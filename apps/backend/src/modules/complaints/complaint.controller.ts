@@ -1,0 +1,70 @@
+import type { RequestHandler } from "express";
+import { AppError } from "../../utils/app-error";
+import type {
+  ComplaintListQuery,
+  CreateComplaintInput,
+  UpdateComplaintInput,
+} from "./complaint.validation";
+import {
+  createComplaint,
+  getComplaint,
+  listComplaints,
+  updateComplaint,
+} from "./complaint.service";
+
+function actorFromRequest(request: Parameters<RequestHandler>[0]) {
+  const user = request.user;
+  if (!user) {
+    throw new Error("Authenticated user is missing from the request.");
+  }
+  return { id: user.id, role: user.role };
+}
+
+function complaintIdFromRequest(request: Parameters<RequestHandler>[0]) {
+  const id = request.params.id;
+  if (typeof id !== "string") {
+    throw new AppError("Complaint id is invalid.", 400, "VALIDATION_ERROR");
+  }
+  return id;
+}
+
+export const create: RequestHandler = async (request, response) => {
+  const complaint = await createComplaint(
+    actorFromRequest(request),
+    request.body as CreateComplaintInput,
+  );
+  response.status(201).json({
+    success: true,
+    message: "Complaint submitted successfully.",
+    data: { complaint },
+  });
+};
+
+export const list: RequestHandler = async (request, response) => {
+  const result = await listComplaints(
+    actorFromRequest(request),
+    request.validatedQuery as ComplaintListQuery,
+  );
+  response.status(200).json({ success: true, data: result });
+};
+
+export const getById: RequestHandler = async (request, response) => {
+  const complaint = await getComplaint(
+    actorFromRequest(request),
+    complaintIdFromRequest(request),
+  );
+  response.status(200).json({ success: true, data: { complaint } });
+};
+
+export const update: RequestHandler = async (request, response) => {
+  const complaint = await updateComplaint(
+    actorFromRequest(request),
+    complaintIdFromRequest(request),
+    request.body as UpdateComplaintInput,
+  );
+  response.status(200).json({
+    success: true,
+    message: "Complaint updated successfully.",
+    data: { complaint },
+  });
+};
