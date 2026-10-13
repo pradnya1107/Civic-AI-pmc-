@@ -1,0 +1,49 @@
+name: Security concern (non-sensitive)
+description: Route a non-sensitive security concern; submit vulnerability details privately.
+title: "[Security concern]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not post exploit steps, proof-of-concept code, affected user data, credentials, tokens, or other sensitive vulnerability details here.**
+
+        For a suspected exploitable vulnerability, use the repository's private vulnerability reporting flow (GitHub Security tab → Report a vulnerability). If private reporting is unavailable, contact a repository maintainer privately and ask them to enable it. This public issue form is only for non-sensitive security improvements or for tracking a concern after private coordination.
+  - type: checkboxes
+    id: safe_to_publish
+    attributes:
+      label: Public disclosure check
+      options:
+        - label: This report contains no exploit details, secrets, personal data, or unpatched vulnerability information.
+          required: true
+  - type: dropdown
+    id: concern_type
+    attributes:
+      label: Concern type
+      options:
+        - Security hardening improvement
+        - Dependency or configuration concern
+        - Coordinated disclosure follow-up (details shared privately)
+        - Other non-sensitive security concern
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Sanitized summary
+      description: Describe the general area and impact without reproduction steps or sensitive details. Use "Details shared privately" if applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: affected_area
+    attributes:
+      label: Affected component
+      description: Name the broad app/module or dependency. Do not include private hostnames, account identifiers, or data.
+    validations:
+      required: true
+  - type: textarea
+    id: remediation
+    attributes:
+      label: Suggested mitigation
+      description: Optional, high-level remediation that is safe to discuss publicly.
+    validations:
+      required: false
