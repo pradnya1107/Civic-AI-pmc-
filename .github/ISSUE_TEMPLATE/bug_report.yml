@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a reproducible defect without sharing secrets or personal data.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include passwords, tokens, OTPs, connection strings, real citizen data, or private vulnerability details. Redact logs and screenshots before attaching them.
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What happened? Include a sanitized error message if available.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest safe sequence that reproduces the issue. Use dummy accounts and data.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: App/platform, browser or runtime version, and branch/commit if known. Do not include private URLs or credentials.
+      placeholder: Web / browser version / commit
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact and frequency
+      description: Who is affected, how often, and is there a safe workaround?
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Checks already performed
+      description: List relevant tests or diagnostics and their result.
+    validations:
+      required: false

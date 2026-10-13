@@ -16,7 +16,28 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
+    origin(requestOrigin, callback) {
+      const allowedOrigin = process.env.FRONTEND_URL ?? "http://localhost:5173";
+
+      // In development, allow any localhost/127.0.0.1 origin (Expo may auto-increment ports)
+      if (process.env.NODE_ENV !== "production") {
+        if (
+          !requestOrigin ||
+          /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(requestOrigin)
+        ) {
+          callback(null, true);
+          return;
+        }
+      }
+
+      // In production (or non-localhost requests), only allow the configured origin
+      if (!requestOrigin || requestOrigin === allowedOrigin) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
   }),
 );
 app.use(express.json());

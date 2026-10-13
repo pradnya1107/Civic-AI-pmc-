@@ -14,7 +14,12 @@ Citizens can report civic issues, upload evidence, provide location and descript
 |---|---|
 | [BRD-CivicAI.md](./BRD-CivicAI.md) | Business requirements and project objectives |
 | [FRD-CivicAI.md](./FRD-CivicAI.md) | Functional requirements |
-| [Architecture.md](./Architecture.md) | System architecture and technology stack |
+| [REQUIREMENTS.md](./REQUIREMENTS.md) | Target product requirements and prioritized migration tasks |
+| [Architecture.md](./Architecture.md) | Target architecture, current-state notes, and module ownership |
+| [API.md](./API.md) | Existing API inventory and proposed versioned API contracts |
+| [DATABASE.md](./DATABASE.md) | Collection ownership, schema responsibilities, indexes, and migrations |
+| [AUTHENTICATION.md](./AUTHENTICATION.md) | Authentication lifecycle, browser sessions, and authorization model |
+| [TEAM_WORKFLOW.md](./TEAM_WORKFLOW.md) | Issues, branch/PR, ownership, testing, and security workflow |
 | [Workflow.md](./Workflow.md) | Main user and complaint workflows |
 | [ENVIRONMENT-SETUP.md](./ENVIRONMENT-SETUP.md) | Development environment setup |
 | [ImplementationPlan.md](./ImplementationPlan.md) | Step-by-step implementation plan |
@@ -37,11 +42,12 @@ AI, analytics, maps, advanced notifications, and other advanced features must no
 
 ## Technology Stack
 
-- Frontend: React, Vite, JavaScript, Tailwind CSS, React Router, Axios
-- Backend: Node.js, Express.js, REST API, Mongoose
+- Target web frontend: React, Vite, JavaScript
+- Existing client: Expo/React Native in `apps/mobile`; preserve while web is introduced
+- Backend: Node.js, Express.js, TypeScript, REST API, Mongoose
 - Database: MongoDB
-- AI service: Python, FastAPI, AI provider such as Gemini
-- Repository: Git, GitHub, pnpm workspace, Turborepo
+- Future AI service: Python, FastAPI, provider adapter
+- Collaboration: Git and GitHub; package-manager/workspace consolidation is not assumed
 
 ## Important Design Principle
 

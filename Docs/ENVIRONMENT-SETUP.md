@@ -55,6 +55,7 @@ MONGODB_URI=your_local_mongodb_connection_string
 JWT_SECRET=your_long_random_secret_at_least_32_characters
 JWT_EXPIRES_IN=15m
 OTP_HASH_SECRET=another_random_secret_at_least_32_characters
+AUTH_DEV_OTP_LOGGING=false
 SMTP_HOST=your_smtp_host
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -67,6 +68,13 @@ FRONTEND_URL=http://localhost:5173
 `MONGODB_URI`, `JWT_SECRET`, `OTP_HASH_SECRET`, SMTP values, and
 `FRONTEND_URL` are validated before the backend starts. Generate unique random
 secrets; do not use the placeholders above as credentials.
+
+For local OTP testing without SMTP, set `AUTH_DEV_OTP_LOGGING=true` only with
+`NODE_ENV=development` or `NODE_ENV=test` and leave all SMTP settings unset.
+The backend prints the OTP with a masked email and expiry, explicitly labels
+the output development-only, and does not claim that an email was sent. With
+SMTP configured, OTP values are logged only under the same explicit opt-in.
+Production always ignores this option and never logs OTP values.
 
 Frontend configuration should include the backend API base URL, for example:
 
@@ -161,6 +169,10 @@ Two development options:
 
 1. Local MongoDB
 2. MongoDB Atlas
+
+Password reset uses a MongoDB transaction; configure Atlas or a local
+replica-set deployment to exercise that flow. A standalone local MongoDB
+server does not support transactions.
 
 For local development, start the MongoDB service and set
 `MONGODB_URI=mongodb://127.0.0.1:27017/civicai_pmc` in the backend environment

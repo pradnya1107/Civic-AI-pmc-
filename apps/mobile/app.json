@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "CivicAI PMC",
+    "slug": "civicai-pmc-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "civicai",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "in.civicai.pmc"
+    },
+    "android": {
+      "package": "in.civicai.pmc"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}
