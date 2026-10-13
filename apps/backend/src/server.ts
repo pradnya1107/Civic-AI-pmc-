@@ -12,6 +12,7 @@ import {
   getFrontendUrl,
   getOtpHashSecret,
 } from "./config/email";
+import { isDevOtpLoggingEnabled } from "./modules/auth/auth-diagnostics";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ async function startServer(): Promise<void> {
     getJwtSecret();
     getJwtExpiresIn();
     getOtpHashSecret();
+    isDevOtpLoggingEnabled();
     createEmailTransport();
     getFrontendUrl();
   } catch (error) {

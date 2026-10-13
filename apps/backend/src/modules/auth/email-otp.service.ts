@@ -1,8 +1,17 @@
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
-import { createEmailTransport, getOtpHashSecret } from "../../config/email";
+import {
+  createEmailTransport,
+  getOtpHashSecret,
+  wasRecipientAccepted,
+} from "../../config/email";
 import { AppError } from "../../utils/app-error";
 import { User } from "../users/user.model";
 import { VerificationCode } from "./verification-code.model";
+import {
+  displayTerminalDevOtp,
+  logDevOtpEvent,
+  logEmailDeliveryFailure,
+} from "./auth-diagnostics";
 
 const OTP_LIFETIME_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
@@ -27,6 +36,7 @@ function otpMatches(expectedHash: string, email: string, code: string): boolean 
 
 export async function requestEmailVerification(
   email: string,
+  eventLabel: "Registration initiated" | "OTP requested" = "OTP requested",
 ): Promise<void> {
   getOtpHashSecret();
   const { from, transporter } = createEmailTransport();
@@ -123,17 +133,96 @@ export async function requestEmailVerification(
     }
   }
 
+  const expiresAt = record.expiresAt;
+
+  // Output terminal OTP during local development demo
+  displayTerminalDevOtp({
+    event: eventLabel,
+    email,
+    otp: code,
+    expiresInMinutes: 10,
+  });
+
+  if (!transporter) {
+    logDevOtpEvent({
+      event: "otp_generated",
+      email,
+      expiresAt,
+      status: "development_console_only_not_emailed",
+      otp: code,
+    });
+    return;
+  }
+
+  const htmlContent = `
+  <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+    <h2 style="color: #1e3a8a; margin-top: 0;">CivicAI PMC</h2>
+    <p style="font-size: 16px; color: #334155;">Hello,</p>
+    <p style="font-size: 16px; color: #334155;">Use the following verification code to verify your CivicAI PMC account:</p>
+    <div style="background-color: #f1f5f9; border-radius: 8px; padding: 18px; text-align: center; margin: 24px 0;">
+      <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #2563eb;">${code}</span>
+    </div>
+    <p style="font-size: 14px; color: #64748b;">This verification code expires in <strong>10 minutes</strong>. If you did not request this code, you can safely ignore this email.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+    <p style="font-size: 12px; color: #94a3b8;">Pune Municipal Corporation — AI-powered Civic Issue Intelligence Platform</p>
+  </div>
+  `;
+
+  let delivery: unknown;
   try {
-    await transporter.sendMail({
+    delivery = await transporter.sendMail({
       from,
       to: email,
       subject: "Verify your CivicAI PMC email",
       text: `Your CivicAI PMC verification code is ${code}. It expires in 10 minutes.`,
+      html: htmlContent,
     });
   } catch (error) {
-    const errorName = error instanceof Error ? error.name : "UnknownError";
-    console.error(`Verification email delivery failed (${errorName}).`);
+    logEmailDeliveryFailure("otp", email, error);
+    if (process.env.NODE_ENV !== "development") {
+      await invalidateFailedOtp(email, record.codeHash, now);
+    } else {
+      console.warn(
+        `[CivicAI Auth] Email delivery failed (${error instanceof Error ? error.name : "Error"}). Verification can proceed with the development terminal OTP.`,
+      );
+    }
+    return;
   }
+
+  if (!wasRecipientAccepted(delivery, email)) {
+    logEmailDeliveryFailure(
+      "otp",
+      email,
+      new Error("RecipientNotAccepted"),
+    );
+    if (process.env.NODE_ENV !== "development") {
+      await invalidateFailedOtp(email, record.codeHash, now);
+    }
+    return;
+  }
+  logDevOtpEvent({
+    event: "otp_email_delivery",
+    email,
+    expiresAt,
+    status: "accepted_by_mail_transport",
+    otp: code,
+  });
+}
+
+async function invalidateFailedOtp(
+  email: string,
+  codeHash: string,
+  now: Date,
+): Promise<void> {
+  await VerificationCode.updateOne(
+    { email, codeHash },
+    {
+      $set: {
+        expiresAt: now,
+        resendAllowedAt: now,
+      },
+    },
+  );
 }
 
 export async function verifyEmailOtp(

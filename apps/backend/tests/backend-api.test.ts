@@ -11,7 +11,9 @@ import { PasswordResetToken } from "../src/modules/auth/password-reset-token.mod
 import { connectToDatabase } from "../src/database/connection";
 
 const mailer = vi.hoisted(() => ({
-  sendMail: vi.fn().mockResolvedValue({ accepted: ["test@example.invalid"] }),
+  sendMail: vi.fn((message: { to: string; text: string }) =>
+    Promise.resolve({ accepted: [message.to] }),
+  ),
 }));
 
 vi.mock("../src/config/email", () => ({
@@ -21,9 +23,13 @@ vi.mock("../src/config/email", () => ({
   }),
   getOtpHashSecret: () => "test-otp-hash-secret-with-at-least-32-chars",
   getFrontendUrl: () => "http://localhost:5173",
+  wasRecipientAccepted: (
+    result: { accepted?: string[] },
+    recipient: string,
+  ) => result.accepted?.some((address) => address === recipient) ?? false,
 }));
 
-const citizenPassword = "correct-horse-battery-staple";
+const citizenPassword = "Correct-Horse-Battery-Staple1!";
 
 async function createVerifiedUser(
   email: string,
@@ -50,7 +56,9 @@ async function signIn(email: string, password = citizenPassword) {
 describe("authentication API", () => {
   beforeEach(() => {
     mailer.sendMail.mockReset();
-    mailer.sendMail.mockResolvedValue({ accepted: ["test@example.invalid"] });
+    mailer.sendMail.mockImplementation((message) =>
+      Promise.resolve({ accepted: [message.to] }),
+    );
   });
 
   it("registers citizens with a password hash and does not expose it", async () => {
@@ -89,6 +97,66 @@ describe("authentication API", () => {
     expect(invalid.status).toBe(400);
     expect(admin.status).toBe(400);
     expect(await User.countDocuments()).toBe(0);
+  });
+
+  it("registers with name and confirmPassword, validating and trimming fields", async () => {
+    const response = await request(app).post("/api/v1/auth/register").send({
+      name: "  Pradnya Ghodke  ",
+      email: "  Pradnya.PMC@example.com  ",
+      password: "StrongPass#123",
+      confirmPassword: "StrongPass#123",
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data.user.name).toBe("Pradnya Ghodke");
+    expect(response.body.data.user.fullName).toBe("Pradnya Ghodke");
+    expect(response.body.data.user.email).toBe("pradnya.pmc@example.com");
+    expect(response.body.data.user.emailVerified).toBe(false);
+    expect(response.body.data.user).not.toHaveProperty("passwordHash");
+    expect(response.body.data.user).not.toHaveProperty("codeHash");
+  });
+
+  it("rejects invalid email formats during registration", async () => {
+    const invalidEmails = ["notanemail", "missingdomain@", "@domain.com", "plain text"];
+    for (const email of invalidEmails) {
+      const response = await request(app).post("/api/v1/auth/register").send({
+        name: "Test User",
+        email,
+        password: "ValidPass#123",
+        confirmPassword: "ValidPass#123",
+      });
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it("rejects weak passwords missing required character classes or minimum length", async () => {
+    const weakPasswords = [
+      "Short1!",
+      "nouppercase1!",
+      "NOLOWERCASE1!",
+      "NoNumberAtAll!",
+      "NoSpecialChar12",
+    ];
+    for (const password of weakPasswords) {
+      const response = await request(app).post("/api/v1/auth/register").send({
+        name: "Test User",
+        email: "weak@example.com",
+        password,
+        confirmPassword: password,
+      });
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it("rejects registration when confirmPassword does not match password", async () => {
+    const response = await request(app).post("/api/v1/auth/register").send({
+      name: "Test User",
+      email: "mismatch@example.com",
+      password: "CorrectPass#123",
+      confirmPassword: "MismatchPass#456",
+    });
+
+    expect(response.status).toBe(400);
   });
 
   it("handles duplicate emails through the unique index", async () => {
@@ -150,6 +218,43 @@ describe("authentication API", () => {
     )).toBe(true);
   });
 
+  it("invalidates the previous OTP when a resend is allowed", async () => {
+    await User.create({
+      fullName: "Resend Citizen",
+      email: "resend@example.com",
+      passwordHash: await bcrypt.hash(citizenPassword, 4),
+      emailVerified: false,
+    });
+    await request(app)
+      .post("/api/v1/auth/send-otp")
+      .send({ email: "resend@example.com" });
+    const firstOtp = mailer.sendMail.mock.calls[0][0].text.match(
+      /\b\d{6}\b/,
+    )?.[0];
+    await VerificationCode.updateOne(
+      { email: "resend@example.com" },
+      { $set: { resendAllowedAt: new Date(Date.now() - 1) } },
+    );
+
+    await request(app)
+      .post("/api/v1/auth/resend-otp")
+      .send({ email: "resend@example.com" });
+    const secondOtp = mailer.sendMail.mock.calls[1][0].text.match(
+      /\b\d{6}\b/,
+    )?.[0];
+
+    const oldCodeResponse = await request(app)
+      .post("/api/v1/auth/verify-otp")
+      .send({ email: "resend@example.com", otp: firstOtp });
+    const newCodeResponse = await request(app)
+      .post("/api/v1/auth/verify-otp")
+      .send({ email: "resend@example.com", otp: secondOtp });
+
+    expect(mailer.sendMail).toHaveBeenCalledTimes(2);
+    expect(oldCodeResponse.status).toBe(400);
+    expect(newCodeResponse.status).toBe(200);
+  });
+
   it("rejects expired OTP codes", async () => {
     await User.create({
       fullName: "Expired Citizen",
@@ -194,6 +299,119 @@ describe("authentication API", () => {
     expect(correctAfterLimit.status).toBe(400);
   });
 
+  it("invalidates a failed OTP delivery and permits a safe retry", async () => {
+    await User.create({
+      fullName: "Delivery Failure Citizen",
+      email: "delivery-failure@example.com",
+      passwordHash: await bcrypt.hash(citizenPassword, 4),
+      emailVerified: false,
+    });
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    mailer.sendMail.mockRejectedValueOnce(
+      new Error("SMTP_PASSWORD=must-not-be-logged"),
+    );
+
+    const firstResponse = await request(app)
+      .post("/api/v1/auth/send-otp")
+      .send({ email: "delivery-failure@example.com" });
+    const failedRecord = await VerificationCode.findOne({
+      email: "delivery-failure@example.com",
+    });
+
+    expect(firstResponse.status).toBe(202);
+    expect(firstResponse.body.message).not.toContain("delivery-failure@example.com");
+    expect(failedRecord?.expiresAt.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(errorLog.mock.calls.flat().join("")).not.toContain("SMTP_PASSWORD");
+    expect(errorLog.mock.calls.flat().join("")).toContain(
+      "d***@example.com",
+    );
+    expect(errorLog.mock.calls.flat().join("")).toContain('"status":"failed"');
+
+    const retryResponse = await request(app)
+      .post("/api/v1/auth/send-otp")
+      .send({ email: "delivery-failure@example.com" });
+    expect(retryResponse.status).toBe(202);
+    expect(mailer.sendMail).toHaveBeenCalledTimes(2);
+  });
+
+  it("logs OTP values only with explicit non-production opt-in", async () => {
+    await User.create({
+      fullName: "Development OTP Citizen",
+      email: "development-otp@example.com",
+      passwordHash: await bcrypt.hash(citizenPassword, 4),
+      emailVerified: false,
+    });
+    const previousFlag = process.env.AUTH_DEV_OTP_LOGGING;
+    const previousEnvironment = process.env.NODE_ENV;
+    const infoLog = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      process.env.AUTH_DEV_OTP_LOGGING = "true";
+      process.env.NODE_ENV = "test";
+
+      const response = await request(app)
+        .post("/api/v1/auth/send-otp")
+        .send({ email: "development-otp@example.com" });
+      const deliveredOtp = mailer.sendMail.mock.calls[0][0].text.match(
+        /\b\d{6}\b/,
+      )?.[0];
+      const logs = infoLog.mock.calls.flat().join("\n");
+
+      expect(response.status).toBe(202);
+      expect(logs).toContain("[AUTH][DEV ONLY]");
+      expect(logs).toContain("d***@example.com");
+      expect(logs).not.toContain("development-otp@example.com");
+      expect(logs).toContain(deliveredOtp);
+      expect(logs).toContain("accepted_by_mail_transport");
+    } finally {
+      if (previousFlag === undefined) {
+        delete process.env.AUTH_DEV_OTP_LOGGING;
+      } else {
+        process.env.AUTH_DEV_OTP_LOGGING = previousFlag;
+      }
+      process.env.NODE_ENV = previousEnvironment ?? "test";
+    }
+  });
+
+  it("never logs OTP values when production is configured to enable dev logging", async () => {
+    await User.create({
+      fullName: "Production OTP Citizen",
+      email: "production-otp@example.com",
+      passwordHash: await bcrypt.hash(citizenPassword, 4),
+      emailVerified: false,
+    });
+    const previousFlag = process.env.AUTH_DEV_OTP_LOGGING;
+    const previousEnvironment = process.env.NODE_ENV;
+    const infoLog = vi.spyOn(console, "info").mockImplementation(() => {});
+    const warningLog = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      process.env.AUTH_DEV_OTP_LOGGING = "true";
+      process.env.NODE_ENV = "production";
+
+      const response = await request(app)
+        .post("/api/v1/auth/send-otp")
+        .send({ email: "production-otp@example.com" });
+      const deliveredOtp = mailer.sendMail.mock.calls[0][0].text.match(
+        /\b\d{6}\b/,
+      )?.[0];
+
+      expect(response.status).toBe(202);
+      expect(infoLog.mock.calls.flat().join("\n")).not.toContain(
+        "[AUTH][DEV ONLY]",
+      );
+      expect(infoLog.mock.calls.flat().join("\n")).not.toContain(deliveredOtp);
+      expect(warningLog.mock.calls.flat().join("\n")).toContain(
+        "ignored outside development and test environments",
+      );
+    } finally {
+      if (previousFlag === undefined) {
+        delete process.env.AUTH_DEV_OTP_LOGGING;
+      } else {
+        process.env.AUTH_DEV_OTP_LOGGING = previousFlag;
+      }
+      process.env.NODE_ENV = previousEnvironment ?? "test";
+    }
+  });
+
   it("logs in verified users, validates JWTs, and revokes tokens on logout", async () => {
     await createVerifiedUser("login@example.com");
     const wrongPassword = await request(app)
@@ -220,6 +438,7 @@ describe("authentication API", () => {
   });
 
   it("rejects malformed and expired JWTs", async () => {
+    const missing = await request(app).get("/api/v1/auth/me");
     const malformed = await request(app)
       .get("/api/v1/auth/me")
       .set("Authorization", "Bearer not-a-jwt");
@@ -232,6 +451,7 @@ describe("authentication API", () => {
       .get("/api/v1/auth/me")
       .set("Authorization", `Bearer ${expiredToken}`);
 
+    expect(missing.status).toBe(401);
     expect(malformed.status).toBe(401);
     expect(expired.status).toBe(401);
   });
@@ -267,6 +487,89 @@ describe("authentication API", () => {
     expect(known.body).toEqual(unknown.body);
   });
 
+  it("keeps password-reset responses generic and removes tokens after delivery failure", async () => {
+    await createVerifiedUser("reset-delivery-failure@example.com");
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    mailer.sendMail.mockRejectedValueOnce(
+      new Error("SMTP_PASSWORD=must-not-be-logged"),
+    );
+
+    const known = await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email: "reset-delivery-failure@example.com" });
+    const unknown = await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email: "unknown-reset@example.com" });
+
+    expect(known.status).toBe(202);
+    expect(known.body).toEqual(unknown.body);
+    expect(
+      await PasswordResetToken.countDocuments(),
+    ).toBe(0);
+    expect(errorLog.mock.calls.flat().join("")).not.toContain("SMTP_PASSWORD");
+    expect(errorLog.mock.calls.flat().join("")).toContain(
+      "r***@example.com",
+    );
+  });
+
+  it("does not consume a reset token if password hashing fails", async () => {
+    await createVerifiedUser("reset-hash-failure@example.com");
+    await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email: "reset-hash-failure@example.com" });
+    const resetMessage = mailer.sendMail.mock.calls[0][0].text as string;
+    const resetToken = resetMessage.match(/token=([A-Za-z0-9_-]+)/)?.[1];
+    expect(resetToken).toBeDefined();
+
+    const hashSpy = vi
+      .spyOn(bcrypt, "hash")
+      .mockRejectedValueOnce(new Error("test hashing failure"));
+    const response = await request(app)
+      .post("/api/v1/auth/reset-password")
+      .send({ token: resetToken, password: "New-Correct-Password1!" });
+
+    expect(response.status).toBe(500);
+    expect(hashSpy).toHaveBeenCalledOnce();
+    expect(await PasswordResetToken.countDocuments()).toBe(1);
+  });
+
+  it("rolls back reset-token consumption if the password update fails", async () => {
+    await createVerifiedUser("reset-transaction@example.com");
+    const existingAccessToken = await signIn("reset-transaction@example.com");
+    await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .send({ email: "reset-transaction@example.com" });
+    const resetMessage = mailer.sendMail.mock.calls[0][0].text as string;
+    const resetToken = resetMessage.match(/token=([A-Za-z0-9_-]+)/)?.[1];
+    expect(resetToken).toBeDefined();
+
+    const updateSpy = vi
+      .spyOn(User, "updateOne")
+      .mockImplementationOnce(() => {
+        throw new Error("test password-update failure");
+      });
+    const failedReset = await request(app)
+      .post("/api/v1/auth/reset-password")
+      .send({ token: resetToken, password: "New-Correct-Password1!" });
+    updateSpy.mockRestore();
+
+    expect(failedReset.status).toBe(500);
+    expect(await PasswordResetToken.countDocuments()).toBe(1);
+    expect(
+      (
+        await request(app)
+          .get("/api/v1/auth/me")
+          .set("Authorization", `Bearer ${existingAccessToken}`)
+      ).status,
+    ).toBe(200);
+
+    const retry = await request(app)
+      .post("/api/v1/auth/reset-password")
+      .send({ token: resetToken, password: "New-Correct-Password1!" });
+    expect(retry.status).toBe(200);
+    expect(await PasswordResetToken.countDocuments()).toBe(0);
+  });
+
   it("resets passwords with single-use tokens and revokes previous access tokens", async () => {
     await createVerifiedUser("reset-token@example.com");
     const oldAccessToken = await signIn("reset-token@example.com");
@@ -279,10 +582,10 @@ describe("authentication API", () => {
 
     const reset = await request(app)
       .post("/api/v1/auth/reset-password")
-      .send({ token: resetToken, password: "new-correct-password" });
+      .send({ token: resetToken, password: "New-Correct-Password1!" });
     const replay = await request(app)
       .post("/api/v1/auth/reset-password")
-      .send({ token: resetToken, password: "another-correct-password" });
+      .send({ token: resetToken, password: "Another-Correct-Password1!" });
     const revoked = await request(app)
       .get("/api/v1/auth/me")
       .set("Authorization", `Bearer ${oldAccessToken}`);
@@ -290,13 +593,20 @@ describe("authentication API", () => {
       .post("/api/v1/auth/login")
       .send({
         email: "reset-token@example.com",
-        password: "new-correct-password",
+        password: "New-Correct-Password1!",
+      });
+    const oldPasswordLogin = await request(app)
+      .post("/api/v1/auth/login")
+      .send({
+        email: "reset-token@example.com",
+        password: citizenPassword,
       });
 
     expect(reset.status).toBe(200);
     expect(replay.status).toBe(400);
     expect(revoked.status).toBe(401);
     expect(login.status).toBe(200);
+    expect(oldPasswordLogin.status).toBe(401);
   });
 
   it("rejects expired password reset tokens", async () => {

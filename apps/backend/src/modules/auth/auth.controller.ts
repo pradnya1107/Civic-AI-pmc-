@@ -12,9 +12,16 @@ import {
   requestPasswordReset,
   resetPassword,
 } from "./password-reset.service";
+import { logDevOtpEvent } from "./auth-diagnostics";
 
 export const register: RequestHandler = async (request, response) => {
+  logDevOtpEvent({
+    event: "registration_initiated",
+    email: request.body.email,
+  });
   const user = await registerCitizen(request.body);
+
+  await requestEmailVerification(user.email, "Registration initiated");
 
   response.status(201).json({
     success: true,
@@ -24,7 +31,7 @@ export const register: RequestHandler = async (request, response) => {
 };
 
 export const sendOtp: RequestHandler = async (request, response) => {
-  await requestEmailVerification(request.body.email);
+  await requestEmailVerification(request.body.email, "OTP requested");
   response.status(202).json({
     success: true,
     message:
@@ -33,7 +40,7 @@ export const sendOtp: RequestHandler = async (request, response) => {
 };
 
 export const resendOtp: RequestHandler = async (request, response) => {
-  await requestEmailVerification(request.body.email);
+  await requestEmailVerification(request.body.email, "OTP requested");
   response.status(202).json({
     success: true,
     message:

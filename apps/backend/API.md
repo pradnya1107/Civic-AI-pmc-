@@ -5,9 +5,13 @@ the `/api/v1` prefix and JSON request/response bodies.
 
 ## Authentication
 
-Citizen registration always assigns the `CITIZEN` role and creates an
-unverified account. Passwords must be 12–128 characters and at most 72 UTF-8
-bytes because bcrypt only processes 72 bytes.
+Citizen registration assigns the `CITIZEN` role and creates an unverified account.
+Password requirements:
+- Minimum 8 characters, maximum 128 characters (and at most 72 UTF-8 bytes for bcrypt compatibility)
+- At least one uppercase letter (`A-Z`)
+- At least one lowercase letter (`a-z`)
+- At least one number (`0-9`)
+- At least one special character (`!@#$%^&*...`)
 
 ### Register
 
@@ -15,15 +19,22 @@ bytes because bcrypt only processes 72 bytes.
 
 ```json
 {
-  "fullName": "A Citizen",
+  "name": "Pradnya Ghodke",
   "email": "citizen@example.com",
-  "password": "use-a-long-unique-password",
+  "password": "StrongPassword#123",
+  "confirmPassword": "StrongPassword#123",
   "phoneNumber": "+91 9000000000"
 }
 ```
 
-`phoneNumber` is optional. Public registration does not accept role or account
-status fields.
+Notes:
+- `name` (or legacy `fullName`) is required and trimmed.
+- `confirmPassword` is validated to match `password`.
+- `phoneNumber` is optional.
+- Upon successful registration, a 6-digit verification OTP is automatically generated, hashed, and stored (expires in 10 minutes).
+- In development mode, the OTP is printed directly to the terminal for easy testing.
+- If SMTP is configured, the OTP is also delivered to the registered email address.
+- Returns `201 Created` with the safe user profile (`id`, `name`, `fullName`, `email`, `role`, `emailVerified: false`, timestamps). Sensitive fields (`passwordHash`, `codeHash`) are never exposed.
 
 ### Send or resend verification code
 
@@ -37,6 +48,18 @@ Both endpoints return the same `202 Accepted` response whether or not an
 eligible account exists. Codes are six digits, expire after 10 minutes, and
 are stored as keyed hashes. Resends have a cooldown and per-account and
 per-IP limits.
+
+Email delivery failures are logged with a masked email and safe error name;
+the generic response remains unchanged to avoid account enumeration. Failed
+codes are invalidated and can be requested again subject to the send limits.
+
+For local development only, `AUTH_DEV_OTP_LOGGING=true` explicitly enables
+masked, structured OTP diagnostics in the backend terminal. OTP values are
+never logged in production; an attempted production opt-in is ignored with a
+security warning. If all SMTP settings are omitted, this opt-in also enables
+a development-only console-code mode for OTP verification; it does not send
+email, does not report email delivery success, and is unavailable in
+production. Keep the setting `false` outside local development and tests.
 
 ### Verify email
 
@@ -85,7 +108,12 @@ account receives a single-use reset link. Complete the reset with:
 ```
 
 Reset tokens expire after 30 minutes, are stored as hashes, and revoke prior
-access tokens after a successful password change.
+access tokens after a successful password change. Token consumption and the
+password update run in a MongoDB transaction, so MongoDB must support
+transactions (MongoDB Atlas or a replica set).
+Password-reset email delivery failures are logged safely and do not change the
+generic response. A reset token is removed if the mail transport rejects or
+fails to submit the reset message.
 
 ## Complaints
 

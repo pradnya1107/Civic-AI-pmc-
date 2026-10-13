@@ -1,9 +1,10 @@
 import { afterAll, afterEach, beforeAll } from "vitest";
 import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 
 process.env.JWT_SECRET = "test-jwt-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
+process.env.AUTH_DEV_OTP_LOGGING = "false";
 process.env.JWT_EXPIRES_IN = "15m";
 process.env.OTP_HASH_SECRET = "test-otp-hash-secret-with-at-least-32-chars";
 process.env.FRONTEND_URL = "http://localhost:5173";
@@ -14,10 +15,12 @@ process.env.SMTP_USER = "test-user";
 process.env.SMTP_PASSWORD = "test-password";
 process.env.SMTP_FROM = "CivicAI Tests <test@example.invalid>";
 
-let mongoServer: MongoMemoryServer;
+let mongoServer: MongoMemoryReplSet;
 
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
+  mongoServer = await MongoMemoryReplSet.create({
+    replSet: { count: 1 },
+  });
   await mongoose.connect(mongoServer.getUri(), {
     dbName: "civicai_test",
   });

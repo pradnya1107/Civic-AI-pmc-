@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "admin:create": "tsx src/scripts/create-admin.ts",
+    "db:test": "tsx src/scripts/test-db.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:types": "tsc --noEmit -p tsconfig.test.json"

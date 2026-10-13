@@ -42,7 +42,15 @@ const userSchema = new Schema<UserRecord>(
     },
     tokenVersion: { type: Number, default: 0, required: true, select: false },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
 );
+
+userSchema.virtual("name").get(function () {
+  return this.fullName;
+});
 
 export const User = model<UserRecord>("User", userSchema);

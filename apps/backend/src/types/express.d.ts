@@ -6,6 +6,7 @@ declare global {
       validatedQuery?: unknown;
       user?: {
         id: string;
+        name: string;
         fullName: string;
         email: string;
         role: UserRole;

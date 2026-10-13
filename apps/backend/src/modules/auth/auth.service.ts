@@ -14,10 +14,11 @@ const DUMMY_PASSWORD_HASH = bcrypt.hash(
 
 export async function registerCitizen(input: RegisterInput) {
   const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+  const fullName = input.name?.trim() || input.fullName?.trim() || "";
 
   try {
     const user = await User.create({
-      fullName: input.fullName,
+      fullName,
       email: input.email,
       passwordHash,
       phoneNumber: input.phoneNumber,
@@ -28,6 +29,7 @@ export async function registerCitizen(input: RegisterInput) {
 
     return {
       id: user.id,
+      name: user.fullName,
       fullName: user.fullName,
       email: user.email,
       phoneNumber: user.phoneNumber,
@@ -45,7 +47,7 @@ export async function registerCitizen(input: RegisterInput) {
       error.code === 11000
     ) {
       throw new AppError(
-        "An account with this email already exists.",
+        "An account with this email already exists. If your account is not verified, please verify your email using OTP or request a new OTP via the send-otp endpoint.",
         409,
         "EMAIL_ALREADY_EXISTS",
       );
@@ -92,6 +94,7 @@ export async function loginCitizen(email: string, password: string) {
     expiresIn,
     user: {
       id: user.id,
+      name: user.fullName,
       fullName: user.fullName,
       email: user.email,
       phoneNumber: user.phoneNumber,

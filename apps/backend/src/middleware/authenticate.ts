@@ -44,6 +44,7 @@ const authenticateRequest: RequestHandler = async (request, _response, next) => 
 
   request.user = {
     id: user.id,
+    name: user.fullName,
     fullName: user.fullName,
     email: user.email,
     role: user.role,
