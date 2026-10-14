@@ -7,7 +7,7 @@ export type DatabaseStatus =
   | "disconnected";
 
 function sanitizeMongoErrorMessage(message: string): string {
-  const mongoUri = process.env.MONGODB_URI?.trim();
+  const mongoUri = (process.env.MONGODB_URI || process.env.MONGO_URI)?.trim();
   let sanitized = mongoUri
     ? message.split(mongoUri).join("[REDACTED_MONGODB_URI]")
     : message;
@@ -43,7 +43,7 @@ function logMongoConnectionError(error: Error): void {
 }
 
 export async function connectToDatabase(): Promise<void> {
-  const mongoUri = process.env.MONGODB_URI?.trim();
+  const mongoUri = (process.env.MONGODB_URI || process.env.MONGO_URI)?.trim();
 
   if (!mongoUri) {
     throw new Error("MONGODB_URI is required to start the backend.");

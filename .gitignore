@@ -12,6 +12,7 @@ coverage/
 logs/
 tmp/
 temp/
+uploads/
 *.log
 *.tsbuildinfo
 

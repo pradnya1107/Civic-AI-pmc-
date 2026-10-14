@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, "feature/**"]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  backend-ci:
+    name: Backend CI (Lint, Build, Test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+
+      - name: Install dependencies
+        run: pnpm --dir apps/backend install --frozen-lockfile=false
+
+      - name: Typecheck
+        run: pnpm --dir apps/backend run test:types
+
+      - name: Build
+        run: pnpm --dir apps/backend run build
+
+      - name: Test
+        run: pnpm --dir apps/backend run test
