@@ -62,6 +62,19 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+app.get("/api/v1/health", (_req, res) => {
+  const database = getDatabaseStatus();
+  const isHealthy = database === "connected";
+
+  res.status(200).json({
+    success: true,
+    message: "CivicAI API is running",
+    status: isHealthy ? "ok" : "degraded",
+    server: "running",
+    database,
+  });
+});
+
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/complaints", complaintRouter);
 app.use("/api/v1/departments", departmentRouter);
