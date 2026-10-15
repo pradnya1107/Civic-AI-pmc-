@@ -13,6 +13,7 @@ import {
   resetPassword,
 } from "./password-reset.service";
 import { logDevOtpEvent } from "./auth-diagnostics";
+import { User } from "../users/user.model";
 
 export const register: RequestHandler = async (request, response) => {
   logDevOtpEvent({
@@ -65,10 +66,24 @@ export const login: RequestHandler = async (request, response) => {
   });
 };
 
-export const getCurrentUser: RequestHandler = (request, response) => {
+export const getCurrentUser: RequestHandler = async (request, response) => {
+  if (!request.user) {
+    response.status(401).json({ success: false, message: "Unauthorized" });
+    return;
+  }
+  let departmentName: string | undefined;
+  if (request.user.departmentId) {
+    const userDoc = await User.findById(request.user.id).populate("departmentId");
+    departmentName = (userDoc?.departmentId as any)?.name;
+  }
   response.status(200).json({
     success: true,
-    data: { user: request.user },
+    data: {
+      user: {
+        ...request.user,
+        departmentName,
+      },
+    },
   });
 };
 

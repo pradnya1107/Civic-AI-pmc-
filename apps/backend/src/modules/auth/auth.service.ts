@@ -59,6 +59,7 @@ export async function registerCitizen(input: RegisterInput) {
 export async function loginCitizen(email: string, password: string) {
   const user = await User.findOne({ email })
     .select("+passwordHash +tokenVersion")
+    .populate("departmentId")
     .exec();
 
   const passwordHash = user?.passwordHash ?? (await DUMMY_PASSWORD_HASH);
@@ -88,6 +89,8 @@ export async function loginCitizen(email: string, password: string) {
     },
   );
 
+  const dept = user.departmentId as any;
+
   return {
     accessToken,
     tokenType: "Bearer",
@@ -99,6 +102,8 @@ export async function loginCitizen(email: string, password: string) {
       email: user.email,
       phoneNumber: user.phoneNumber,
       role: user.role,
+      departmentId: dept?._id ? dept._id.toString() : user.departmentId ? user.departmentId.toString() : undefined,
+      departmentName: dept?.name ?? undefined,
       emailVerified: user.emailVerified,
       accountStatus: user.accountStatus,
       createdAt: user.createdAt,

@@ -7,7 +7,9 @@ export type AuthUser = {
   fullName: string;
   email: string;
   phoneNumber?: string;
-  role: "CITIZEN" | "ADMIN";
+  role: "CITIZEN" | "ADMIN" | "DEPARTMENT_ADMIN" | "SUPER_ADMIN";
+  departmentId?: string;
+  departmentName?: string;
   emailVerified: boolean;
   accountStatus: "ACTIVE" | "DISABLED";
   createdAt: string;
@@ -76,7 +78,7 @@ function getDevelopmentApiUrl(): string | undefined {
   }
 }
 
-function getApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   const configuredUrl =
     process.env.EXPO_PUBLIC_API_URL?.trim() ||
     (__DEV__ ? getDevelopmentApiUrl() : undefined);
