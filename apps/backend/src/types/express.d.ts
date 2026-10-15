@@ -10,6 +10,7 @@ declare global {
         fullName: string;
         email: string;
         role: UserRole;
+        departmentId?: string;
         emailVerified: boolean;
         accountStatus: string;
       };
