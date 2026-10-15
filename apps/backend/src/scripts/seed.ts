@@ -137,6 +137,84 @@ async function seedDepartments(): Promise<void> {
   console.log(`✅ Departments: ${created} created, ${skipped} already existed.`);
 }
 
+/* ─────────────────────── Demo Department Admins ─────────────────────── */
+const DEMO_DEPARTMENT_ADMINS = [
+  {
+    fullName: "Roads Department Admin",
+    email: "roads.demo@civicai.local",
+    password: "Roads@Demo2026!",
+    deptSlug: "roads",
+  },
+  {
+    fullName: "Waste Management Admin",
+    email: "waste.demo@civicai.local",
+    password: "Waste@Demo2026!",
+    deptSlug: "waste",
+  },
+  {
+    fullName: "Water Supply Admin",
+    email: "water.demo@civicai.local",
+    password: "Water@Demo2026!",
+    deptSlug: "water",
+  },
+  {
+    fullName: "Drainage Admin",
+    email: "drainage.demo@civicai.local",
+    password: "Drainage@Demo2026!",
+    deptSlug: "drainage",
+  },
+  {
+    fullName: "Street Lighting Admin",
+    email: "lighting.demo@civicai.local",
+    password: "Lighting@Demo2026!",
+    deptSlug: "street-lighting",
+  },
+  {
+    fullName: "Public Health Admin",
+    email: "health.demo@civicai.local",
+    password: "Health@Demo2026!",
+    deptSlug: "public-health",
+  },
+];
+
+async function seedDemoDepartmentAdmins(): Promise<void> {
+  let created = 0;
+  let skipped = 0;
+
+  for (const item of DEMO_DEPARTMENT_ADMINS) {
+    const dept = await Department.findOne({ slug: item.deptSlug });
+    if (!dept) continue;
+
+    const existing = await User.findOne({ email: item.email.toLowerCase() });
+    if (existing) {
+      const updates: any = {};
+      if (existing.role !== "DEPARTMENT_ADMIN") updates.role = "DEPARTMENT_ADMIN";
+      if (!existing.departmentId) updates.departmentId = dept._id;
+      if (!existing.emailVerified) updates.emailVerified = true;
+      if (existing.accountStatus !== "ACTIVE") updates.accountStatus = "ACTIVE";
+
+      if (Object.keys(updates).length > 0) {
+        await User.updateOne({ _id: existing._id }, { $set: updates });
+      }
+      skipped++;
+    } else {
+      const passwordHash = await bcrypt.hash(item.password, 12);
+      await User.create({
+        fullName: item.fullName,
+        email: item.email.toLowerCase(),
+        passwordHash,
+        role: "DEPARTMENT_ADMIN",
+        departmentId: dept._id,
+        emailVerified: true,
+        accountStatus: "ACTIVE",
+      });
+      created++;
+    }
+  }
+
+  console.log(`✅ Demo Department Admins: ${created} created, ${skipped} already existed.`);
+}
+
 /* ─────────────────────── Main Runner ─────────────────────── */
 
 async function seed(): Promise<void> {
@@ -146,6 +224,7 @@ async function seed(): Promise<void> {
 
   await seedAdmin();
   await seedDepartments();
+  await seedDemoDepartmentAdmins();
 
   console.log("\n🎉 Seed completed successfully!\n");
 }
