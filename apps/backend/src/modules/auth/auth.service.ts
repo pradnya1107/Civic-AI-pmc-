@@ -27,7 +27,7 @@ export async function registerCitizen(input: RegisterInput) {
       accountStatus: "ACTIVE",
     });
 
-    return {
+    const safeUser = {
       id: user.id,
       name: user.fullName,
       fullName: user.fullName,
@@ -38,6 +38,26 @@ export async function registerCitizen(input: RegisterInput) {
       accountStatus: user.accountStatus,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+    };
+
+    const expiresIn = getJwtExpiresIn();
+    const accessToken = jwt.sign(
+      { tokenVersion: user.tokenVersion ?? 0, role: user.role, email: user.email },
+      getJwtSecret(),
+      {
+        algorithm: "HS256",
+        subject: user.id,
+        expiresIn,
+      },
+    );
+
+    return {
+      ...safeUser,
+      user: safeUser,
+      accessToken,
+      token: accessToken,
+      tokenType: "Bearer",
+      expiresIn,
     };
   } catch (error) {
     if (
@@ -80,7 +100,7 @@ export async function loginCitizen(email: string, password: string) {
 
   const expiresIn = getJwtExpiresIn();
   const accessToken = jwt.sign(
-    { tokenVersion: user.tokenVersion },
+    { tokenVersion: user.tokenVersion, role: user.role, email: user.email },
     getJwtSecret(),
     {
       algorithm: "HS256",
@@ -93,8 +113,10 @@ export async function loginCitizen(email: string, password: string) {
 
   return {
     accessToken,
+    token: accessToken,
     tokenType: "Bearer",
     expiresIn,
+    role: user.role,
     user: {
       id: user.id,
       name: user.fullName,
@@ -112,6 +134,53 @@ export async function loginCitizen(email: string, password: string) {
   };
 }
 
+export async function validateToken(token: string) {
+  if (!token || typeof token !== "string") {
+    throw new AppError("Authentication is required.", 401, "UNAUTHORIZED");
+  }
+
+  const jwtSecret = getJwtSecret();
+  let decoded: any;
+  try {
+    decoded = jwt.verify(token, jwtSecret, {
+      algorithms: ["HS256"],
+    });
+    if (
+      typeof decoded === "string" ||
+      typeof decoded.sub !== "string" ||
+      typeof decoded.tokenVersion !== "number"
+    ) {
+      throw new Error("Invalid token claims");
+    }
+  } catch {
+    throw new AppError("Authentication is required.", 401, "UNAUTHORIZED");
+  }
+
+  const user = await User.findById(decoded.sub).select("+tokenVersion");
+  if (
+    !user ||
+    user.accountStatus !== "ACTIVE" ||
+    !user.emailVerified ||
+    user.tokenVersion !== decoded.tokenVersion
+  ) {
+    throw new AppError("Authentication is required.", 401, "UNAUTHORIZED");
+  }
+
+  return {
+    id: user.id,
+    name: user.fullName,
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    departmentId: user.departmentId?.toString(),
+    emailVerified: user.emailVerified,
+    accountStatus: user.accountStatus,
+  };
+}
+
 export async function revokeUserTokens(userId: string): Promise<void> {
   await User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } });
 }
+
+export const register = registerCitizen;
+export const login = loginCitizen;
