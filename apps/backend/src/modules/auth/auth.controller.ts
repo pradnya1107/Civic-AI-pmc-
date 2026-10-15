@@ -20,14 +20,22 @@ export const register: RequestHandler = async (request, response) => {
     event: "registration_initiated",
     email: request.body.email,
   });
-  const user = await registerCitizen(request.body);
+  const result = await registerCitizen(request.body);
 
-  await requestEmailVerification(user.email, "Registration initiated");
+  await requestEmailVerification(result.email, "Registration initiated");
 
   response.status(201).json({
     success: true,
     message: "Account created successfully. Verify your email to continue.",
-    data: { user },
+    token: result.accessToken,
+    accessToken: result.accessToken,
+    role: result.role,
+    data: {
+      user: result.user,
+      token: result.accessToken,
+      accessToken: result.accessToken,
+      role: result.role,
+    },
   });
 };
 
@@ -62,6 +70,9 @@ export const login: RequestHandler = async (request, response) => {
   response.status(200).json({
     success: true,
     message: "Signed in successfully.",
+    token: result.accessToken,
+    accessToken: result.accessToken,
+    role: result.role,
     data: result,
   });
 };
@@ -76,13 +87,15 @@ export const getCurrentUser: RequestHandler = async (request, response) => {
     const userDoc = await User.findById(request.user.id).populate("departmentId");
     departmentName = (userDoc?.departmentId as any)?.name;
   }
+  const userProfile = {
+    ...request.user,
+    departmentName,
+  };
   response.status(200).json({
     success: true,
+    user: userProfile,
     data: {
-      user: {
-        ...request.user,
-        departmentName,
-      },
+      user: userProfile,
     },
   });
 };
