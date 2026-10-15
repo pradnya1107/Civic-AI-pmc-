@@ -7,6 +7,7 @@ import type {
 } from "./complaint.validation";
 import {
   createComplaint,
+  deleteComplaint,
   getComplaint,
   listComplaints,
   updateComplaint,
@@ -66,5 +67,16 @@ export const update: RequestHandler = async (request, response) => {
     success: true,
     message: "Complaint updated successfully.",
     data: { complaint },
+  });
+};
+
+export const remove: RequestHandler = async (request, response) => {
+  await deleteComplaint(
+    actorFromRequest(request),
+    complaintIdFromRequest(request),
+  );
+  response.status(200).json({
+    success: true,
+    message: "Complaint deleted successfully.",
   });
 };

@@ -148,13 +148,17 @@ File uploads and evidence references are not implemented.
 
 Pagination defaults to page 1 and 20 records; the maximum page size is 100.
 
-### Read or update
+### Read, update, or delete
 
 - `GET /api/v1/complaints/{id}` — citizens can read their own record; admins
   can read any record.
 - `PATCH /api/v1/complaints/{id}` — citizens may edit content/location while
   the complaint is still `SUBMITTED`. Administrators may additionally set
   `status`, `priority`, and `departmentId`.
+- `DELETE /api/v1/complaints/{id}` — citizens can delete their own complaint
+  while it is still `SUBMITTED`. Administrators can delete complaints only once
+  they have reached `RESOLVED` status. Ineligible deletions return `400`
+  with `COMPLAINT_NOT_DELETABLE`.
 
 Ownership, role, status, and department fields cannot be changed by citizens.
 An unknown or another citizen's complaint returns the same `404` response.

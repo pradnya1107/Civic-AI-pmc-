@@ -12,6 +12,7 @@ import {
   recordComplaintSubmission,
   recordComplaintUpdate,
 } from "../notifications/notification.service";
+import { Notification } from "../notifications/notification.model";
 
 interface RequestActor {
   id: string;
@@ -166,4 +167,44 @@ export async function updateComplaint(
   }
 
   return updated.toJSON();
+}
+
+export async function deleteComplaint(
+  actor: RequestActor,
+  id: string,
+): Promise<void> {
+  const complaintObjectId = requireObjectId(id);
+  const complaint = await Complaint.findById(complaintObjectId);
+  if (!complaint) {
+    throw notFound();
+  }
+
+  if (actor.role !== "ADMIN") {
+    if (complaint.citizenId.toString() !== actor.id) {
+      throw notFound();
+    }
+
+    if (complaint.status !== "SUBMITTED") {
+      throw new AppError(
+        "A complaint can only be deleted before it is reviewed.",
+        400,
+        "COMPLAINT_NOT_DELETABLE",
+      );
+    }
+  } else {
+    if (complaint.status !== "RESOLVED") {
+      throw new AppError(
+        "Only resolved complaints can be deleted by administrators.",
+        400,
+        "COMPLAINT_NOT_DELETABLE",
+      );
+    }
+  }
+
+  const deleted = await Complaint.findByIdAndDelete(complaintObjectId);
+  if (!deleted) {
+    throw notFound();
+  }
+
+  await Notification.deleteMany({ complaintId: complaintObjectId });
 }
