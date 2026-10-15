@@ -9,7 +9,8 @@
     "start": "pnpm --filter backend start",
     "test": "pnpm --filter backend test",
     "test:types": "pnpm --filter backend test:types",
-    "lint": "pnpm --filter backend test:types"
+    "lint": "pnpm --filter backend test:types",
+    "mobile:typecheck": "npm --prefix apps/mobile run typecheck"
   },
   "packageManager": "pnpm@12.10.1"
 }
