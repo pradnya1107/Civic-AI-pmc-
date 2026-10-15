@@ -1,6 +1,6 @@
 import { model, Schema } from "mongoose";
 
-export const USER_ROLES = ["CITIZEN", "ADMIN"] as const;
+export const USER_ROLES = ["CITIZEN", "ADMIN", "SUPER_ADMIN"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
 export const ACCOUNT_STATUSES = ["ACTIVE", "DISABLED"] as const;
@@ -8,6 +8,7 @@ export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
 export interface UserRecord {
   fullName: string;
+  name?: string;
   email: string;
   passwordHash: string;
   phoneNumber?: string;

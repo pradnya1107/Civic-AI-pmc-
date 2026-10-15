@@ -54,7 +54,7 @@ export async function connectToDatabase(): Promise<void> {
   mongoose.connection.off("error", logMongoConnectionError);
   mongoose.connection.on("error", logMongoConnectionError);
 
-  console.log("MongoDB connected successfully");
+  console.log("Database connected successfully");
 }
 
 export async function disconnectFromDatabase(): Promise<void> {

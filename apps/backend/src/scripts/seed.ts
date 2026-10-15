@@ -61,46 +61,70 @@ const DEFAULT_DEPARTMENTS = [
 /* ─────────────────────── Seed Functions ─────────────────────── */
 
 async function seedAdmin(): Promise<void> {
-  const existingAdmin = await User.findOne({ role: "ADMIN" });
+  // Normalize email (lowercase + trim) to match User model behavior
+  const adminEmail = ADMIN_EMAIL.trim().toLowerCase();
 
-  if (existingAdmin) {
-    console.log(`⏭️  Admin already exists: ${existingAdmin.email} — skipping.`);
+  // Look for an existing user with this email
+  const existing = await User.findOne({ email: adminEmail });
+
+  if (existing) {
+    const updates: Partial<any> = {};
+    if (existing.role !== "SUPER_ADMIN") updates.role = "SUPER_ADMIN";
+    if (!existing.emailVerified) updates.emailVerified = true;
+    if (!existing.accountStatus) updates.accountStatus = "ACTIVE";
+    // Apply updates only if needed
+    if (Object.keys(updates).length > 0) {
+      await User.updateOne({ _id: existing._id }, { $set: updates });
+      console.log(`✅ Updated existing super admin: ${adminEmail}`);
+    } else {
+      console.log(`✅ Super admin already exists: ${adminEmail}`);
+    }
     return;
   }
 
+  // No existing user, create a new super admin
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 
   await User.create({
     fullName: ADMIN_FULL_NAME,
-    email: ADMIN_EMAIL,
+    email: adminEmail,
     passwordHash,
-    role: "ADMIN",
+    role: "SUPER_ADMIN",
     emailVerified: true,
     accountStatus: "ACTIVE",
   });
 
-  console.log("✅ Admin user created successfully:");
-  console.log(`   📧 Email:    ${ADMIN_EMAIL}`);
+  console.log("✅ Super admin user created successfully:");
+  console.log(`   📧 Email:    ${adminEmail}`);
   console.log(`   🔑 Password: ${ADMIN_PASSWORD}`);
 }
 
 async function seedDepartments(): Promise<void> {
+  // Required six departments (slug must be unique)
+  const required = [
+    { name: "Roads", slug: "roads", description: "Handles road-related complaints such as potholes, streetlight, and bridge issues." },
+    { name: "Waste", slug: "waste", description: "Manages garbage collection, illegal dumping, and sanitation issues." },
+    { name: "Water", slug: "water", description: "Handles water supply issues, leaks, and contamination complaints." },
+    { name: "Drainage", slug: "drainage", description: "Manages drainage, flooding, and stormwater problems." },
+    { name: "Street Lighting", slug: "street-lighting", description: "Handles streetlight outages and maintenance." },
+    { name: "Public Health", slug: "public-health", description: "Handles health hazards, mosquito breeding, and sanitation concerns." },
+  ];
+
   let created = 0;
   let skipped = 0;
 
-  for (const dept of DEFAULT_DEPARTMENTS) {
-    const exists = await Department.findOne({ slug: dept.slug });
-    if (exists) {
+  for (const dept of required) {
+    // Use upsert to avoid duplicates; $setOnInsert ensures existing records stay untouched
+    const result = await Department.updateOne({ slug: dept.slug }, { $setOnInsert: dept }, { upsert: true });
+    if (result.upsertedCount && result.upsertedCount > 0) {
+      created++;
+    } else {
+      // If a document with the slug already existed, we consider it skipped
       skipped++;
-      continue;
     }
-    await Department.create(dept);
-    created++;
   }
 
-  console.log(
-    `✅ Departments: ${created} created, ${skipped} already existed.`,
-  );
+  console.log(`✅ Departments: ${created} created, ${skipped} already existed.`);
 }
 
 /* ─────────────────────── Main Runner ─────────────────────── */
