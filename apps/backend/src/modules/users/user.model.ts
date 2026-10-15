@@ -8,6 +8,7 @@ export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
 export interface UserRecord {
   fullName: string;
+  name?: string;
   email: string;
   passwordHash: string;
   phoneNumber?: string;
