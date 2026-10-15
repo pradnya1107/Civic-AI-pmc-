@@ -1,3 +1,7 @@
+packages:
+  - "apps/backend"
+  - "packages/*"
+
 allowBuilds:
   bcrypt: true
   esbuild: true

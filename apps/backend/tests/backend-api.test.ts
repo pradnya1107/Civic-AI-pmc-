@@ -786,6 +786,24 @@ describe("complaint, department, and dashboard APIs", () => {
     expect(read.status).toBe(200);
     expect(unreadCitizenNotification.status).toBe(404);
   });
+
+  describe("system and health check APIs", () => {
+    it("GET /api/v1/health returns 200 with running status and database state", async () => {
+      const res = await request(app).get("/api/v1/health");
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        success: true,
+        message: "CivicAI API is running",
+        server: "running",
+      });
+    });
+
+    it("GET / returns 200 welcome message", async () => {
+      const res = await request(app).get("/");
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+  });
 });
 
 async function mongooseUpdateOtpExpiry(email: string): Promise<void> {
