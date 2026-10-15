@@ -8,19 +8,45 @@ import {
 import { CivicLogo } from "../components/CivicLogo";
 import { colors } from "../theme";
 import { ApiError, type AuthUser } from "../services/auth-api";
+import { SuperAdminDashboard } from "./SuperAdminDashboard";
+import { DepartmentAdminDashboard } from "./DepartmentAdminDashboard";
 
 type AuthenticatedScreenProps = {
   user: AuthUser;
+  token?: string;
   onLogout: () => Promise<void>;
 };
 
 export function AuthenticatedScreen({
   user,
+  token = "",
   onLogout,
 }: AuthenticatedScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // Role-based routing
+  if (user.role === "SUPER_ADMIN") {
+    return (
+      <SuperAdminDashboard
+        user={user}
+        token={token}
+        onLogout={onLogout}
+      />
+    );
+  }
+
+  if (user.role === "DEPARTMENT_ADMIN" || (user.role === "ADMIN" && user.departmentId)) {
+    return (
+      <DepartmentAdminDashboard
+        user={user}
+        token={token}
+        onLogout={onLogout}
+      />
+    );
+  }
+
+  // Default: Citizen Authenticated Screen
   const signOut = async () => {
     setError("");
     setIsSubmitting(true);
@@ -98,5 +124,13 @@ const styles = StyleSheet.create({
   email: { color: colors.muted, fontSize: 13, marginTop: 4 },
   rolePill: { backgroundColor: "#EAF4EF", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, marginTop: 13 },
   roleText: { color: colors.emeraldDark, fontSize: 9, fontWeight: "800", letterSpacing: 0.8 },
-  body: { color: colors.muted, fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: 24, marginBottom: 26 },
+  body: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+    marginTop: 22,
+    marginBottom: 30,
+    paddingHorizontal: 8,
+  },
 });

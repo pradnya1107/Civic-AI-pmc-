@@ -169,7 +169,11 @@ export default function App() {
           }}
         />
       ) : screen === "authenticated" && authenticatedUser ? (
-        <AuthenticatedScreen user={authenticatedUser} onLogout={handleLogout} />
+        <AuthenticatedScreen
+          user={authenticatedUser}
+          token={accessToken}
+          onLogout={handleLogout}
+        />
       ) : (
         <WelcomeScreen
           onLogin={() => setScreen("login")}

@@ -48,6 +48,7 @@ const authenticateRequest: RequestHandler = async (request, _response, next) => 
     fullName: user.fullName,
     email: user.email,
     role: user.role,
+    departmentId: user.departmentId?.toString(),
     emailVerified: user.emailVerified,
     accountStatus: user.accountStatus,
   };

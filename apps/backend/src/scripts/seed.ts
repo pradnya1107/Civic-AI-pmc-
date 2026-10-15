@@ -37,6 +37,16 @@ const DEFAULT_DEPARTMENTS = [
     description: "Manages power outages, faulty wiring, and streetlight issues.",
   },
   {
+    name: "Drainage",
+    slug: "drainage",
+    description: "Handles storm water drains, sewage clogs, and waterlogging.",
+  },
+  {
+    name: "Street Lighting",
+    slug: "street-lighting",
+    description: "Manages public street lighting, damaged poles, and dark spots.",
+  },
+  {
     name: "Public Health",
     slug: "public-health",
     description: "Handles health hazards, mosquito breeding, and sanitation concerns.",

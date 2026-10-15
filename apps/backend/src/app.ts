@@ -9,6 +9,8 @@ import complaintRouter from "./modules/complaints/complaint.routes";
 import departmentRouter from "./modules/departments/department.routes";
 import dashboardRouter from "./modules/dashboard/dashboard.routes";
 import notificationRouter from "./modules/notifications/notification.routes";
+import { superAdminDeptRouter } from "./modules/admin/department-admin.routes";
+import { departmentAdminRouter } from "./modules/department-admin/department-admin.routes";
 import { AppError } from "./utils/app-error";
 
 const app = express();
@@ -78,8 +80,14 @@ app.get("/api/v1/health", (_req, res) => {
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/complaints", complaintRouter);
 app.use("/api/v1/departments", departmentRouter);
+app.use("/api/departments", departmentRouter);
 app.use("/api/v1/admin/dashboard", dashboardRouter);
+app.use("/api/admin/dashboard", dashboardRouter);
 app.use("/api/v1/notifications", notificationRouter);
+app.use("/api/v1/admin/department-admins", superAdminDeptRouter);
+app.use("/api/admin/department-admins", superAdminDeptRouter);
+app.use("/api/v1/department-admin", departmentAdminRouter);
+app.use("/api/department-admin", departmentAdminRouter);
 app.use((_request, _response, next) => {
   next(new AppError("The requested endpoint does not exist.", 404, "NOT_FOUND"));
 });
