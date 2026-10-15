@@ -23,6 +23,7 @@ Citizens can report civic issues, upload evidence, provide location and descript
 | [Workflow.md](./Workflow.md) | Main user and complaint workflows |
 | [ENVIRONMENT-SETUP.md](./ENVIRONMENT-SETUP.md) | Development environment setup |
 | [ImplementationPlan.md](./ImplementationPlan.md) | Step-by-step implementation plan |
+| [CI.md](./CI.md) | Continuous Integration pipeline and automated checks |
 | [Backend API](../apps/backend/API.md) | Authentication, complaint and admin API usage |
 
 ## Core MVP
