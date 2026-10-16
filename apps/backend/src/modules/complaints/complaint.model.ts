@@ -48,7 +48,7 @@ const complaintSchema = new Schema<ComplaintRecord>(
       unique: true,
       default: () => `CIV-${randomUUID()}`,
     },
-    title: { type: String, required: true, trim: true, maxlength: 150 },
+    title: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, required: true, trim: true, maxlength: 5000 },
     category: { type: String, required: true, trim: true, maxlength: 80 },
     location: {

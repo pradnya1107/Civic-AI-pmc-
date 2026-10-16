@@ -97,6 +97,60 @@ describe("GitHub Issue #4: Core Complaint CRUD API", () => {
       expect(response.body.error.code).toBe("VALIDATION_ERROR");
     });
 
+    it("sanitizes title and description against XSS payload injection", async () => {
+      const citizen = await createVerifiedUser("citizen-xss@example.com");
+      const token = await signIn(citizen.email);
+
+      const response = await request(app)
+        .post("/api/v1/complaints")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          title: "Pothole on Main St <script>alert('xss')</script>",
+          description:
+            "Road is broken <script>window.location='evil.com'</script> with deep pits and hazards.",
+          category: "Roads",
+          location: { address: "Main Road, Pune" },
+        });
+
+      expect(response.status).toBe(201);
+      const created = response.body.data.complaint;
+      expect(created.title).not.toContain("<script>");
+      expect(created.title).toBe("Pothole on Main St");
+      expect(created.description).not.toContain("<script>");
+      expect(created.description).toBe("Road is broken with deep pits and hazards.");
+    });
+
+    it("accepts title up to 200 characters and rejects title > 200 characters", async () => {
+      const citizen = await createVerifiedUser("citizen-titlelen@example.com");
+      const token = await signIn(citizen.email);
+
+      const title200 = "P".repeat(200);
+      const resValid = await request(app)
+        .post("/api/v1/complaints")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          title: title200,
+          description: "Valid description for 200-char boundary test.",
+          category: "Roads",
+          location: { address: "Boundary St, Pune" },
+        });
+      expect(resValid.status).toBe(201);
+      expect(resValid.body.data.complaint.title).toHaveLength(200);
+
+      const title201 = "P".repeat(201);
+      const resInvalid = await request(app)
+        .post("/api/v1/complaints")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          title: title201,
+          description: "Valid description for boundary test.",
+          category: "Roads",
+          location: { address: "Boundary St, Pune" },
+        });
+      expect(resInvalid.status).toBe(400);
+      expect(resInvalid.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
     it("rejects invalid complaint input (empty title, short description, invalid coords)", async () => {
       const citizen = await createVerifiedUser("citizen-invalid@example.com");
       const token = await signIn(citizen.email);
