@@ -42,7 +42,7 @@ export const authRateLimit = rateLimit({
       "127.0.0.1"
     );
   },
-  validate: { ip: false },
+  validate: false,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   statusCode: 429,
@@ -64,7 +64,7 @@ const otpRateLimit = rateLimit({
       "127.0.0.1"
     );
   },
-  validate: { ip: false },
+  validate: false,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   statusCode: 429,
