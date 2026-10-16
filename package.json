@@ -10,7 +10,13 @@
     "test": "pnpm --filter backend test",
     "test:types": "pnpm --filter backend test:types",
     "lint": "pnpm --filter backend test:types",
-    "mobile:typecheck": "npm --prefix apps/mobile run typecheck"
+    "mobile:typecheck": "npm --prefix apps/mobile run typecheck",
+    "web": "pnpm --filter web dev",
+    "dev:web": "pnpm --filter web dev",
+    "web:dev": "pnpm --filter web dev",
+    "web:build": "pnpm --filter web build",
+    "web:test": "pnpm --filter web test",
+    "web:preview": "pnpm --filter web preview"
   },
   "packageManager": "pnpm@12.10.1"
 }
