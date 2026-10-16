@@ -5,6 +5,9 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { ComplaintFormPage } from './pages/ComplaintFormPage';
+import { ComplaintListPage } from './pages/ComplaintListPage';
+import { ComplaintDetailPage } from './pages/ComplaintDetailPage';
 
 /**
  * Root index redirect handler
@@ -45,6 +48,34 @@ export const App = () => {
                 <DashboardPage />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/complaints"
+            element={
+              <ProtectedRoute>
+                <ComplaintListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/complaints/new"
+            element={
+              <ProtectedRoute>
+                <ComplaintFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/complaints/:id"
+            element={
+              <ProtectedRoute>
+                <ComplaintDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/report"
+            element={<Navigate to="/complaints/new" replace />}
           />
 
           {/* Catch-all Fallback */}

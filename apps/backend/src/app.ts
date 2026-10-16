@@ -87,6 +87,8 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/auth", authRouter);
 app.use("/auth", authRouter);
 app.use("/api/v1/complaints", complaintRouter);
+app.use("/api/complaints", complaintRouter);
+app.use("/complaints", complaintRouter);
 app.use("/api/v1/departments", departmentRouter);
 app.use("/api/departments", departmentRouter);
 app.use("/api/v1/admin/dashboard", dashboardRouter);

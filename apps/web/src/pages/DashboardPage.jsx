@@ -1,11 +1,53 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { complaintApi } from '../services/api';
 
 export const DashboardPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [complaintStats, setComplaintStats] = useState({
+    active: 0,
+    inProgress: 0,
+    resolved: 0,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const response = await complaintApi.getComplaints();
+        const list = response?.data?.complaints || response?.complaints || response?.data || [];
+        if (Array.isArray(list) && isMounted) {
+          let active = 0;
+          let inProgress = 0;
+          let resolved = 0;
+
+          list.forEach((c) => {
+            const st = (c.status || '').toUpperCase();
+            if (st === 'SUBMITTED' || st === 'VERIFIED' || st === 'UNDER_REVIEW' || st === 'ASSIGNED') {
+              active++;
+            }
+            if (st === 'IN_PROGRESS') {
+              inProgress++;
+            }
+            if (st === 'RESOLVED' || st === 'CLOSED') {
+              resolved++;
+            }
+          });
+
+          setComplaintStats({ active, inProgress, resolved });
+        }
+      } catch {
+        // Stats gracefully remain at 0 if offline or error
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -90,15 +132,15 @@ export const DashboardPage = () => {
         <section className="stats-grid" aria-label="Grievance Statistics Overview">
           <article className="stat-card">
             <div className="stat-label">Active Complaints</div>
-            <div className="stat-value">0</div>
+            <div className="stat-value">{complaintStats.active}</div>
           </article>
           <article className="stat-card">
             <div className="stat-label">In Review / Progress</div>
-            <div className="stat-value">0</div>
+            <div className="stat-value">{complaintStats.inProgress}</div>
           </article>
           <article className="stat-card">
             <div className="stat-label">Resolved Issues</div>
-            <div className="stat-value">0</div>
+            <div className="stat-value">{complaintStats.resolved}</div>
           </article>
           <article className="stat-card">
             <div className="stat-label">Account Verification</div>
@@ -155,18 +197,33 @@ export const DashboardPage = () => {
               Report issues directly to Pune Municipal Corporation departments including Roads, Water Supply, Drainage, Solid Waste Management, and Street Lighting.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <button
-                type="button"
+              <Link
+                to="/complaints/new"
+                className="btn btn-primary"
+                style={{ justifyContent: 'flex-start' }}
+                id="report-an-issue-button"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>Report an Issue (New Grievance)</span>
+              </Link>
+              <Link
+                to="/complaints"
                 className="btn btn-outline"
                 style={{ justifyContent: 'flex-start' }}
-                onClick={() => alert('Civic issue filing module will be enabled in subsequent milestones.')}
+                id="view-my-complaints-button"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <line x1="10" y1="9" x2="8" y2="9" />
                 </svg>
-                <span>Report New Civic Grievance (Coming Soon)</span>
-              </button>
+                <span>View My Complaints & Grievance History</span>
+              </Link>
             </div>
           </article>
         </section>

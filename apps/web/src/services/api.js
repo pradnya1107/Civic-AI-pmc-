@@ -70,6 +70,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // 401 Unauthorized handling: clear credentials and redirect to login
+    if (error.response?.status === 401) {
+      removeStoredToken();
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
+
     let message = 'An unexpected error occurred. Please try again.';
     let code = 'UNKNOWN_ERROR';
 
@@ -131,4 +139,34 @@ export const authApi = {
   },
 };
 
+export const complaintApi = {
+  /**
+   * Submit a new citizen grievance / complaint
+   * POST /api/v1/complaints
+   */
+  async createComplaint(complaintData) {
+    const response = await api.post('/api/v1/complaints', complaintData);
+    return response.data;
+  },
+
+  /**
+   * Fetch complaints submitted by the citizen
+   * GET /api/v1/complaints
+   */
+  async getComplaints(params = {}) {
+    const response = await api.get('/api/v1/complaints', { params });
+    return response.data;
+  },
+
+  /**
+   * Fetch specific complaint details by id
+   * GET /api/v1/complaints/:id
+   */
+  async getComplaintById(id) {
+    const response = await api.get(`/api/v1/complaints/${id}`);
+    return response.data;
+  },
+};
+
 export default api;
+
