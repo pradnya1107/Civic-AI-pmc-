@@ -14,6 +14,7 @@ import {
 } from "./password-reset.service";
 import { logDevOtpEvent } from "./auth-diagnostics";
 import { User } from "../users/user.model";
+import { generateAndDispatchAdminOtp } from "./department-admin-otp.service";
 
 export const register: RequestHandler = async (request, response) => {
   logDevOtpEvent({
@@ -66,14 +67,77 @@ export const verifyOtp: RequestHandler = async (request, response) => {
 };
 
 export const login: RequestHandler = async (request, response) => {
-  const result = await loginCitizen(request.body.email, request.body.password);
+  const forceOtp = Boolean(
+    request.headers["x-test-admin-otp"] === "true" || request.body.forceOtp,
+  );
+  const result = await loginCitizen(
+    request.body.email,
+    request.body.password,
+    request.body.otp,
+    { forceOtp },
+  );
+
+  if ("requiresOtp" in result && result.requiresOtp) {
+    response.status(200).json({
+      success: true,
+      requiresOtp: true,
+      message:
+        result.message ||
+        "Security OTP required for Department Admin. Check your backend terminal.",
+      data: result,
+    });
+    return;
+  }
+
+  const session = result as Extract<typeof result, { accessToken: string }>;
+
   response.status(200).json({
     success: true,
     message: "Signed in successfully.",
-    token: result.accessToken,
-    accessToken: result.accessToken,
-    role: result.role,
-    data: result,
+    token: session.accessToken,
+    accessToken: session.accessToken,
+    role: session.role,
+    data: session,
+  });
+};
+
+export const resendDepartmentAdminOtpHandler: RequestHandler = async (
+  request,
+  response,
+) => {
+  const email = request.body.email?.trim().toLowerCase();
+  if (!email) {
+    response.status(400).json({ success: false, message: "Email is required." });
+    return;
+  }
+
+  const user = await User.findOne({ email }).populate("departmentId");
+  if (!user || user.role !== "DEPARTMENT_ADMIN") {
+    response.status(200).json({
+      success: true,
+      message:
+        "If an eligible department admin exists, an OTP has been printed to the backend terminal.",
+    });
+    return;
+  }
+
+  const dept = user.departmentId as any;
+  const deptName = dept?.name || "Department";
+  const code = await generateAndDispatchAdminOtp(
+    user,
+    deptName,
+    "LOGIN_VERIFICATION",
+  );
+
+  response.status(200).json({
+    success: true,
+    message:
+      "A fresh verification OTP has been printed to the backend terminal.",
+    data: {
+      email: user.email,
+      departmentName: deptName,
+      demoTerminalOtp: code,
+    },
   });
 };
 

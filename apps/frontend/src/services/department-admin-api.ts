@@ -56,6 +56,7 @@ export type DepartmentComplaintItem = {
 export type CreateAdminResponse = {
   admin: DepartmentAdminItem;
   temporaryPassword?: string;
+  confirmationOtp?: string;
 };
 
 async function apiCall<T>(
@@ -153,5 +154,18 @@ export const departmentAdminApi = {
       { token },
     );
     return data.complaints;
+  },
+
+  async resendDepartmentAdminOtp(email: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${getApiBaseUrl()}/api/v1/auth/department-admin/resend-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new ApiError(data?.message || "Failed to resend OTP.", response.status);
+    }
+    return data;
   },
 };
