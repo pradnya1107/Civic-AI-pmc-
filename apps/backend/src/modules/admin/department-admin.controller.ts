@@ -114,7 +114,7 @@ export const getDepartmentAdminMeHandler: RequestHandler = async (
 };
 
 export const updateAdminHandler: RequestHandler = async (request, response) => {
-  const { id } = request.params;
+  const id = request.params.id as string;
   const { fullName, departmentId, accountStatus } = request.body;
 
   const result = await updateDepartmentAdmin(id, {

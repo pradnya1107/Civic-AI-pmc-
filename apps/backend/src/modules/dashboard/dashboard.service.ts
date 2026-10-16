@@ -75,10 +75,10 @@ export async function getAdminDashboard() {
     departments.map(async (dept) => {
       const deptId = dept._id;
       const [deptTotal, deptResolved, deptPending, deptInProgress] = await Promise.all([
-        Complaint.countDocuments({ departmentId: deptId }),
-        Complaint.countDocuments({ departmentId: deptId, status: { $in: ["RESOLVED", "CLOSED"] } }),
-        Complaint.countDocuments({ departmentId: deptId, status: { $in: ["SUBMITTED", "UNDER_REVIEW"] } }),
-        Complaint.countDocuments({ departmentId: deptId, status: { $in: ["ASSIGNED", "IN_PROGRESS"] } }),
+        Complaint.countDocuments({ departmentId: deptId as any }),
+        Complaint.countDocuments({ departmentId: deptId as any, status: "RESOLVED" }),
+        Complaint.countDocuments({ departmentId: deptId as any, status: { $in: ["SUBMITTED", "UNDER_REVIEW"] } }),
+        Complaint.countDocuments({ departmentId: deptId as any, status: { $in: ["ASSIGNED", "IN_PROGRESS"] } }),
       ]);
 
       const assignedAdmins = admins.filter(

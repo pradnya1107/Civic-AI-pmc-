@@ -16,7 +16,7 @@ export const list: RequestHandler = async (request, response) => {
 };
 
 export const getById: RequestHandler = async (request, response) => {
-  const department = await getDepartmentById(request.params.id);
+  const department = await getDepartmentById(request.params.id as string);
   response.status(200).json({
     success: true,
     data: { department },
@@ -33,7 +33,7 @@ export const create: RequestHandler = async (request, response) => {
 };
 
 export const update: RequestHandler = async (request, response) => {
-  const department = await updateDepartment(request.params.id, request.body);
+  const department = await updateDepartment(request.params.id as string, request.body);
   response.status(200).json({
     success: true,
     message: "Department updated successfully.",
