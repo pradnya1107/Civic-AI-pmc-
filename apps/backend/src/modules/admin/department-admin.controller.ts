@@ -5,6 +5,8 @@ import {
   listDepartmentAdmins,
   getDepartmentDashboard,
   getDepartmentComplaints,
+  updateDepartmentAdmin,
+  listCitizens,
 } from "./department-admin.service";
 import { Department } from "../departments/department.model";
 
@@ -108,5 +110,35 @@ export const getDepartmentAdminMeHandler: RequestHandler = async (
         accountStatus: user.accountStatus,
       },
     },
+  });
+};
+
+export const updateAdminHandler: RequestHandler = async (request, response) => {
+  const { id } = request.params;
+  const { fullName, departmentId, accountStatus } = request.body;
+
+  const result = await updateDepartmentAdmin(id, {
+    fullName,
+    departmentId,
+    accountStatus,
+  });
+
+  response.status(200).json({
+    success: true,
+    message: "Department admin updated successfully.",
+    data: result,
+  });
+};
+
+export const listCitizensHandler: RequestHandler = async (request, response) => {
+  const search = typeof request.query.search === "string" ? request.query.search : undefined;
+  const page = typeof request.query.page === "string" ? parseInt(request.query.page, 10) : undefined;
+  const limit = typeof request.query.limit === "string" ? parseInt(request.query.limit, 10) : undefined;
+
+  const result = await listCitizens({ search, page, limit });
+
+  response.status(200).json({
+    success: true,
+    data: result,
   });
 };

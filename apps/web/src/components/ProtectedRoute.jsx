@@ -14,8 +14,8 @@ import { useAuth } from '../context/AuthContext';
  * ============================================================================
  */
 
-export const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+export const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   // Prevent flash of redirection while the token is being verified against /api/v1/auth/me
@@ -31,6 +31,14 @@ export const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated) {
     // Preserve intended destination so user can be redirected after successful login
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Role-based access control
+  if (allowedRoles && allowedRoles.length > 0) {
+    const userRole = user?.role || 'CITIZEN';
+    if (!allowedRoles.includes(userRole)) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return children ? children : null;

@@ -166,7 +166,131 @@ export const complaintApi = {
     const response = await api.get(`/api/v1/complaints/${id}`);
     return response.data;
   },
+
+  /**
+   * Update complaint status, department assignment, or priority (Admin/SuperAdmin)
+   * PATCH /api/v1/complaints/:id
+   */
+  async updateComplaint(id, data) {
+    const response = await api.patch(`/api/v1/complaints/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete complaint
+   * DELETE /api/v1/complaints/:id
+   */
+  async deleteComplaint(id) {
+    const response = await api.delete(`/api/v1/complaints/${id}`);
+    return response.data;
+  },
+};
+
+export const departmentApi = {
+  /**
+   * List all departments with complaint & admin stats
+   * GET /api/v1/departments
+   */
+  async getDepartments(params = {}) {
+    const response = await api.get('/api/v1/departments', { params });
+    return response.data;
+  },
+
+  /**
+   * Get department by ID
+   * GET /api/v1/departments/:id
+   */
+  async getDepartmentById(id) {
+    const response = await api.get(`/api/v1/departments/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Create a new civic department
+   * POST /api/v1/departments
+   */
+  async createDepartment(data) {
+    const response = await api.post('/api/v1/departments', data);
+    return response.data;
+  },
+
+  /**
+   * Update an existing department
+   * PATCH /api/v1/departments/:id
+   */
+  async updateDepartment(id, data) {
+    const response = await api.patch(`/api/v1/departments/${id}`, data);
+    return response.data;
+  },
+};
+
+export const adminApi = {
+  /**
+   * Fetch municipal super admin dashboard metrics, KPI counters, and department workloads
+   * GET /api/v1/admin/dashboard
+   */
+  async getDashboard() {
+    const response = await api.get('/api/v1/admin/dashboard');
+    return response.data;
+  },
+
+  /**
+   * Fetch department administrators directory
+   * GET /api/v1/admin/department-admins
+   */
+  async getDepartmentAdmins() {
+    const response = await api.get('/api/v1/admin/department-admins');
+    return response.data;
+  },
+
+  /**
+   * Create a new department administrator
+   * POST /api/v1/admin/department-admins
+   */
+  async createDepartmentAdmin(data) {
+    const response = await api.post('/api/v1/admin/department-admins', data);
+    return response.data;
+  },
+
+  /**
+   * Update department admin details, assignment, or account status
+   * PATCH /api/v1/admin/department-admins/:id
+   */
+  async updateDepartmentAdmin(id, data) {
+    const response = await api.patch(`/api/v1/admin/department-admins/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Fetch registered citizens directory
+   * GET /api/v1/admin/citizens
+   */
+  async getCitizens(params = {}) {
+    const response = await api.get('/api/v1/admin/citizens', { params });
+    return response.data;
+  },
+};
+
+export const notificationApi = {
+  /**
+   * Fetch user/admin notifications
+   * GET /api/v1/notifications
+   */
+  async getNotifications(params = {}) {
+    const response = await api.get('/api/v1/notifications', { params });
+    return response.data;
+  },
+
+  /**
+   * Mark notification as read
+   * PATCH /api/v1/notifications/:id/read
+   */
+  async markAsRead(id) {
+    const response = await api.patch(`/api/v1/notifications/${id}/read`);
+    return response.data;
+  },
 };
 
 export default api;
+
 
