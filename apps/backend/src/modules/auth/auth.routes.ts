@@ -41,7 +41,6 @@ export const authRateLimit = rateLimit({
       ipKeyGenerator(request.ip || "127.0.0.1")
     );
   },
-  validate: { ip: false, keyGeneratorIpFallback: false },
   validate: false,
   standardHeaders: "draft-8",
   legacyHeaders: false,
@@ -63,7 +62,6 @@ const otpRateLimit = rateLimit({
       ipKeyGenerator(request.ip || "127.0.0.1")
     );
   },
-  validate: { ip: false, keyGeneratorIpFallback: false },
   validate: false,
   standardHeaders: "draft-8",
   legacyHeaders: false,
