@@ -42,6 +42,12 @@ app.use(
     credentials: true,
   }),
 );
+app.use((req, _res, next) => {
+  if (req.url) {
+    req.url = req.url.trim().replace(/(%20)+$/, "");
+  }
+  next();
+});
 app.use(express.json());
 app.use(requestLogger);
 

@@ -109,6 +109,45 @@ async function seedAdmin(): Promise<void> {
   console.log(`   🔑 Password: ${ADMIN_PASSWORD}`);
 }
 
+/* ─────────────────────── Demo Citizen Account ─────────────────────── */
+const DEMO_CITIZEN_EMAIL = "citizen@example.com";
+const DEMO_CITIZEN_PASSWORD = "Citizen@12345678";
+
+async function seedCitizen(): Promise<void> {
+  const email = DEMO_CITIZEN_EMAIL.trim().toLowerCase();
+  const existing = await User.findOne({ email });
+  const passwordHash = await bcrypt.hash(DEMO_CITIZEN_PASSWORD, 12);
+
+  if (existing) {
+    await User.updateOne(
+      { _id: existing._id },
+      {
+        $set: {
+          role: "CITIZEN",
+          emailVerified: true,
+          accountStatus: "ACTIVE",
+          passwordHash,
+        },
+      },
+    );
+    console.log(`✅ Demo Citizen ready: ${email}`);
+    return;
+  }
+
+  await User.create({
+    fullName: "Civic Citizen",
+    email,
+    passwordHash,
+    role: "CITIZEN",
+    emailVerified: true,
+    accountStatus: "ACTIVE",
+  });
+
+  console.log("✅ Demo citizen user created successfully:");
+  console.log(`   📧 Email:    ${email}`);
+  console.log(`   🔑 Password: ${DEMO_CITIZEN_PASSWORD}`);
+}
+
 async function seedDepartments(): Promise<void> {
   // Required six departments (slug must be unique)
   const required = [
@@ -223,6 +262,7 @@ async function seed(): Promise<void> {
   await connectToDatabase();
 
   await seedAdmin();
+  await seedCitizen();
   await seedDepartments();
   await seedDemoDepartmentAdmins();
 
