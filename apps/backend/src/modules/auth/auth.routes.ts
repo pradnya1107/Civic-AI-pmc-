@@ -42,6 +42,7 @@ export const authRateLimit = rateLimit({
     );
   },
   validate: { ip: false, keyGeneratorIpFallback: false },
+  validate: false,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   statusCode: 429,
@@ -63,6 +64,7 @@ const otpRateLimit = rateLimit({
     );
   },
   validate: { ip: false, keyGeneratorIpFallback: false },
+  validate: false,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   statusCode: 429,
