@@ -13,6 +13,7 @@ import {
   resendOtp,
   sendOtp,
   verifyOtp,
+  resendDepartmentAdminOtpHandler,
 } from "./auth.controller";
 import {
   emailSchema,
@@ -25,11 +26,48 @@ import {
 
 const authRouter = Router();
 
+export const authRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: (request) => {
+    if (process.env.NODE_ENV === "test" && !request.headers["x-test-rate-limit"]) {
+      return 1000;
+    }
+    return 10;
+  },
+  keyGenerator: (request) => {
+    return (
+      (request.headers["x-test-client-id"] as string) ||
+      (request.headers["x-forwarded-for"] as string) ||
+      request.ip ||
+      "127.0.0.1"
+    );
+  },
+  validate: { ip: false },
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  statusCode: 429,
+  message: {
+    success: false,
+    message: "Too many authentication requests. Try again later.",
+    error: { code: "RATE_LIMITED" },
+  },
+});
+
 const otpRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: process.env.NODE_ENV === "test" ? 1000 : 10,
+  keyGenerator: (request) => {
+    return (
+      (request.headers["x-test-client-id"] as string) ||
+      (request.headers["x-forwarded-for"] as string) ||
+      request.ip ||
+      "127.0.0.1"
+    );
+  },
+  validate: { ip: false },
   standardHeaders: "draft-8",
   legacyHeaders: false,
+  statusCode: 429,
   message: {
     success: false,
     message: "Too many authentication requests. Try again later.",
@@ -39,7 +77,7 @@ const otpRateLimit = rateLimit({
 
 authRouter.post(
   "/register",
-  otpRateLimit,
+  authRateLimit,
   validateRequest(registerSchema),
   asyncHandler(register),
 );
@@ -64,9 +102,14 @@ authRouter.post(
 );
 authRouter.post(
   "/login",
-  otpRateLimit,
+  authRateLimit,
   validateRequest(loginSchema),
   asyncHandler(login),
+);
+authRouter.post(
+  "/department-admin/resend-otp",
+  authRateLimit,
+  asyncHandler(resendDepartmentAdminOtpHandler),
 );
 authRouter.post(
   "/forgot-password",

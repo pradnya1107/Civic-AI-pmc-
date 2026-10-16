@@ -95,12 +95,17 @@ export default function App() {
     };
   }, []);
 
-  const handleLogin = async (email: string, password: string) => {
-    const session: AuthSession = await authApi.login(email, password);
+  const handleLogin = async (email: string, password: string, otp?: string) => {
+    const result = await authApi.login(email, password, otp);
+    if ("requiresOtp" in result && result.requiresOtp) {
+      return result;
+    }
+    const session = result as AuthSession;
     await sessionStore.saveAccessToken(session.accessToken);
     setAuthenticatedUser(session.user);
     setAccessToken(session.accessToken);
     setScreen("authenticated");
+    return session;
   };
 
   const handleLogout = async () => {
@@ -169,7 +174,11 @@ export default function App() {
           }}
         />
       ) : screen === "authenticated" && authenticatedUser ? (
-        <AuthenticatedScreen user={authenticatedUser} onLogout={handleLogout} />
+        <AuthenticatedScreen
+          user={authenticatedUser}
+          token={accessToken}
+          onLogout={handleLogout}
+        />
       ) : (
         <WelcomeScreen
           onLogin={() => setScreen("login")}

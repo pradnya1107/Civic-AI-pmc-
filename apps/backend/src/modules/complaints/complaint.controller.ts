@@ -18,7 +18,11 @@ function actorFromRequest(request: Parameters<RequestHandler>[0]) {
   if (!user) {
     throw new Error("Authenticated user is missing from the request.");
   }
-  return { id: user.id, role: user.role };
+  return {
+    id: user.id,
+    role: user.role,
+    departmentId: user.departmentId,
+  };
 }
 
 function complaintIdFromRequest(request: Parameters<RequestHandler>[0]) {

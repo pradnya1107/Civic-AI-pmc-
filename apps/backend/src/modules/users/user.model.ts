@@ -1,6 +1,11 @@
-import { model, Schema } from "mongoose";
+import { model, Schema, Types } from "mongoose";
 
-export const USER_ROLES = ["CITIZEN", "ADMIN"] as const;
+export const USER_ROLES = [
+  "CITIZEN",
+  "ADMIN",
+  "DEPARTMENT_ADMIN",
+  "SUPER_ADMIN",
+] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
 export const ACCOUNT_STATUSES = ["ACTIVE", "DISABLED"] as const;
@@ -8,10 +13,12 @@ export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
 export interface UserRecord {
   fullName: string;
+  name?: string;
   email: string;
   passwordHash: string;
   phoneNumber?: string;
   role: UserRole;
+  departmentId?: Types.ObjectId;
   emailVerified: boolean;
   accountStatus: AccountStatus;
   tokenVersion: number;
@@ -33,6 +40,7 @@ const userSchema = new Schema<UserRecord>(
     passwordHash: { type: String, required: true, select: false },
     phoneNumber: { type: String, trim: true, maxlength: 32 },
     role: { type: String, enum: USER_ROLES, default: "CITIZEN", required: true },
+    departmentId: { type: Schema.Types.ObjectId, ref: "Department" },
     emailVerified: { type: Boolean, default: false, required: true },
     accountStatus: {
       type: String,

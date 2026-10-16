@@ -82,5 +82,6 @@ const complaintSchema = new Schema<ComplaintRecord>(
 
 complaintSchema.index({ citizenId: 1, createdAt: -1 });
 complaintSchema.index({ status: 1, createdAt: -1 });
+complaintSchema.index({ status: 1, citizenId: 1 });
 
 export const Complaint = model<ComplaintRecord>("Complaint", complaintSchema);

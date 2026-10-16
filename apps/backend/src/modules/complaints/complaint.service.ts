@@ -17,16 +17,31 @@ import { Notification } from "../notifications/notification.model";
 interface RequestActor {
   id: string;
   role: UserRole;
+  departmentId?: string;
 }
 
 function requireObjectId(value: string): Types.ObjectId {
   return new Types.ObjectId(value);
 }
 
+function isPrivilegedAdmin(role: UserRole): boolean {
+  return role === "ADMIN" || role === "DEPARTMENT_ADMIN" || role === "SUPER_ADMIN";
+}
+
 function actorFilter(actor: RequestActor) {
-  return actor.role === "ADMIN"
-    ? {}
-    : { citizenId: requireObjectId(actor.id) };
+  if (actor.role === "SUPER_ADMIN") {
+    return {};
+  }
+  if (
+    (actor.role === "ADMIN" || actor.role === "DEPARTMENT_ADMIN") &&
+    actor.departmentId
+  ) {
+    return { departmentId: requireObjectId(actor.departmentId) };
+  }
+  if (actor.role === "ADMIN") {
+    return {};
+  }
+  return { citizenId: requireObjectId(actor.id) };
 }
 
 function notFound(): AppError {
@@ -79,13 +94,32 @@ export async function listComplaints(
 }
 
 export async function getComplaint(actor: RequestActor, id: string) {
-  const complaint = await Complaint.findOne({
-    _id: requireObjectId(id),
-    ...actorFilter(actor),
-  }).lean();
+  const objectId = requireObjectId(id);
+  const complaint = await Complaint.findById(objectId).lean();
   if (!complaint) {
     throw notFound();
   }
+
+  if (actor.role === "CITIZEN") {
+    if (complaint.citizenId.toString() !== actor.id) {
+      throw notFound();
+    }
+  } else if (
+    (actor.role === "ADMIN" || actor.role === "DEPARTMENT_ADMIN") &&
+    actor.departmentId
+  ) {
+    if (
+      !complaint.departmentId ||
+      complaint.departmentId.toString() !== actor.departmentId
+    ) {
+      throw new AppError(
+        "You do not have permission to access complaints belonging to another department.",
+        403,
+        "FORBIDDEN",
+      );
+    }
+  }
+
   return complaint;
 }
 
@@ -95,7 +129,7 @@ export async function updateComplaint(
   patch: UpdateComplaintInput,
 ) {
   if (
-    actor.role !== "ADMIN" &&
+    !isPrivilegedAdmin(actor.role) &&
     (patch.status !== undefined ||
       patch.priority !== undefined ||
       patch.departmentId !== undefined)
@@ -105,6 +139,25 @@ export async function updateComplaint(
       403,
       "FORBIDDEN",
     );
+  }
+
+  // Cross-department check for department admin
+  if (
+    (actor.role === "ADMIN" || actor.role === "DEPARTMENT_ADMIN") &&
+    actor.departmentId
+  ) {
+    const existing = await Complaint.findById(requireObjectId(id));
+    if (
+      existing &&
+      existing.departmentId &&
+      existing.departmentId.toString() !== actor.departmentId
+    ) {
+      throw new AppError(
+        "You do not have permission to access complaints belonging to another department.",
+        403,
+        "FORBIDDEN",
+      );
+    }
   }
 
   const updates: Record<string, unknown> = { ...patch };
@@ -133,7 +186,7 @@ export async function updateComplaint(
     {
       _id: requireObjectId(id),
       ...actorFilter(actor),
-      ...(actor.role === "ADMIN" ? {} : { status: "SUBMITTED" }),
+      ...(isPrivilegedAdmin(actor.role) ? {} : { status: "SUBMITTED" }),
     },
     {
       $set: updates,
@@ -144,7 +197,7 @@ export async function updateComplaint(
 
   if (!updated) {
     if (
-      actor.role !== "ADMIN" &&
+      !isPrivilegedAdmin(actor.role) &&
       (await Complaint.exists({
         _id: requireObjectId(id),
         ...actorFilter(actor),
@@ -160,7 +213,7 @@ export async function updateComplaint(
   }
 
   if (
-    actor.role === "ADMIN" &&
+    isPrivilegedAdmin(actor.role) &&
     (patch.status !== undefined || patch.departmentId !== undefined)
   ) {
     await recordComplaintUpdate(updated, updated.status);
