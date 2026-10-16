@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../middleware/async-handler";
 import { validateRequest } from "../../middleware/validate-request";
-import { rateLimit } from "express-rate-limit";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { authenticate } from "../../middleware/authenticate";
 import {
   getCurrentUser,
@@ -38,8 +38,7 @@ export const authRateLimit = rateLimit({
     return (
       (request.headers["x-test-client-id"] as string) ||
       (request.headers["x-forwarded-for"] as string) ||
-      request.ip ||
-      "127.0.0.1"
+      ipKeyGenerator(request.ip || "127.0.0.1")
     );
   },
   validate: false,
@@ -60,8 +59,7 @@ const otpRateLimit = rateLimit({
     return (
       (request.headers["x-test-client-id"] as string) ||
       (request.headers["x-forwarded-for"] as string) ||
-      request.ip ||
-      "127.0.0.1"
+      ipKeyGenerator(request.ip || "127.0.0.1")
     );
   },
   validate: false,

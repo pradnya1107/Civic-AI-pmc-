@@ -1,5 +1,6 @@
 packages:
   - "apps/backend"
+  - "apps/web"
   - "packages/*"
 
 allowBuilds:
