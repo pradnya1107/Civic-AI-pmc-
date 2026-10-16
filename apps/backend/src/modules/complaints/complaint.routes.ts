@@ -12,6 +12,7 @@ import {
   create,
   getById,
   list,
+  remove,
   update,
 } from "./complaint.controller";
 
@@ -38,6 +39,11 @@ complaintRouter.patch(
   validateRequest(complaintIdSchema, "params"),
   validateRequest(updateComplaintSchema),
   asyncHandler(update),
+);
+complaintRouter.delete(
+  "/:id",
+  validateRequest(complaintIdSchema, "params"),
+  asyncHandler(remove),
 );
 
 export default complaintRouter;

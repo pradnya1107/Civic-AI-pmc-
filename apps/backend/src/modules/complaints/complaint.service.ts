@@ -12,6 +12,7 @@ import {
   recordComplaintSubmission,
   recordComplaintUpdate,
 } from "../notifications/notification.service";
+import { Notification } from "../notifications/notification.model";
 
 interface RequestActor {
   id: string;
@@ -43,6 +44,15 @@ function actorFilter(actor: RequestActor) {
   return { citizenId: requireObjectId(actor.id) };
 }
 
+function sanitizeText(value: string): string {
+  return value
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function notFound(): AppError {
   return new AppError("Complaint not found.", 404, "COMPLAINT_NOT_FOUND");
 }
@@ -51,8 +61,13 @@ export async function createComplaint(
   actor: RequestActor,
   input: CreateComplaintInput,
 ) {
-  const complaint = await Complaint.create({
+  const sanitizedInput = {
     ...input,
+    title: sanitizeText(input.title),
+    description: sanitizeText(input.description),
+  };
+  const complaint = await Complaint.create({
+    ...sanitizedInput,
     citizenId: requireObjectId(actor.id),
   });
   await recordComplaintSubmission(complaint);
@@ -160,6 +175,12 @@ export async function updateComplaint(
   }
 
   const updates: Record<string, unknown> = { ...patch };
+  if (typeof patch.title === "string") {
+    updates.title = sanitizeText(patch.title);
+  }
+  if (typeof patch.description === "string") {
+    updates.description = sanitizeText(patch.description);
+  }
   const unset: Record<string, 1> = {};
   if (patch.departmentId !== undefined) {
     if (patch.departmentId === null) {
@@ -219,4 +240,44 @@ export async function updateComplaint(
   }
 
   return updated.toJSON();
+}
+
+export async function deleteComplaint(
+  actor: RequestActor,
+  id: string,
+): Promise<void> {
+  const complaintObjectId = requireObjectId(id);
+  const complaint = await Complaint.findById(complaintObjectId);
+  if (!complaint) {
+    throw notFound();
+  }
+
+  if (actor.role !== "ADMIN") {
+    if (complaint.citizenId.toString() !== actor.id) {
+      throw notFound();
+    }
+
+    if (complaint.status !== "SUBMITTED") {
+      throw new AppError(
+        "A complaint can only be deleted before it is reviewed.",
+        400,
+        "COMPLAINT_NOT_DELETABLE",
+      );
+    }
+  } else {
+    if (complaint.status !== "RESOLVED") {
+      throw new AppError(
+        "Only resolved complaints can be deleted by administrators.",
+        400,
+        "COMPLAINT_NOT_DELETABLE",
+      );
+    }
+  }
+
+  const deleted = await Complaint.findByIdAndDelete(complaintObjectId);
+  if (!deleted) {
+    throw notFound();
+  }
+
+  await Notification.deleteMany({ complaintId: complaintObjectId });
 }

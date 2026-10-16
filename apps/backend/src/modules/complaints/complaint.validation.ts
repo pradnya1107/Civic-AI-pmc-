@@ -21,7 +21,7 @@ const locationSchema = z
 
 export const createComplaintSchema = z
   .object({
-    title: z.string().trim().min(3).max(150),
+    title: z.string().trim().min(3).max(200),
     description: z.string().trim().min(10).max(5000),
     category: z.string().trim().min(1).max(80),
     location: locationSchema,
@@ -45,7 +45,7 @@ export const complaintListQuerySchema = z
 
 export const updateComplaintSchema = z
   .object({
-    title: z.string().trim().min(3).max(150).optional(),
+    title: z.string().trim().min(3).max(200).optional(),
     description: z.string().trim().min(10).max(5000).optional(),
     category: z.string().trim().min(1).max(80).optional(),
     location: locationSchema.optional(),
