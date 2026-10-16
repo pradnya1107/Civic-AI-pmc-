@@ -75,6 +75,8 @@ export const loginSchema = z
       .min(1)
       .max(128)
       .refine((password) => Buffer.byteLength(password, "utf8") <= 72),
+    otp: z.string().trim().regex(/^\d{6}$/, "OTP must be a 6-digit code.").optional(),
+    forceOtp: z.boolean().optional(),
   })
   .strict();
 

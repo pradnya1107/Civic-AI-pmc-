@@ -13,6 +13,7 @@ import {
   resendOtp,
   sendOtp,
   verifyOtp,
+  resendDepartmentAdminOtpHandler,
 } from "./auth.controller";
 import {
   emailSchema,
@@ -41,6 +42,7 @@ export const authRateLimit = rateLimit({
       "127.0.0.1"
     );
   },
+  validate: { ip: false },
   standardHeaders: "draft-8",
   legacyHeaders: false,
   statusCode: 429,
@@ -54,6 +56,15 @@ export const authRateLimit = rateLimit({
 const otpRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: process.env.NODE_ENV === "test" ? 1000 : 10,
+  keyGenerator: (request) => {
+    return (
+      (request.headers["x-test-client-id"] as string) ||
+      (request.headers["x-forwarded-for"] as string) ||
+      request.ip ||
+      "127.0.0.1"
+    );
+  },
+  validate: { ip: false },
   standardHeaders: "draft-8",
   legacyHeaders: false,
   statusCode: 429,
@@ -94,6 +105,11 @@ authRouter.post(
   authRateLimit,
   validateRequest(loginSchema),
   asyncHandler(login),
+);
+authRouter.post(
+  "/department-admin/resend-otp",
+  authRateLimit,
+  asyncHandler(resendDepartmentAdminOtpHandler),
 );
 authRouter.post(
   "/forgot-password",

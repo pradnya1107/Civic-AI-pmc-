@@ -55,6 +55,7 @@ export function SuperAdminDashboard({
   const [createdCredentials, setCreatedCredentials] = useState<{
     email: string;
     temporaryPassword?: string;
+    confirmationOtp?: string;
     departmentName: string;
   } | null>(null);
 
@@ -119,6 +120,7 @@ export function SuperAdminDashboard({
       setCreatedCredentials({
         email: result.admin.email,
         temporaryPassword: result.temporaryPassword,
+        confirmationOtp: result.confirmationOtp,
         departmentName: selectedDept?.name || "Department",
       });
 
@@ -235,8 +237,17 @@ export function SuperAdminDashboard({
                         {createdCredentials.temporaryPassword}
                       </Text>
                     </Text>
+                    {createdCredentials.confirmationOtp ? (
+                      <Text style={styles.credRow}>
+                        <Text style={styles.credKey}>Confirmation OTP: </Text>
+                        <Text style={styles.credOtp}>
+                          {createdCredentials.confirmationOtp}
+                        </Text>
+                        <Text style={styles.credBadge}> (Sent to Terminal)</Text>
+                      </Text>
+                    ) : null}
                     <Text style={styles.credNotice}>
-                      Also logged in backend terminal. You can log in using these credentials.
+                      Dispatched to backend terminal. The department admin will be prompted to enter this OTP on login to confirm their account.
                     </Text>
                   </View>
                 ) : null}
@@ -389,6 +400,8 @@ const styles = StyleSheet.create({
   credRow: { color: colors.text, fontSize: 13, marginVertical: 2 },
   credKey: { fontWeight: "700" },
   credPassword: { color: "#B91C1C", fontWeight: "800", fontFamily: "monospace" },
+  credOtp: { color: "#2563EB", fontWeight: "800", fontFamily: "monospace", letterSpacing: 1 },
+  credBadge: { color: "#059669", fontSize: 11, fontWeight: "700" },
   credNotice: { color: colors.muted, fontSize: 11, fontStyle: "italic", marginTop: 6 },
   adminRow: {
     flexDirection: "row",

@@ -5,6 +5,7 @@ import { User } from "../users/user.model";
 import { Department } from "../departments/department.model";
 import { Complaint } from "../complaints/complaint.model";
 import { AppError } from "../../utils/app-error";
+import { generateAndDispatchAdminOtp } from "../auth/department-admin-otp.service";
 
 export interface CreateDepartmentAdminInput {
   departmentId: string;
@@ -83,15 +84,23 @@ export async function createDepartmentAdmin(input: CreateDepartmentAdminInput) {
 
   const demoMode = isDemoModeEnabled();
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  let confirmationOtp: string | undefined;
 
   if (demoMode) {
+    confirmationOtp = await generateAndDispatchAdminOtp(
+      admin,
+      department.name,
+      "ACCOUNT_CREATION",
+    );
+
     console.log("\n==================================================");
     console.log("CIVICAI PMC — DEMO DEPARTMENT ADMIN CREATED");
     console.log(`Name:               ${admin.fullName}`);
     console.log(`Department:         ${department.name}`);
     console.log(`Demo Email:         ${admin.email}`);
     console.log(`Temporary Password: ${temporaryPassword}`);
-    console.log(`Account Status:     Active`);
+    console.log(`Confirmation OTP:   ${confirmationOtp} (Dispatched to Terminal)`);
+    console.log(`Account Status:     Active / OTP Ready`);
     console.log(`Login Page:         ${frontendUrl}`);
     console.log("==================================================\n");
   }
@@ -110,7 +119,7 @@ export async function createDepartmentAdmin(input: CreateDepartmentAdminInput) {
       accountStatus: admin.accountStatus,
       createdAt: admin.createdAt,
     },
-    ...(demoMode ? { temporaryPassword } : {}),
+    ...(demoMode ? { temporaryPassword, confirmationOtp } : {}),
   };
 }
 

@@ -202,11 +202,23 @@ export const authApi = {
     return expectNoData("/auth/verify-otp", { email, otp });
   },
 
-  async login(email: string, password: string): Promise<AuthSession> {
-    const response = await request<AuthSession>("/auth/login", {
+  async login(
+    email: string,
+    password: string,
+    otp?: string,
+  ): Promise<AuthSession | { requiresOtp: true; email: string; departmentName?: string; message?: string }> {
+    const response = await request<any>("/auth/login", {
       method: "POST",
-      body: { email, password },
+      body: { email, password, ...(otp ? { otp } : {}) },
     });
+    if (response.data?.requiresOtp || (response as any).requiresOtp) {
+      return {
+        requiresOtp: true,
+        email: response.data?.email || email,
+        departmentName: response.data?.departmentName,
+        message: response.message || response.data?.message,
+      };
+    }
     if (
       !response.data?.accessToken ||
       response.data.tokenType !== "Bearer" ||
