@@ -3,6 +3,7 @@ import { AppError } from "../../utils/app-error";
 import {
   listUserNotifications,
   markNotificationRead,
+  markAllNotificationsRead,
 } from "./notification.service";
 
 function recipientId(request: Parameters<RequestHandler>[0]): string {
@@ -13,14 +14,21 @@ function recipientId(request: Parameters<RequestHandler>[0]): string {
 }
 
 export const list: RequestHandler = async (request, response) => {
-  const query = request.validatedQuery as {
+  const query = (request.query || {}) as {
     page?: string;
     limit?: string;
+    unreadOnly?: string | boolean;
   };
+  const isUnreadOnly =
+    query.unreadOnly === true ||
+    query.unreadOnly === "true" ||
+    request.path.includes("unread");
+
   const result = await listUserNotifications(
     recipientId(request),
     Number(query.page ?? 1),
     Number(query.limit ?? 20),
+    isUnreadOnly,
   );
   response.status(200).json({ success: true, data: result });
 };
@@ -35,5 +43,14 @@ export const markRead: RequestHandler = async (request, response) => {
     success: true,
     message: "Notification marked as read.",
     data: { notification },
+  });
+};
+
+export const markAllRead: RequestHandler = async (request, response) => {
+  const result = await markAllNotificationsRead(recipientId(request));
+  response.status(200).json({
+    success: true,
+    message: "All notifications marked as read.",
+    data: result,
   });
 };

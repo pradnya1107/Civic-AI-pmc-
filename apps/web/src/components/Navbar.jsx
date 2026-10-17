@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { NotificationBell } from './NotificationBell';
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
@@ -67,8 +68,10 @@ export const Navbar = () => {
           </NavLink>
         </nav>
 
-        {/* User profile & Logout */}
+        {/* User profile, Notifications & Logout */}
         <div className="portal-user-section">
+          <NotificationBell />
+
           <div className="user-profile-badge" aria-label={`Logged in as ${displayName}`}>
             <div className="user-avatar" aria-hidden="true">{initial}</div>
             <div className="user-meta">

@@ -13,6 +13,7 @@ import {
   recordComplaintUpdate,
 } from "../notifications/notification.service";
 import { Notification } from "../notifications/notification.model";
+import { AuditLog } from "../audit/auditLog.model";
 
 interface RequestActor {
   id: string;
@@ -155,16 +156,17 @@ export async function updateComplaint(
     );
   }
 
+  const existingComplaint = await Complaint.findById(requireObjectId(id));
+
   // Cross-department check for department admin
   if (
     (actor.role === "ADMIN" || actor.role === "DEPARTMENT_ADMIN") &&
     actor.departmentId
   ) {
-    const existing = await Complaint.findById(requireObjectId(id));
     if (
-      existing &&
-      existing.departmentId &&
-      existing.departmentId.toString() !== actor.departmentId
+      existingComplaint &&
+      existingComplaint.departmentId &&
+      existingComplaint.departmentId.toString() !== actor.departmentId
     ) {
       throw new AppError(
         "You do not have permission to access complaints belonging to another department.",
@@ -232,11 +234,36 @@ export async function updateComplaint(
     throw notFound();
   }
 
-  if (
-    isPrivilegedAdmin(actor.role) &&
-    (patch.status !== undefined || patch.departmentId !== undefined)
-  ) {
-    await recordComplaintUpdate(updated, updated.status);
+  if (isPrivilegedAdmin(actor.role)) {
+    if (patch.status !== undefined) {
+      await AuditLog.create({
+        actorRef: requireObjectId(actor.id),
+        action: "STATUS_UPDATE",
+        targetRef: updated._id,
+        targetModel: "Complaint",
+        metadata: {
+          previousStatus: existingComplaint?.status,
+          newStatus: updated.status,
+          complaintNumber: updated.complaintNumber,
+        },
+      });
+      await recordComplaintUpdate(updated, updated.status);
+    }
+    if (patch.departmentId !== undefined) {
+      await AuditLog.create({
+        actorRef: requireObjectId(actor.id),
+        action: "ASSIGN_DEPARTMENT",
+        targetRef: updated._id,
+        targetModel: "Complaint",
+        metadata: {
+          departmentId: updated.departmentId,
+          complaintNumber: updated.complaintNumber,
+        },
+      });
+      if (patch.status === undefined) {
+        await recordComplaintUpdate(updated, updated.status);
+      }
+    }
   }
 
   return updated.toJSON();

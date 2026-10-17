@@ -6,7 +6,7 @@ import {
   notificationIdSchema,
   notificationListQuerySchema,
 } from "./notification.validation";
-import { list, markRead } from "./notification.controller";
+import { list, markRead, markAllRead } from "./notification.controller";
 
 const notificationRouter = Router();
 notificationRouter.use(authenticate);
@@ -15,6 +15,7 @@ notificationRouter.get(
   validateRequest(notificationListQuerySchema, "query"),
   asyncHandler(list),
 );
+notificationRouter.patch("/read-all", asyncHandler(markAllRead));
 notificationRouter.patch(
   "/:id/read",
   validateRequest(notificationIdSchema, "params"),

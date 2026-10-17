@@ -269,6 +269,51 @@ export const adminApi = {
     const response = await api.get('/api/v1/admin/citizens', { params });
     return response.data;
   },
+
+  /**
+   * Fetch all complaints with filter, sort, and pagination (Admin Portal)
+   * GET /api/v1/admin/complaints
+   */
+  async getComplaints(params = {}) {
+    const response = await api.get('/api/v1/admin/complaints', { params });
+    return response.data;
+  },
+
+  /**
+   * Fetch single complaint with timeline / audit trail
+   * GET /api/v1/admin/complaints/:id
+   */
+  async getComplaintById(id) {
+    const response = await api.get(`/api/v1/admin/complaints/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Update complaint status
+   * PATCH /api/v1/admin/complaints/:id/status
+   */
+  async updateComplaintStatus(id, data) {
+    const response = await api.patch(`/api/v1/admin/complaints/${id}/status`, data);
+    return response.data;
+  },
+
+  /**
+   * Assign department to complaint
+   * PATCH /api/v1/admin/complaints/:id/assign
+   */
+  async assignComplaintDepartment(id, data) {
+    const response = await api.patch(`/api/v1/admin/complaints/${id}/assign`, data);
+    return response.data;
+  },
+
+  /**
+   * Verify complaint
+   * PATCH /api/v1/admin/complaints/:id/verify
+   */
+  async verifyComplaint(id, data = {}) {
+    const response = await api.patch(`/api/v1/admin/complaints/${id}/verify`, data);
+    return response.data;
+  },
 };
 
 export const notificationApi = {
@@ -287,6 +332,15 @@ export const notificationApi = {
    */
   async markAsRead(id) {
     const response = await api.patch(`/api/v1/notifications/${id}/read`);
+    return response.data;
+  },
+
+  /**
+   * Mark all notifications as read
+   * PATCH /api/v1/notifications/read-all
+   */
+  async markAllAsRead() {
+    const response = await api.patch('/api/v1/notifications/read-all');
     return response.data;
   },
 };

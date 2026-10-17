@@ -10,6 +10,7 @@ import departmentRouter from "./modules/departments/department.routes";
 import dashboardRouter from "./modules/dashboard/dashboard.routes";
 import notificationRouter from "./modules/notifications/notification.routes";
 import { superAdminDeptRouter, superAdminCitizenRouter } from "./modules/admin/department-admin.routes";
+import adminComplaintRouter from "./modules/admin/admin-complaint.routes";
 import { departmentAdminRouter } from "./modules/department-admin/department-admin.routes";
 import { AppError } from "./utils/app-error";
 
@@ -94,6 +95,8 @@ app.use("/api/departments", departmentRouter);
 app.use("/api/v1/admin/dashboard", dashboardRouter);
 app.use("/api/admin/dashboard", dashboardRouter);
 app.use("/api/v1/notifications", notificationRouter);
+app.use("/api/v1/admin/complaints", adminComplaintRouter);
+app.use("/api/admin/complaints", adminComplaintRouter);
 app.use("/api/v1/admin/department-admins", superAdminDeptRouter);
 app.use("/api/admin/department-admins", superAdminDeptRouter);
 app.use("/api/v1/admin/citizens", superAdminCitizenRouter);
