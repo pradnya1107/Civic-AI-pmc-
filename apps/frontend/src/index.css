@@ -4003,5 +4003,399 @@ a:hover {
   width: 100%;
 }
 
+/* =========================================================
+   ISSUE-06: Splash Screen & Pune Cityscape
+   ========================================================= */
+
+.splash-container {
+  min-height: 100vh;
+  background-color: #071D29;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  padding: 2.5rem 1.5rem 4rem;
+  box-sizing: border-box;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.splash-fading {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.splash-aura {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 440px;
+  height: 440px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(12, 104, 102, 0.35) 0%, rgba(7, 29, 41, 0) 70%);
+  pointer-events: none;
+}
+
+.splash-brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1.75rem;
+  z-index: 1;
+}
+
+.splash-logo-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background-color: #087B62;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 4px 14px rgba(8, 123, 98, 0.4);
+  overflow: hidden;
+}
+
+.splash-logo-orbit {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 12px;
+  transform: rotate(35deg);
+}
+
+.splash-logo-c {
+  font-size: 25px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+  position: relative;
+  z-index: 2;
+}
+
+.splash-logo-spark {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #A8E9DF;
+  z-index: 2;
+}
+
+.splash-logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.splash-logo-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.splash-logo-accent {
+  color: #34d399;
+}
+
+.splash-logo-caption {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.68);
+  margin-top: 2px;
+}
+
+.splash-cityscape {
+  width: 100%;
+  max-width: 500px;
+  height: 240px;
+  background-color: #082633;
+  border-radius: 28px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(160, 223, 206, 0.18);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  margin-bottom: 1.5rem;
+  z-index: 1;
+}
+
+.city-sky-glow {
+  position: absolute;
+  top: -80px;
+  left: 12%;
+  width: 76%;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(30, 130, 135, 0.35) 0%, transparent 70%);
+}
+
+.city-moon {
+  position: absolute;
+  top: 24px;
+  right: 36px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: #B8E7DF;
+  box-shadow: 0 0 14px rgba(184, 231, 223, 0.6);
+}
+
+.city-stars {
+  position: absolute;
+  inset: 0;
+}
+
+.city-star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: #DDF7F1;
+  opacity: 0.7;
+}
+
+.city-skyline {
+  position: absolute;
+  bottom: 46px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+}
+
+.city-building {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  border: 1px solid rgba(178, 229, 220, 0.14);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+.city-windows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.city-window {
+  width: 4px;
+  height: 5px;
+  border-radius: 1px;
+  background-color: rgba(142, 205, 199, 0.18);
+}
+
+.city-window-lit {
+  background-color: rgba(196, 239, 190, 0.95);
+  box-shadow: 0 0 3px rgba(196, 239, 190, 0.5);
+}
+
+.city-treeline {
+  position: absolute;
+  bottom: 38px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.city-tree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.city-tree-top {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #16735F;
+}
+
+.city-tree-trunk {
+  width: 2px;
+  height: 9px;
+  background-color: #8C7652;
+}
+
+.city-ground {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 42px;
+  background-color: #0A2832;
+  border-top: 1px solid rgba(160, 223, 206, 0.16);
+}
+
+.city-road {
+  position: absolute;
+  bottom: -24px;
+  left: 14%;
+  width: 72%;
+  height: 48px;
+  border-top-left-radius: 60px;
+  border-top-right-radius: 60px;
+  background-color: #102E37;
+  border-top: 2px solid rgba(168, 233, 223, 0.28);
+}
+
+.city-road-stripe {
+  position: absolute;
+  bottom: 12px;
+  left: 45%;
+  width: 10%;
+  border-top: 2px dashed rgba(199, 233, 242, 0.45);
+}
+
+.city-light-trail {
+  position: absolute;
+  bottom: 20px;
+  left: 22%;
+  width: 20%;
+  border-top: 2px solid #83E7D1;
+  opacity: 0.8;
+  transform: rotate(-8deg);
+  box-shadow: 0 0 6px #83E7D1;
+}
+
+.city-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(5, 26, 35, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  padding: 4px 9px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.city-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #84E7C5;
+  box-shadow: 0 0 5px #84E7C5;
+}
+
+.splash-copy {
+  text-align: center;
+  margin-bottom: 1.75rem;
+  z-index: 1;
+}
+
+.splash-heading {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.splash-subheading {
+  font-size: 0.95rem;
+  color: #B9D5D5;
+  margin: 0;
+}
+
+.splash-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 300px;
+  z-index: 1;
+}
+
+.splash-btn-primary {
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #087B62 0%, #05624F 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(8, 123, 98, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.splash-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(8, 123, 98, 0.55);
+}
+
+.splash-links {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.85rem;
+}
+
+.splash-link {
+  color: #A8E9DF;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.splash-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.splash-link-divider {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.splash-footer {
+  position: absolute;
+  bottom: 24px;
+  left: 32px;
+  right: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.splash-footer-line {
+  flex: 1;
+  height: 1px;
+  background-color: rgba(211, 245, 235, 0.18);
+}
+
+.splash-footer-text {
+  color: #8DB2B3;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
 
 

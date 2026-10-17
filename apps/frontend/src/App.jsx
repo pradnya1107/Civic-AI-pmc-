@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminProtectedRoute } from './components/AdminProtectedRoute';
 
 // Citizen Pages
+import { SplashScreen } from './pages/SplashScreen';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -42,7 +43,7 @@ const RootIndexRedirect = () => {
     );
   }
 
-  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/splash'} replace />;
 };
 
 /**
@@ -74,7 +75,8 @@ export const App = () => {
             {/* Index Route */}
             <Route path="/" element={<RootIndexRedirect />} />
 
-            {/* Public Auth Routes */}
+            {/* Public Welcome & Auth Routes */}
+            <Route path="/splash" element={<SplashScreen />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 
