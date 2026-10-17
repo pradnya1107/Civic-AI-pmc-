@@ -12,6 +12,7 @@ import notificationRouter from "./modules/notifications/notification.routes";
 import { superAdminDeptRouter, superAdminCitizenRouter } from "./modules/admin/department-admin.routes";
 import { adminComplaintRouter } from "./modules/admin/admin-complaint.routes";
 import { departmentAdminRouter } from "./modules/department-admin/department-admin.routes";
+import aiRouter from "./modules/ai/ai.routes";
 import { AppError } from "./utils/app-error";
 
 const app = express();
@@ -96,12 +97,15 @@ app.use("/api/v1/admin/dashboard", dashboardRouter);
 app.use("/api/admin/dashboard", dashboardRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/admin/complaints", adminComplaintRouter);
+app.use("/api/admin/complaints", adminComplaintRouter);
 app.use("/api/v1/admin/department-admins", superAdminDeptRouter);
 app.use("/api/admin/department-admins", superAdminDeptRouter);
 app.use("/api/v1/admin/citizens", superAdminCitizenRouter);
 app.use("/api/admin/citizens", superAdminCitizenRouter);
 app.use("/api/v1/department-admin", departmentAdminRouter);
 app.use("/api/department-admin", departmentAdminRouter);
+app.use("/api/v1/ai", aiRouter);
+app.use("/api/ai", aiRouter);
 app.use((_request, _response, next) => {
   next(new AppError("The requested endpoint does not exist.", 404, "NOT_FOUND"));
 });

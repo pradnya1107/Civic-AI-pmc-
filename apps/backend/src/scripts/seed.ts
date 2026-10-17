@@ -6,6 +6,7 @@ import {
 } from "../database/connection";
 import { User } from "../modules/users/user.model";
 import { Department } from "../modules/departments/department.model";
+import { Complaint, calculateSlaDeadline } from "../modules/complaints/complaint.model";
 
 dotenv.config();
 
@@ -254,6 +255,171 @@ async function seedDemoDepartmentAdmins(): Promise<void> {
   console.log(`✅ Demo Department Admins: ${created} created, ${skipped} already existed.`);
 }
 
+/* ─────────────────────── Demo Smart City Complaints ─────────────────────── */
+async function seedDemoComplaints(): Promise<void> {
+  const citizen = await User.findOne({ email: DEMO_CITIZEN_EMAIL.toLowerCase() });
+  if (!citizen) return;
+
+  const existingCount = await Complaint.countDocuments();
+  if (existingCount >= 6) {
+    console.log(`✅ Demo Complaints: ${existingCount} already present.`);
+    return;
+  }
+
+  const roadsDept = await Department.findOne({ slug: "roads" });
+  const wasteDept = await Department.findOne({ slug: "waste" });
+  const drainageDept = await Department.findOne({ slug: "drainage" });
+  const lightingDept = await Department.findOne({ slug: "street-lighting" });
+  const waterDept = await Department.findOne({ slug: "water" });
+
+  const demoItems = [
+    {
+      complaintNumber: "PMC-2026-00101",
+      title: "Major Dangerous Pothole near Goodluck Chowk",
+      description: "Deep cavity in the middle of active road lane on FC Road. Causes sudden swerving by motorists and risk of two-wheeler crashes during peak traffic.",
+      category: "Roads & Potholes",
+      departmentId: roadsDept?._id,
+      priority: "CRITICAL",
+      status: "IN_PROGRESS",
+      location: {
+        address: "FC Road, near Goodluck Cafe, Shivajinagar, Pune",
+        ward: "Ward 1 - Shivajinagar / Ghole Road",
+        latitude: 18.5186,
+        longitude: 73.8415,
+      },
+      imageUrl: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800",
+      supportCount: 14,
+      slaDeadline: calculateSlaDeadline("CRITICAL"),
+      aiAnalysis: {
+        severity: "CRITICAL",
+        score: 94,
+        reasoning: "High vehicular density combined with deep cavity exceeds safe threshold.",
+        suggestedDepartment: "Roads",
+        detectedIssues: ["Pothole", "Active Corridor"],
+      },
+      citizenId: citizen._id,
+    },
+    {
+      complaintNumber: "PMC-2026-00102",
+      title: "Overflowing Garbage Container outside Karve Statue",
+      description: "Municipal waste bin overflowing onto sidewalk. Stray dogs scattering litter and intense foul odor affecting pedestrians and nearby shopkeepers.",
+      category: "Solid Waste & Garbage",
+      departmentId: wasteDept?._id,
+      priority: "HIGH",
+      status: "ASSIGNED",
+      location: {
+        address: "Karve Road, Near Karve Statue, Kothrud, Pune",
+        ward: "Ward 2 - Kothrud / Bavdhan",
+        latitude: 18.5074,
+        longitude: 73.8077,
+      },
+      imageUrl: "https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=800",
+      supportCount: 8,
+      slaDeadline: calculateSlaDeadline("HIGH"),
+      aiAnalysis: {
+        severity: "HIGH",
+        score: 79,
+        reasoning: "Sanitation hazard in high pedestrian commercial zone.",
+        suggestedDepartment: "Waste",
+      },
+      citizenId: citizen._id,
+    },
+    {
+      complaintNumber: "PMC-2026-00103",
+      title: "Severe Stormwater Waterlogging at Magarpatta Flyover Base",
+      description: "Knee-deep water accumulating after evening shower. Inadequate drainage slope causing severe traffic standstill toward Hadapsar.",
+      category: "Drainage & Sewerage",
+      departmentId: drainageDept?._id,
+      priority: "CRITICAL",
+      status: "SUBMITTED",
+      location: {
+        address: "Magarpatta Road, Hadapsar, Pune",
+        ward: "Ward 9 - Hadapsar / Mundhwa",
+        latitude: 18.5167,
+        longitude: 73.926,
+      },
+      imageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=800",
+      supportCount: 19,
+      slaDeadline: calculateSlaDeadline("CRITICAL"),
+      citizenId: citizen._id,
+    },
+    {
+      complaintNumber: "PMC-2026-00104",
+      title: "Streetlight Pole Darkened for 4 Consecutive Days",
+      description: "Five streetlights completely off from High Street circle toward Baner bridge. Road pitch dark creating safety hazards for women and commuters.",
+      category: "Street Lighting & Electrical",
+      departmentId: lightingDept?._id,
+      priority: "MEDIUM",
+      status: "UNDER_REVIEW",
+      location: {
+        address: "Baner Road, Near Balewadi High Street, Baner, Pune",
+        ward: "Ward 15 - Aundh / Baner / Pashan",
+        latitude: 18.5642,
+        longitude: 73.7769,
+      },
+      imageUrl: "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=800",
+      supportCount: 5,
+      slaDeadline: calculateSlaDeadline("MEDIUM"),
+      citizenId: citizen._id,
+    },
+    {
+      complaintNumber: "PMC-2026-00105",
+      title: "Drinking Water Pipeline Leak Flooding Bus Terminal Road",
+      description: "Clean pressurized potable water gushing from underground joint near Swargate terminal. Gallons of clean water wasting down storm drain.",
+      category: "Water Supply",
+      departmentId: waterDept?._id,
+      priority: "HIGH",
+      status: "IN_PROGRESS",
+      location: {
+        address: "Near Swargate ST Stand, Pune",
+        ward: "Ward 7 - Bhavani Peth",
+        latitude: 18.5018,
+        longitude: 73.8587,
+      },
+      imageUrl: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800",
+      supportCount: 11,
+      slaDeadline: calculateSlaDeadline("HIGH"),
+      citizenId: citizen._id,
+    },
+    {
+      complaintNumber: "PMC-2026-00106",
+      title: "Large Cavity near Sambhaji Park Entrance",
+      description: "Pothole that opened up after water pipe excavation. Required urgent bituminous filling.",
+      category: "Roads & Potholes",
+      departmentId: roadsDept?._id,
+      priority: "HIGH",
+      status: "RESOLVED",
+      location: {
+        address: "Jangali Maharaj Road, Shivajinagar, Pune",
+        ward: "Ward 1 - Shivajinagar / Ghole Road",
+        latitude: 18.5246,
+        longitude: 73.8496,
+      },
+      imageUrl: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800",
+      resolutionImageUrl: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800",
+      resolutionNotes: "PMC Road Engineering team resurfaced and compacted cold-mix bitumen. Surface verified level.",
+      aiAnalysis: {
+        severity: "HIGH",
+        score: 78,
+        resolutionVerdict: "RESOLVED_VERIFIED",
+        resolutionConfidence: 94,
+        resolutionAnalysis: "Photographic inspection verifies asphalt patch has sealed the cavity flush with surrounding road.",
+      },
+      citizenConfirmation: {
+        confirmed: true,
+        rating: 5,
+        feedback: "Repaired very quickly within 24 hours. Excellent response from PMC!",
+      },
+      supportCount: 7,
+      slaDeadline: calculateSlaDeadline("HIGH"),
+      citizenId: citizen._id,
+    },
+  ];
+
+  await Complaint.insertMany(demoItems);
+  console.log(`✅ Demo Complaints: ${demoItems.length} created with Pune coordinates.`);
+}
+
 /* ─────────────────────── Main Runner ─────────────────────── */
 
 async function seed(): Promise<void> {
@@ -265,6 +431,7 @@ async function seed(): Promise<void> {
   await seedCitizen();
   await seedDepartments();
   await seedDemoDepartmentAdmins();
+  await seedDemoComplaints();
 
   console.log("\n🎉 Seed completed successfully!\n");
 }

@@ -4,52 +4,64 @@ import { authorize } from "../../middleware/authorize";
 import { asyncHandler } from "../../middleware/async-handler";
 import { validateRequest } from "../../middleware/validate-request";
 import {
-  adminComplaintIdParamSchema,
   adminComplaintListQuerySchema,
-  adminAssignSchema,
-  adminStatusUpdateSchema,
+  updateComplaintStatusSchema,
+  assignComplaintDepartmentSchema,
+  verifyComplaintSchema,
+  adminComplaintIdParamSchema,
 } from "./admin-complaint.validation";
 import {
-  listComplaintsHandler,
-  getComplaintHandler,
-  updateStatusHandler,
-  assignComplaintHandler,
+  listAdminComplaintsHandler,
+  getAdminComplaintByIdHandler,
+  updateComplaintStatusHandler,
+  assignComplaintDepartmentHandler,
+  verifyComplaintHandler,
 } from "./admin-complaint.controller";
 
 export const adminComplaintRouter = Router();
 
-// All routes require authentication + admin-level role
+// Allow ADMIN, SUPER_ADMIN, and DEPARTMENT_ADMIN
 adminComplaintRouter.use(
   authenticate,
   authorize("ADMIN", "SUPER_ADMIN", "DEPARTMENT_ADMIN"),
 );
 
-// GET /api/v1/admin/complaints — list all complaints (paginated + filtered)
+// GET /api/v1/admin/complaints - List all complaints
 adminComplaintRouter.get(
   "/",
   validateRequest(adminComplaintListQuerySchema, "query"),
-  asyncHandler(listComplaintsHandler),
+  asyncHandler(listAdminComplaintsHandler),
 );
 
-// GET /api/v1/admin/complaints/:id — get single complaint
+// GET /api/v1/admin/complaints/:id - Get single complaint
 adminComplaintRouter.get(
   "/:id",
   validateRequest(adminComplaintIdParamSchema, "params"),
-  asyncHandler(getComplaintHandler),
+  asyncHandler(getAdminComplaintByIdHandler),
 );
 
-// PATCH /api/v1/admin/complaints/:id/status — advance lifecycle status
+// PATCH /api/v1/admin/complaints/:id/status - Update complaint status
 adminComplaintRouter.patch(
   "/:id/status",
   validateRequest(adminComplaintIdParamSchema, "params"),
-  validateRequest(adminStatusUpdateSchema),
-  asyncHandler(updateStatusHandler),
+  validateRequest(updateComplaintStatusSchema),
+  asyncHandler(updateComplaintStatusHandler),
 );
 
-// PATCH /api/v1/admin/complaints/:id/assign — assign to department
+// PATCH /api/v1/admin/complaints/:id/assign - Assign department
 adminComplaintRouter.patch(
   "/:id/assign",
   validateRequest(adminComplaintIdParamSchema, "params"),
-  validateRequest(adminAssignSchema),
-  asyncHandler(assignComplaintHandler),
+  validateRequest(assignComplaintDepartmentSchema),
+  asyncHandler(assignComplaintDepartmentHandler),
 );
+
+// PATCH /api/v1/admin/complaints/:id/verify - Verify complaint
+adminComplaintRouter.patch(
+  "/:id/verify",
+  validateRequest(adminComplaintIdParamSchema, "params"),
+  validateRequest(verifyComplaintSchema),
+  asyncHandler(verifyComplaintHandler),
+);
+
+export default adminComplaintRouter;

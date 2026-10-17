@@ -8,6 +8,7 @@ export const notificationListQuerySchema = z
   .object({
     page: z.string().regex(/^[1-9]\d{0,5}$/).optional(),
     limit: z.string().regex(/^[1-9]\d{0,2}$/).optional(),
+    unreadOnly: z.union([z.string(), z.boolean()]).optional(),
   })
-  .strict()
+  .passthrough()
   .refine((query) => !query.limit || Number(query.limit) <= 100);

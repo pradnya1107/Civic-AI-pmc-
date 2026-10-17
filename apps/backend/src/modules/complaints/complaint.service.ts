@@ -2,7 +2,8 @@ import { Types } from "mongoose";
 import type { UserRole } from "../users/user.model";
 import { Department } from "../departments/department.model";
 import { AppError } from "../../utils/app-error";
-import { Complaint } from "./complaint.model";
+import { Complaint, calculateSlaDeadline } from "./complaint.model";
+import { verifyResolution } from "../ai/gemini-ai.service";
 import type {
   ComplaintListQuery,
   CreateComplaintInput,
@@ -13,6 +14,7 @@ import {
   recordComplaintUpdate,
 } from "../notifications/notification.service";
 import { Notification } from "../notifications/notification.model";
+import { AuditLog } from "../audit/auditLog.model";
 
 interface RequestActor {
   id: string;
@@ -61,10 +63,15 @@ export async function createComplaint(
   actor: RequestActor,
   input: CreateComplaintInput,
 ) {
+  const priority = input.priority || "MEDIUM";
   const sanitizedInput = {
     ...input,
     title: sanitizeText(input.title),
     description: sanitizeText(input.description),
+    priority,
+    slaDeadline: calculateSlaDeadline(priority),
+    supporters: [],
+    supportCount: 0,
   };
   const complaint = await Complaint.create({
     ...sanitizedInput,
@@ -80,15 +87,26 @@ export async function listComplaints(
 ) {
   const page = Number(query.page ?? 1);
   const limit = Number(query.limit ?? 20);
-  const filter = {
+  const filter: any = {
     ...actorFilter(actor),
     ...(query.status ? { status: query.status } : {}),
     ...(query.priority ? { priority: query.priority } : {}),
     ...(query.category ? { category: query.category } : {}),
+    ...(query.ward ? { "location.ward": query.ward } : {}),
   };
+
+  if (query.search) {
+    const s = query.search.trim();
+    filter.$or = [
+      { title: { $regex: s, $options: "i" } },
+      { complaintNumber: { $regex: s, $options: "i" } },
+      { "location.address": { $regex: s, $options: "i" } },
+    ];
+  }
 
   const [complaints, total] = await Promise.all([
     Complaint.find(filter)
+      .populate("departmentId", "name slug")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -155,16 +173,17 @@ export async function updateComplaint(
     );
   }
 
+  const existingComplaint = await Complaint.findById(requireObjectId(id));
+
   // Cross-department check for department admin
   if (
     (actor.role === "ADMIN" || actor.role === "DEPARTMENT_ADMIN") &&
     actor.departmentId
   ) {
-    const existing = await Complaint.findById(requireObjectId(id));
     if (
-      existing &&
-      existing.departmentId &&
-      existing.departmentId.toString() !== actor.departmentId
+      existingComplaint &&
+      existingComplaint.departmentId &&
+      existingComplaint.departmentId.toString() !== actor.departmentId
     ) {
       throw new AppError(
         "You do not have permission to access complaints belonging to another department.",
@@ -232,11 +251,36 @@ export async function updateComplaint(
     throw notFound();
   }
 
-  if (
-    isPrivilegedAdmin(actor.role) &&
-    (patch.status !== undefined || patch.departmentId !== undefined)
-  ) {
-    await recordComplaintUpdate(updated, updated.status);
+  if (isPrivilegedAdmin(actor.role)) {
+    if (patch.status !== undefined) {
+      await AuditLog.create({
+        actorRef: requireObjectId(actor.id),
+        action: "STATUS_UPDATE",
+        targetRef: updated._id,
+        targetModel: "Complaint",
+        metadata: {
+          previousStatus: existingComplaint?.status,
+          newStatus: updated.status,
+          complaintNumber: updated.complaintNumber,
+        },
+      });
+      await recordComplaintUpdate(updated, updated.status);
+    }
+    if (patch.departmentId !== undefined) {
+      await AuditLog.create({
+        actorRef: requireObjectId(actor.id),
+        action: "ASSIGN_DEPARTMENT",
+        targetRef: updated._id,
+        targetModel: "Complaint",
+        metadata: {
+          departmentId: updated.departmentId,
+          complaintNumber: updated.complaintNumber,
+        },
+      });
+      if (patch.status === undefined) {
+        await recordComplaintUpdate(updated, updated.status);
+      }
+    }
   }
 
   return updated.toJSON();
@@ -280,4 +324,232 @@ export async function deleteComplaint(
   }
 
   await Notification.deleteMany({ complaintId: complaintObjectId });
+}
+
+/**
+ * Fetch geospatial heatmap points for Pune Smart City Map
+ */
+export async function getHeatmapData(filterQuery: {
+  category?: string;
+  priority?: string;
+  status?: string;
+  ward?: string;
+}) {
+  const filter: any = {};
+  if (filterQuery.category && filterQuery.category !== "ALL") {
+    filter.category = filterQuery.category;
+  }
+  if (filterQuery.priority && filterQuery.priority !== "ALL") {
+    filter.priority = filterQuery.priority;
+  }
+  if (filterQuery.status && filterQuery.status !== "ALL") {
+    filter.status = filterQuery.status;
+  }
+  if (filterQuery.ward && filterQuery.ward !== "ALL") {
+    filter["location.ward"] = filterQuery.ward;
+  }
+
+  // Ensure only complaints with valid latitude/longitude are returned on the heatmap
+  filter["location.latitude"] = { $exists: true, $ne: null };
+  filter["location.longitude"] = { $exists: true, $ne: null };
+
+  const points = await Complaint.find(filter)
+    .select(
+      "_id complaintNumber title category priority status location imageUrl resolutionImageUrl supportCount createdAt updatedAt slaDeadline aiAnalysis",
+    )
+    .populate("departmentId", "name slug")
+    .sort({ createdAt: -1 })
+    .limit(1000)
+    .lean();
+
+  return points;
+}
+
+/**
+ * Resolve complaint with repair photo and AI before/after verification
+ */
+export async function resolveComplaintWithVerification(
+  actor: RequestActor,
+  id: string,
+  input: { resolutionImageUrl?: string; resolutionNotes?: string },
+) {
+  if (!isPrivilegedAdmin(actor.role)) {
+    throw new AppError("Only administrators can resolve complaints.", 403, "FORBIDDEN");
+  }
+  const complaint = await Complaint.findById(requireObjectId(id));
+  if (!complaint) throw notFound();
+
+  let aiVerdict: any = undefined;
+  if (complaint.imageUrl && input.resolutionImageUrl) {
+    try {
+      const verification = await verifyResolution({
+        originalImageUrl: complaint.imageUrl,
+        resolutionImageUrl: input.resolutionImageUrl,
+        title: complaint.title,
+        category: complaint.category,
+      });
+      aiVerdict = {
+        resolutionVerdict: verification.verdict,
+        resolutionConfidence: verification.confidence,
+        resolutionAnalysis: verification.analysis,
+      };
+    } catch (e) {
+      console.warn("AI verification error:", e);
+    }
+  }
+
+  complaint.status = "RESOLVED";
+  if (input.resolutionImageUrl) complaint.resolutionImageUrl = input.resolutionImageUrl;
+  if (input.resolutionNotes) complaint.resolutionNotes = input.resolutionNotes;
+  if (aiVerdict) {
+    complaint.aiAnalysis = {
+      ...(complaint.aiAnalysis || {}),
+      ...aiVerdict,
+    };
+  }
+
+  await complaint.save();
+
+  await AuditLog.create({
+    actorRef: requireObjectId(actor.id),
+    action: "STATUS_UPDATE",
+    targetRef: complaint._id,
+    targetModel: "Complaint",
+    metadata: {
+      action: "RESOLVE_WITH_VERIFICATION",
+      previousStatus: "IN_PROGRESS",
+      newStatus: "RESOLVED",
+      resolutionVerdict: aiVerdict?.resolutionVerdict || "MANUAL_VERIFIED",
+    },
+  });
+
+  await recordComplaintUpdate(complaint, "RESOLVED");
+
+  return complaint.toJSON();
+}
+
+/**
+ * Citizen confirms the municipal resolution
+ */
+export async function confirmResolutionByCitizen(
+  actor: RequestActor,
+  id: string,
+  input: { rating?: number; feedback?: string },
+) {
+  const complaint = await Complaint.findById(requireObjectId(id));
+  if (!complaint) throw notFound();
+  if (complaint.citizenId.toString() !== actor.id) {
+    throw new AppError("Only the complainant can confirm resolution.", 403, "FORBIDDEN");
+  }
+
+  complaint.citizenConfirmation = {
+    confirmed: true,
+    rating: input.rating || 5,
+    feedback: input.feedback || "Citizen confirmed resolution satisfactory.",
+    confirmedAt: new Date(),
+  };
+
+  await complaint.save();
+
+  await AuditLog.create({
+    actorRef: requireObjectId(actor.id),
+    action: "STATUS_UPDATE",
+    targetRef: complaint._id,
+    targetModel: "Complaint",
+    metadata: {
+      action: "CITIZEN_CONFIRMED_RESOLUTION",
+      rating: input.rating,
+      complaintNumber: complaint.complaintNumber,
+    },
+  });
+
+  return complaint.toJSON();
+}
+
+/**
+ * Citizen disputes the resolution and reopens the complaint
+ */
+export async function disputeResolutionByCitizen(
+  actor: RequestActor,
+  id: string,
+  input: { reason: string },
+) {
+  const complaint = await Complaint.findById(requireObjectId(id));
+  if (!complaint) throw notFound();
+  if (complaint.citizenId.toString() !== actor.id) {
+    throw new AppError("Only the complainant can dispute resolution.", 403, "FORBIDDEN");
+  }
+
+  complaint.status = "UNDER_REVIEW";
+  complaint.citizenConfirmation = {
+    disputed: true,
+    disputeReason: input.reason,
+    disputedAt: new Date(),
+  };
+
+  await complaint.save();
+
+  await AuditLog.create({
+    actorRef: requireObjectId(actor.id),
+    action: "STATUS_UPDATE",
+    targetRef: complaint._id,
+    targetModel: "Complaint",
+    metadata: {
+      action: "CITIZEN_DISPUTED_RESOLUTION",
+      disputeReason: input.reason,
+      newStatus: "UNDER_REVIEW",
+      complaintNumber: complaint.complaintNumber,
+    },
+  });
+
+  await recordComplaintUpdate(complaint, "UNDER_REVIEW");
+
+  return complaint.toJSON();
+}
+
+/**
+ * SLA monitoring and overdue breach overview
+ */
+export async function getSlaMonitoringOverview() {
+  const now = new Date();
+  const approaching = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+
+  const openFilter = {
+    status: { $in: ["SUBMITTED", "UNDER_REVIEW", "ASSIGNED", "IN_PROGRESS"] },
+  };
+
+  const [totalOpen, overdueComplaints, approachingComplaints, resolvedCount] = await Promise.all([
+    Complaint.countDocuments(openFilter),
+    Complaint.find({
+      ...openFilter,
+      slaDeadline: { $lt: now },
+    })
+      .sort({ slaDeadline: 1 })
+      .populate("departmentId", "name slug")
+      .limit(50)
+      .lean(),
+    Complaint.find({
+      ...openFilter,
+      slaDeadline: { $gte: now, $lte: approaching },
+    })
+      .sort({ slaDeadline: 1 })
+      .populate("departmentId", "name slug")
+      .limit(50)
+      .lean(),
+    Complaint.countDocuments({ status: "RESOLVED" }),
+  ]);
+
+  const overdueCount = overdueComplaints.length;
+  const compliantCount = Math.max(0, totalOpen - overdueCount);
+  const complianceRate = totalOpen > 0 ? Math.round((compliantCount / totalOpen) * 100) : 100;
+
+  return {
+    totalOpen,
+    overdueCount,
+    approachingCount: approachingComplaints.length,
+    resolvedCount,
+    complianceRate,
+    overdueComplaints,
+    approachingComplaints,
+  };
 }

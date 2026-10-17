@@ -1,102 +1,124 @@
 import type { RequestHandler } from "express";
 import { AppError } from "../../utils/app-error";
-import type {
-  AdminAssignInput,
-  AdminComplaintListQuery,
-  AdminStatusUpdateInput,
-} from "./admin-complaint.validation";
 import {
-  adminAssignComplaint,
-  adminGetComplaint,
-  adminListComplaints,
-  adminUpdateComplaintStatus,
+  listAdminComplaints,
+  getAdminComplaintById,
+  updateAdminComplaintStatus,
+  assignAdminComplaintDepartment,
+  verifyAdminComplaint,
+  type AdminActor,
 } from "./admin-complaint.service";
-import type { ComplaintStatus } from "../complaints/complaint.model";
 
-function actorFromRequest(request: Parameters<RequestHandler>[0]) {
-  const user = request.user;
-  if (!user) {
-    throw new AppError("Authentication required.", 401, "UNAUTHORIZED");
+function getActor(request: Parameters<RequestHandler>[0]): AdminActor {
+  if (!request.user) {
+    throw new AppError("Authentication is required.", 401, "UNAUTHORIZED");
   }
-  return { id: user.id, role: user.role, departmentId: user.departmentId };
+  return {
+    id: request.user.id,
+    role: request.user.role,
+    departmentId: request.user.departmentId,
+  };
 }
 
-function requireId(request: Parameters<RequestHandler>[0]): string {
+function getParamId(request: Parameters<RequestHandler>[0]): string {
   const id = request.params.id;
-  if (typeof id !== "string") {
-    throw new AppError("Invalid complaint ID.", 400, "VALIDATION_ERROR");
+  if (!id || typeof id !== "string") {
+    throw new AppError("Invalid complaint ID parameter.", 400, "VALIDATION_ERROR");
   }
   return id;
 }
 
-/**
- * GET /api/v1/admin/complaints
- * List all complaints with pagination and optional filters.
- */
-export const listComplaintsHandler: RequestHandler = async (
+export const listAdminComplaintsHandler: RequestHandler = async (
   request,
   response,
 ) => {
-  const query = request.validatedQuery as AdminComplaintListQuery;
-  const result = await adminListComplaints(actorFromRequest(request), {
-    ...query,
-    page: query.page ? Number(query.page) : undefined,
-    limit: query.limit ? Number(query.limit) : undefined,
-  });
-  response.status(200).json({ success: true, data: result });
-};
-
-/**
- * GET /api/v1/admin/complaints/:id
- * Get a single complaint by ID (with populated citizen and department).
- */
-export const getComplaintHandler: RequestHandler = async (request, response) => {
-  const complaint = await adminGetComplaint(
-    actorFromRequest(request),
-    requireId(request),
-  );
-  response.status(200).json({ success: true, data: { complaint } });
-};
-
-/**
- * PATCH /api/v1/admin/complaints/:id/status
- * Advance the complaint status lifecycle.
- */
-export const updateStatusHandler: RequestHandler = async (request, response) => {
-  const body = request.body as AdminStatusUpdateInput;
-  const updated = await adminUpdateComplaintStatus(
-    actorFromRequest(request),
-    requireId(request),
-    body.status as ComplaintStatus,
-    body.note,
-  );
+  const result = await listAdminComplaints(request.query);
   response.status(200).json({
     success: true,
-    message: `Complaint status updated to '${updated.status}'.`,
-    data: { complaint: updated },
+    data: result,
   });
 };
 
-/**
- * PATCH /api/v1/admin/complaints/:id/assign
- * Assign (or unassign) a complaint to a department.
- */
-export const assignComplaintHandler: RequestHandler = async (
+export const listComplaintsHandler = listAdminComplaintsHandler;
+
+export const getAdminComplaintByIdHandler: RequestHandler = async (
   request,
   response,
 ) => {
-  const body = request.body as AdminAssignInput;
-  const updated = await adminAssignComplaint(
-    actorFromRequest(request),
-    requireId(request),
-    body.departmentId,
+  const id = getParamId(request);
+  const result = await getAdminComplaintById(id);
+  response.status(200).json({
+    success: true,
+    data: result,
+  });
+};
+
+export const getComplaintHandler = getAdminComplaintByIdHandler;
+
+export const updateComplaintStatusHandler: RequestHandler = async (
+  request,
+  response,
+) => {
+  const actor = getActor(request);
+  const id = getParamId(request);
+  const { status, notes, note } = request.body;
+
+  const complaint = await updateAdminComplaintStatus(
+    actor,
+    id,
+    status,
+    notes || note,
   );
+
+  response.status(200).json({
+    success: true,
+    message: `Complaint status updated to '${status}'.`,
+    data: { complaint },
+  });
+};
+
+export const updateStatusHandler = updateComplaintStatusHandler;
+
+export const assignComplaintDepartmentHandler: RequestHandler = async (
+  request,
+  response,
+) => {
+  const actor = getActor(request);
+  const id = getParamId(request);
+  const { departmentId, notes } = request.body;
+
+  const complaint = await assignAdminComplaintDepartment(
+    actor,
+    id,
+    departmentId,
+    notes,
+  );
+
   response.status(200).json({
     success: true,
     message:
-      body.departmentId !== null
+      departmentId !== null && departmentId !== undefined
         ? "Complaint assigned to department successfully."
         : "Complaint unassigned from department.",
-    data: { complaint: updated },
+    data: { complaint },
+  });
+};
+
+export const assignComplaintHandler = assignComplaintDepartmentHandler;
+
+export const verifyComplaintHandler: RequestHandler = async (
+  request,
+  response,
+) => {
+  const actor = getActor(request);
+  const id = getParamId(request);
+  const { notes } = request.body;
+
+  const complaint = await verifyAdminComplaint(actor, id, notes);
+
+  response.status(200).json({
+    success: true,
+    message: "Complaint verified successfully.",
+    data: { complaint },
   });
 };
