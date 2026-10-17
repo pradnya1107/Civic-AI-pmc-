@@ -806,9 +806,209 @@ describe("complaint, department, and dashboard APIs", () => {
   });
 });
 
+
 async function mongooseUpdateOtpExpiry(email: string): Promise<void> {
   await VerificationCode.updateOne(
     { email },
     { $set: { expiresAt: new Date(Date.now() - 1000) } },
   );
 }
+
+// ---------------------------------------------------------------------------
+// ISSUE-05: Admin Complaint Management tests
+// ---------------------------------------------------------------------------
+
+describe("admin complaint management API (Issue #5)", () => {
+  it("admin can list all complaints with pagination and filter by status", async () => {
+    const citizen = await createVerifiedUser("adm5-list-citizen@example.com");
+    const admin = await createVerifiedUser("adm5-list-admin@example.com", "ADMIN");
+    const citizenToken = await signIn(citizen.email);
+    const adminToken = await signIn(admin.email);
+
+    await request(app)
+      .post("/api/v1/complaints")
+      .set("Authorization", `Bearer ${citizenToken}`)
+      .send({ title: "Road pothole issue admin5", description: "Large pothole near main junction causing accidents.", category: "Roads", location: { address: "Pune" } });
+    await request(app)
+      .post("/api/v1/complaints")
+      .set("Authorization", `Bearer ${citizenToken}`)
+      .send({ title: "Broken streetlight admin5", description: "Streetlight not working at all near the park.", category: "Street Lighting", location: { address: "Pune" } });
+
+    const allComplaints = await request(app)
+      .get("/api/v1/admin/complaints")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    const filteredByStatus = await request(app)
+      .get("/api/v1/admin/complaints?status=SUBMITTED")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    const citizenBlocked = await request(app)
+      .get("/api/v1/admin/complaints")
+      .set("Authorization", `Bearer ${citizenToken}`);
+
+    expect(allComplaints.status).toBe(200);
+    expect(allComplaints.body.data.complaints.length).toBeGreaterThanOrEqual(2);
+    expect(allComplaints.body.data.pagination).toHaveProperty("total");
+    expect(filteredByStatus.status).toBe(200);
+    expect(filteredByStatus.body.data.complaints.every((c: { status: string }) => c.status === "SUBMITTED")).toBe(true);
+    expect(citizenBlocked.status).toBe(403);
+  });
+
+  it("admin can get a single complaint with populated fields", async () => {
+    const citizen = await createVerifiedUser("adm5-get-citizen@example.com");
+    const admin = await createVerifiedUser("adm5-get-admin@example.com", "ADMIN");
+    const citizenToken = await signIn(citizen.email);
+    const adminToken = await signIn(admin.email);
+
+    const created = await request(app)
+      .post("/api/v1/complaints")
+      .set("Authorization", `Bearer ${citizenToken}`)
+      .send({ title: "Water pipeline leaking admin5", description: "Water leaking from main pipeline on the street causing damage.", category: "Water Supply", location: { address: "Pune" } });
+    const complaintId = created.body.data.complaint._id;
+
+    const found = await request(app)
+      .get(`/api/v1/admin/complaints/${complaintId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    const notFound = await request(app)
+      .get("/api/v1/admin/complaints/000000000000000000000000")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    const badId = await request(app)
+      .get("/api/v1/admin/complaints/bad-id-format")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(found.status).toBe(200);
+    expect(found.body.data.complaint._id).toBe(complaintId);
+    expect(found.body.data.complaint.citizenId).toBeDefined();
+    expect(notFound.status).toBe(404);
+    expect(badId.status).toBe(400);
+  });
+
+  it("enforces valid lifecycle transitions and rejects invalid ones", async () => {
+    const citizen = await createVerifiedUser("adm5-lifecycle-citizen@example.com");
+    const admin = await createVerifiedUser("adm5-lifecycle-admin@example.com", "ADMIN");
+    const citizenToken = await signIn(citizen.email);
+    const adminToken = await signIn(admin.email);
+
+    const created = await request(app)
+      .post("/api/v1/complaints")
+      .set("Authorization", `Bearer ${citizenToken}`)
+      .send({ title: "Garbage not collected admin5", description: "Garbage has not been collected for over a week causing health hazards.", category: "Waste Management", location: { address: "Pune" } });
+    const complaintId = created.body.data.complaint._id;
+
+    // SUBMITTED → UNDER_REVIEW (valid)
+    const step1 = await request(app)
+      .patch(`/api/v1/admin/complaints/${complaintId}/status`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "UNDER_REVIEW", note: "Reviewing" });
+
+    // UNDER_REVIEW → IN_PROGRESS (invalid — must go via ASSIGNED)
+    const invalidJump = await request(app)
+      .patch(`/api/v1/admin/complaints/${complaintId}/status`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "IN_PROGRESS" });
+
+    // UNDER_REVIEW → ASSIGNED (valid)
+    const step2 = await request(app)
+      .patch(`/api/v1/admin/complaints/${complaintId}/status`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "ASSIGNED" });
+
+    // ASSIGNED → IN_PROGRESS (valid)
+    const step3 = await request(app)
+      .patch(`/api/v1/admin/complaints/${complaintId}/status`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "IN_PROGRESS" });
+
+    // IN_PROGRESS → RESOLVED (valid)
+    const step4 = await request(app)
+      .patch(`/api/v1/admin/complaints/${complaintId}/status`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "RESOLVED" });
+
+    // RESOLVED → SUBMITTED (terminal — blocked)
+    const fromTerminal = await request(app)
+      .patch(`/api/v1/admin/complaints/${complaintId}/status`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "SUBMITTED" });
+
+    expect(step1.status).toBe(200);
+    expect(step1.body.data.complaint.status).toBe("UNDER_REVIEW");
+    expect(invalidJump.status).toBe(400);
+    expect(step2.status).toBe(200);
+    expect(step2.body.data.complaint.status).toBe("ASSIGNED");
+    expect(step3.status).toBe(200);
+    expect(step3.body.data.complaint.status).toBe("IN_PROGRESS");
+    expect(step4.status).toBe(200);
+    expect(step4.body.data.complaint.status).toBe("RESOLVED");
+    expect(fromTerminal.status).toBe(400);
+  });
+
+  it("admin can assign and unassign a complaint to a department", async () => {
+    const citizen = await createVerifiedUser("adm5-assign-citizen@example.com");
+    const admin = await createVerifiedUser("adm5-assign-admin@example.com", "ADMIN");
+    const citizenToken = await signIn(citizen.email);
+    const adminToken = await signIn(admin.email);
+
+    const dept = await Department.create({ name: "Water Supply Dept", slug: "water-supply-dept", isActive: true });
+
+    const created = await request(app)
+      .post("/api/v1/complaints")
+      .set("Authorization", `Bearer ${citizenToken}`)
+      .send({ title: "Water supply disruption admin5", description: "No water supply for three days in the entire ward area.", category: "Water", location: { address: "Pune" } });
+    const complaintId = created.body.data.complaint._id;
+
+    // Assign to department — status should auto-advance to ASSIGNED
+    const assigned = await request(app)
+      .patch(`/api/v1/admin/complaints/${complaintId}/assign`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ departmentId: dept.id });
+
+    // Unassign — status should revert to UNDER_REVIEW
+    const unassigned = await request(app)
+      .patch(`/api/v1/admin/complaints/${complaintId}/assign`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ departmentId: null });
+
+    // Assign to non-existent department
+    const badDept = await request(app)
+      .patch(`/api/v1/admin/complaints/${complaintId}/assign`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ departmentId: "000000000000000000000000" });
+
+    expect(assigned.status).toBe(200);
+    expect(assigned.body.data.complaint.status).toBe("ASSIGNED");
+    expect(unassigned.status).toBe(200);
+    expect(unassigned.body.data.complaint.status).toBe("UNDER_REVIEW");
+    expect(badDept.status).toBe(400);
+  });
+
+  it("citizen is blocked from all admin complaint management routes (RBAC)", async () => {
+    const citizen = await createVerifiedUser("adm5-rbac-citizen@example.com");
+    const citizenToken = await signIn(citizen.email);
+
+    const listBlocked = await request(app)
+      .get("/api/v1/admin/complaints")
+      .set("Authorization", `Bearer ${citizenToken}`);
+
+    const statusBlocked = await request(app)
+      .patch("/api/v1/admin/complaints/000000000000000000000001/status")
+      .set("Authorization", `Bearer ${citizenToken}`)
+      .send({ status: "UNDER_REVIEW" });
+
+    const assignBlocked = await request(app)
+      .patch("/api/v1/admin/complaints/000000000000000000000001/assign")
+      .set("Authorization", `Bearer ${citizenToken}`)
+      .send({ departmentId: null });
+
+    expect(listBlocked.status).toBe(403);
+    expect(statusBlocked.status).toBe(403);
+    expect(assignBlocked.status).toBe(403);
+  });
+
+  it("unauthenticated requests to admin complaint routes return 401", async () => {
+    const response = await request(app).get("/api/v1/admin/complaints");
+    expect(response.status).toBe(401);
+  });
+});
