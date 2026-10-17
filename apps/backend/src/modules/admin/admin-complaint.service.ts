@@ -23,6 +23,15 @@ export interface AdminComplaintListQuery {
   sortBy?: "newest" | "oldest" | "priority" | "status";
 }
 
+const VALID_TRANSITIONS: Record<ComplaintStatus, readonly ComplaintStatus[]> = {
+  SUBMITTED: ["UNDER_REVIEW", "IN_PROGRESS", "REJECTED"],
+  UNDER_REVIEW: ["ASSIGNED", "REJECTED"],
+  ASSIGNED: ["IN_PROGRESS", "UNDER_REVIEW"],
+  IN_PROGRESS: ["RESOLVED", "UNDER_REVIEW"],
+  RESOLVED: [],
+  REJECTED: [],
+};
+
 function requireObjectId(value: string): Types.ObjectId {
   if (!Types.ObjectId.isValid(value)) {
     throw new AppError("Invalid complaint ID format.", 400, "VALIDATION_ERROR");
@@ -146,7 +155,6 @@ export async function adminListComplaints(
   actor: AdminActor,
   query: AdminComplaintListQuery,
 ) {
-  // Department admins are scoped to their own department
   const enrichedQuery = { ...query };
   if (actor.role === "DEPARTMENT_ADMIN" && actor.departmentId) {
     enrichedQuery.departmentId = actor.departmentId;
@@ -214,6 +222,15 @@ export async function updateAdminComplaintStatus(
     }
   }
 
+  const allowed = VALID_TRANSITIONS[complaint.status] || [];
+  if (!allowed.includes(newStatus)) {
+    throw new AppError(
+      `Cannot transition complaint from '${complaint.status}' to '${newStatus}'. Allowed transitions: ${allowed.length > 0 ? allowed.join(", ") : "none"}`,
+      400,
+      "INVALID_STATUS_TRANSITION",
+    );
+  }
+
   const oldStatus = complaint.status;
   complaint.status = newStatus;
   await complaint.save();
@@ -257,8 +274,7 @@ export async function adminUpdateComplaintStatus(
   newStatus: ComplaintStatus,
   note?: string,
 ) {
-  const updated = await updateAdminComplaintStatus(actor, id, newStatus, note);
-  return updated;
+  return updateAdminComplaintStatus(actor, id, newStatus, note);
 }
 
 export async function assignAdminComplaintDepartment(
@@ -286,6 +302,9 @@ export async function assignAdminComplaintDepartment(
     }
   } else {
     complaint.departmentId = undefined;
+    if (complaint.status === "ASSIGNED") {
+      complaint.status = "UNDER_REVIEW";
+    }
   }
 
   await complaint.save();
