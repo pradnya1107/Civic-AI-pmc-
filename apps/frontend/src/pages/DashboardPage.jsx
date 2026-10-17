@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Navbar } from '../components/Navbar';
 import { complaintApi } from '../services/api';
 
 export const DashboardPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [trackingIdInput, setTrackingIdInput] = useState('');
+  const [trackingError, setTrackingError] = useState('');
+
   const [complaintStats, setComplaintStats] = useState({
     active: 0,
     inProgress: 0,
     resolved: 0,
+    totalCommunitySupport: 0,
   });
 
   useEffect(() => {
@@ -23,6 +28,7 @@ export const DashboardPage = () => {
           let active = 0;
           let inProgress = 0;
           let resolved = 0;
+          let totalCommunitySupport = 0;
 
           list.forEach((c) => {
             const st = (c.status || '').toUpperCase();
@@ -35,9 +41,10 @@ export const DashboardPage = () => {
             if (st === 'RESOLVED' || st === 'CLOSED') {
               resolved++;
             }
+            totalCommunitySupport += (c.supportCount || 1);
           });
 
-          setComplaintStats({ active, inProgress, resolved });
+          setComplaintStats({ active, inProgress, resolved, totalCommunitySupport });
         }
       } catch {
         // Stats gracefully remain at 0 if offline or error
@@ -61,6 +68,17 @@ export const DashboardPage = () => {
     }
   };
 
+  const handleTrackSubmit = (e) => {
+    e.preventDefault();
+    const q = trackingIdInput.trim();
+    if (!q) {
+      setTrackingError('Please enter a complaint or tracking ID.');
+      return;
+    }
+    // Navigate directly to complaint detail or filter complaints
+    navigate(`/complaints?search=${encodeURIComponent(q)}`);
+  };
+
   const displayName = user?.name || user?.fullName || 'Citizen';
   const displayEmail = user?.email || 'N/A';
   const displayRole = user?.role || 'CITIZEN';
@@ -70,88 +88,96 @@ export const DashboardPage = () => {
 
   return (
     <div className="app-container">
-      {/* Top Portal Navigation */}
-      <header className="portal-nav" role="banner">
-        <div className="portal-brand">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-primary)' }} aria-hidden="true">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-          <span className="portal-brand-text">CivicAI PMC</span>
-          <span className="portal-badge">Citizen Portal</span>
-        </div>
-
-        <div className="portal-user-section">
-          <div className="user-profile-badge" aria-label={`Logged in as ${displayName}`}>
-            <div className="user-avatar" aria-hidden="true">{initial}</div>
-            <div>
-              <div className="user-meta-name">{displayName}</div>
-              <div className="user-meta-role">{displayRole}</div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            aria-label="Sign out of Citizen Portal"
-            id="logout-button"
-          >
-            {isLoggingOut ? (
-              <>
-                <span className="spinner" style={{ width: '0.85rem', height: '0.85rem' }} aria-hidden="true" />
-                <span>Signing out...</span>
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-                <span>Sign Out</span>
-              </>
-            )}
-          </button>
-        </div>
-      </header>
+      {/* Top Unified Portal Navigation */}
+      <Navbar />
 
       {/* Main Dashboard Workspace */}
       <main className="dashboard-main" id="main-content">
         <section className="dashboard-hero" aria-labelledby="welcome-heading">
+          <div className="d-flex align-center gap-2 mb-2">
+            <span className="badge badge-primary">Smart City Pune</span>
+            <span className="badge badge-success">AI Grievance Portal</span>
+          </div>
           <h1 id="welcome-heading" className="dashboard-hero-title">
             Welcome, {displayName}!
           </h1>
           <p className="dashboard-hero-desc">
-            Pune Municipal Corporation Civic Intelligence Platform. Report civic grievances,
-            monitor departmental action, and track Pune civic infrastructure resolutions in real time.
+            Pune Municipal Corporation Civic Intelligence Platform. Report potholes, garbage, or drainage breakdowns, inspect live AI heatmaps, and monitor automated before-and-after repair audits.
           </p>
+
+          {/* Quick Tracking ID Search Bar */}
+          <form onSubmit={handleTrackSubmit} className="quick-track-bar mt-4">
+            <div className="quick-track-input-group">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                className="quick-track-input"
+                placeholder="Track by Grievance ID (e.g. CIV-2026-001 or keyword)..."
+                value={trackingIdInput}
+                onChange={(e) => {
+                  setTrackingIdInput(e.target.value);
+                  if (trackingError) setTrackingError('');
+                }}
+              />
+              <button type="submit" className="btn btn-primary btn-track">
+                Track Status &rarr;
+              </button>
+            </div>
+            {trackingError && <p className="text-danger text-xs mt-1">{trackingError}</p>}
+          </form>
         </section>
 
         {/* Quick Stats Grid */}
         <section className="stats-grid" aria-label="Grievance Statistics Overview">
           <article className="stat-card">
-            <div className="stat-label">Active Complaints</div>
+            <div className="stat-label">Active Grievances</div>
             <div className="stat-value">{complaintStats.active}</div>
           </article>
           <article className="stat-card">
-            <div className="stat-label">In Review / Progress</div>
-            <div className="stat-value">{complaintStats.inProgress}</div>
+            <div className="stat-label">In Remediation</div>
+            <div className="stat-value text-info">{complaintStats.inProgress}</div>
           </article>
           <article className="stat-card">
-            <div className="stat-label">Resolved Issues</div>
-            <div className="stat-value">{complaintStats.resolved}</div>
+            <div className="stat-label">Resolved & Verified</div>
+            <div className="stat-value text-success">{complaintStats.resolved}</div>
           </article>
           <article className="stat-card">
-            <div className="stat-label">Account Verification</div>
-            <div className="stat-value" style={{ fontSize: '1.25rem', color: isVerified ? 'var(--color-success)' : 'var(--color-warning)' }}>
-              {isVerified ? 'Verified Citizen' : 'Pending Verification'}
-            </div>
+            <div className="stat-label">Community Impact</div>
+            <div className="stat-value text-primary">{complaintStats.totalCommunitySupport}</div>
           </article>
         </section>
 
+        {/* Smart City Features Banner */}
+        <section className="heatmap-cta-banner">
+          <div className="heatmap-cta-content">
+            <div className="d-flex align-center gap-2">
+              <span className="badge badge-warning">GIS Geolocation</span>
+              <span className="badge badge-primary">Multimodal AI 1.5</span>
+            </div>
+            <h2 className="heatmap-cta-title">Explore Pune's Live AI Civic Heatmap</h2>
+            <p className="heatmap-cta-desc">
+              View real-time hotspots of potholes, solid waste accumulation, waterlogging, and streetlights across all 15 PMC wards with SLA priority rings.
+            </p>
+            <div className="d-flex gap-2 mt-3">
+              <Link to="/heatmap" className="btn btn-primary">
+                🗺️ Open Live Civic Heatmap
+              </Link>
+              <Link to="/complaints/new" className="btn btn-outline" id="report-an-issue-button">
+                📸 Report with AI Photo Scanner
+              </Link>
+            </div>
+          </div>
+          <div className="heatmap-cta-graphic" aria-hidden="true">
+            <div className="radar-circle" />
+            <div className="radar-ping" />
+          </div>
+        </section>
+
         {/* Informational Cards */}
-        <section className="info-cards-grid">
+        <section className="info-cards-grid mt-4">
           {/* Profile Overview */}
           <article className="info-card" aria-labelledby="profile-info-heading">
             <div className="info-card-header">
@@ -191,17 +217,16 @@ export const DashboardPage = () => {
           {/* Quick Actions / Civic Reporting */}
           <article className="info-card" aria-labelledby="quick-actions-heading">
             <div className="info-card-header">
-              <h2 id="quick-actions-heading" className="info-card-title">Civic Services</h2>
+              <h2 id="quick-actions-heading" className="info-card-title">Civic Services & Tracking</h2>
             </div>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-              Report issues directly to Pune Municipal Corporation departments including Roads, Water Supply, Drainage, Solid Waste Management, and Street Lighting.
+              Report issues directly to Pune Municipal Corporation departments. Support neighbors' complaints to automatically escalate municipal response priority.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <Link
                 to="/complaints/new"
                 className="btn btn-primary"
                 style={{ justifyContent: 'flex-start' }}
-                id="report-an-issue-button"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                   <line x1="12" y1="5" x2="12" y2="19" />
@@ -224,21 +249,32 @@ export const DashboardPage = () => {
                 </svg>
                 <span>View My Complaints & Grievance History</span>
               </Link>
+              <Link
+                to="/heatmap"
+                className="btn btn-outline"
+                style={{ justifyContent: 'flex-start' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                  <line x1="8" y1="2" x2="8" y2="18" />
+                  <line x1="16" y1="6" x2="16" y2="22" />
+                </svg>
+                <span>Browse PMC Ward Heatmap & Upvote Issues</span>
+              </Link>
             </div>
           </article>
         </section>
 
         {/* Security & Route Notice */}
-        <aside className="security-note-box" aria-label="Security and route notice">
+        <aside className="security-note-box mt-4" aria-label="Security and route notice">
           <div className="security-note-title">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-            CivicAI Security Architecture Notice
+            CivicAI Smart City Security & Auditing Architecture
           </div>
           <p>
-            Client-side route protection verifies your local authenticated session before rendering.
-            All backend PMC endpoints independently validate JWT signatures, token freshness, and citizen authorization claims on every request.
+            All citizen reports are cryptographically signed with tamper-proof audit trails. Gemini AI multimodal vision verifies before-and-after photo integrity, and citizen satisfaction ratings drive department SLA accountability.
           </p>
         </aside>
       </main>

@@ -168,6 +168,69 @@ export const complaintApi = {
   },
 
   /**
+   * Fetch heatmap geo-points for Pune civic map
+   * GET /api/v1/complaints/heatmap
+   */
+  async getHeatmapData(params = {}) {
+    const response = await api.get('/api/v1/complaints/heatmap', { params });
+    return response.data;
+  },
+
+  /**
+   * Check for nearby potential duplicate complaints
+   * POST /api/v1/complaints/check-duplicates
+   */
+  async checkDuplicates(data) {
+    const response = await api.post('/api/v1/complaints/check-duplicates', data);
+    return response.data;
+  },
+
+  /**
+   * Citizen community upvote / support a complaint
+   * POST /api/v1/complaints/:id/support
+   */
+  async supportComplaint(id) {
+    const response = await api.post(`/api/v1/complaints/${id}/support`);
+    return response.data;
+  },
+
+  /**
+   * Admin resolve complaint with before-and-after photo verification
+   * POST /api/v1/complaints/:id/resolve
+   */
+  async resolveComplaint(id, data) {
+    const response = await api.post(`/api/v1/complaints/${id}/resolve`, data);
+    return response.data;
+  },
+
+  /**
+   * Citizen confirm resolution satisfaction and provide feedback
+   * POST /api/v1/complaints/:id/confirm
+   */
+  async confirmResolution(id, data) {
+    const response = await api.post(`/api/v1/complaints/${id}/confirm`, data);
+    return response.data;
+  },
+
+  /**
+   * Citizen dispute an unresolved or unsatisfactory resolution
+   * POST /api/v1/complaints/:id/dispute
+   */
+  async disputeResolution(id, data) {
+    const response = await api.post(`/api/v1/complaints/${id}/dispute`, data);
+    return response.data;
+  },
+
+  /**
+   * Get SLA monitoring metrics and overdue alerts
+   * GET /api/v1/complaints/sla-monitoring
+   */
+  async getSlaMonitoring() {
+    const response = await api.get('/api/v1/complaints/sla-monitoring');
+    return response.data;
+  },
+
+  /**
    * Update complaint status, department assignment, or priority (Admin/SuperAdmin)
    * PATCH /api/v1/complaints/:id
    */
@@ -182,6 +245,35 @@ export const complaintApi = {
    */
   async deleteComplaint(id) {
     const response = await api.delete(`/api/v1/complaints/${id}`);
+    return response.data;
+  },
+};
+
+export const aiApi = {
+  /**
+   * Check Gemini AI connection status
+   * GET /api/v1/ai/status
+   */
+  async getAiStatus() {
+    const response = await api.get('/api/v1/ai/status');
+    return response.data;
+  },
+
+  /**
+   * Analyze complaint image + text with Gemini Vision
+   * POST /api/v1/ai/analyze-complaint
+   */
+  async analyzeComplaint(data) {
+    const response = await api.post('/api/v1/ai/analyze-complaint', data);
+    return response.data;
+  },
+
+  /**
+   * Verify before-and-after resolution repair photo
+   * POST /api/v1/ai/verify-resolution
+   */
+  async verifyResolution(data) {
+    const response = await api.post('/api/v1/ai/verify-resolution', data);
     return response.data;
   },
 };

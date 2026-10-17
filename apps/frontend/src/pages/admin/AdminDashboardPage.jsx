@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { adminApi, departmentApi } from '../../services/api';
+import { adminApi, departmentApi, complaintApi } from '../../services/api';
 import { ComplaintRow } from '../../components/admin/ComplaintRow';
 
 const STATUS_FILTER_OPTIONS = [
@@ -134,8 +134,22 @@ export const AdminDashboardPage = () => {
     }
   }, [currentPage, search, selectedStatus, selectedCategory, selectedDept, selectedPriority, sortBy]);
 
+  const [slaMonitoring, setSlaMonitoring] = useState(null);
+
+  const loadSlaMetrics = async () => {
+    try {
+      const res = await complaintApi.getSlaMonitoring();
+      if (res && res.success) {
+        setSlaMonitoring(res.data);
+      }
+    } catch {
+      // Non-blocking SLA metrics load
+    }
+  };
+
   useEffect(() => {
     loadDepartments();
+    loadSlaMetrics();
   }, []);
 
   useEffect(() => {
@@ -156,6 +170,7 @@ export const AdminDashboardPage = () => {
       );
       // Refresh to update server metrics
       fetchComplaints();
+      loadSlaMetrics();
     } catch (err) {
       showToast(`Error updating status: ${err?.message || 'Please try again.'}`);
       throw err;
@@ -229,10 +244,22 @@ export const AdminDashboardPage = () => {
         </div>
 
         <div className="admin-page-header-actions">
+          <Link to="/heatmap" className="btn btn-primary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+              <line x1="8" y1="2" x2="8" y2="18" />
+              <line x1="16" y1="6" x2="16" y2="22" />
+            </svg>
+            <span>AI Civic Heatmap</span>
+          </Link>
+
           <button
             type="button"
             className="btn btn-outline btn-sm"
-            onClick={fetchComplaints}
+            onClick={() => {
+              fetchComplaints();
+              loadSlaMetrics();
+            }}
             disabled={isLoading}
             title="Refresh complaint data"
           >
@@ -254,6 +281,23 @@ export const AdminDashboardPage = () => {
           </button>
         </div>
       </div>
+
+      {/* SLA Alert Banner */}
+      {slaMonitoring && slaMonitoring.overdueCount > 0 && (
+        <div className="alert-banner alert-banner-warning mb-4 d-flex align-center justify-between" role="alert" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '8px' }}>
+          <div className="d-flex align-center gap-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>
+              <strong>PMC SLA Alert:</strong> {slaMonitoring.overdueCount} active complaint(s) have exceeded citizen SLA deadlines! Overall municipal compliance rate is <strong>{slaMonitoring.complianceRate}%</strong>.
+            </span>
+          </div>
+          <span className="badge badge-danger">Breached SLA ({slaMonitoring.overdueCount})</span>
+        </div>
+      )}
 
       {/* KPI Metric Summary Cards */}
       <div className="admin-metric-grid" aria-label="Grievance Overview Statistics">

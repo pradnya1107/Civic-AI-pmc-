@@ -13,6 +13,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ComplaintFormPage } from './pages/ComplaintFormPage';
 import { ComplaintListPage } from './pages/ComplaintListPage';
 import { ComplaintDetailPage } from './pages/ComplaintDetailPage';
+import { HeatmapPage } from './pages/HeatmapPage';
 
 // Admin Components & Pages
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -118,6 +119,14 @@ export const App = () => {
             <Route
               path="/report"
               element={<Navigate to="/complaints/new" replace />}
+            />
+            <Route
+              path="/heatmap"
+              element={
+                <ProtectedRoute>
+                  <HeatmapPage />
+                </ProtectedRoute>
+              }
             />
 
             {/* Administrative Portal Routes (Protected by AdminProtectedRoute) */}

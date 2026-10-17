@@ -55,6 +55,13 @@ export const Navbar = () => {
             My Complaints
           </NavLink>
           <NavLink
+            to="/heatmap"
+            className={({ isActive }) => `nav-link ${isActive ? 'nav-link--active' : ''}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            🗺️ AI Heatmap
+          </NavLink>
+          <NavLink
             to="/complaints/new"
             className={({ isActive }) => `btn btn-primary btn-sm ${isActive ? 'btn-primary--active' : ''}`}
             style={{ textDecoration: 'none' }}

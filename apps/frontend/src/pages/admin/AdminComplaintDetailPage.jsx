@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { adminApi, departmentApi } from '../../services/api';
+import { adminApi, departmentApi, complaintApi } from '../../services/api';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LifecycleStepper } from '../../components/LifecycleStepper';
 
@@ -36,9 +36,39 @@ export const AdminComplaintDetailPage = () => {
 
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // Before-and-After Resolution Verification modal
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [resolutionImageUrl, setResolutionImageUrl] = useState('');
+  const [resolutionNotes, setResolutionNotes] = useState('');
+  const [assignedOfficer, setAssignedOfficer] = useState('Officer R. Shinde (PMC Field Team 4)');
+  const [isResolving, setIsResolving] = useState(false);
+
   const showToast = (message) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleResolveWithVerification = async (e) => {
+    e.preventDefault();
+    if (!id || isResolving) return;
+    setIsResolving(true);
+    try {
+      const res = await complaintApi.resolveComplaint(id, {
+        resolutionImageUrl: resolutionImageUrl.trim() || undefined,
+        resolutionNotes: resolutionNotes.trim() || undefined,
+        assignedOfficer: assignedOfficer.trim() || undefined,
+      });
+
+      if (res && res.success) {
+        showToast('Complaint resolved! Gemini AI before-and-after audit completed.');
+        setShowResolveModal(false);
+        loadData();
+      }
+    } catch (err) {
+      showToast(`Resolution failed: ${err.message || 'Please try again.'}`);
+    } finally {
+      setIsResolving(false);
+    }
   };
 
   const loadData = async () => {
@@ -297,6 +327,53 @@ export const AdminComplaintDetailPage = () => {
             </div>
           </div>
 
+          {/* AI Diagnostics & Photo Audit Card */}
+          {(complaint.imageUrl || complaint.resolutionImageUrl || complaint.aiAnalysis) && (
+            <div className="admin-card mb-4">
+              <div className="admin-card-header">
+                <h2 className="admin-card-title">AI Diagnostics & Photo Audit</h2>
+                {complaint.verificationStatus && (
+                  <span className={`badge badge-${complaint.verificationStatus === 'RESOLVED_VERIFIED' ? 'success' : 'warning'}`}>
+                    {complaint.verificationStatus.replace('_', ' ')}
+                  </span>
+                )}
+              </div>
+              <div className="admin-card-body">
+                <div className="before-after-grid mb-3">
+                  <div className="photo-compare-card">
+                    <div className="compare-tag compare-tag-before">Original Problem Photo</div>
+                    {complaint.imageUrl ? (
+                      <img src={complaint.imageUrl} alt="Original reported grievance" className="compare-img" />
+                    ) : (
+                      <div className="compare-empty">No original photo submitted</div>
+                    )}
+                  </div>
+                  <div className="photo-compare-card">
+                    <div className="compare-tag compare-tag-after">Field Officer Repair Photo</div>
+                    {complaint.resolutionImageUrl ? (
+                      <img src={complaint.resolutionImageUrl} alt="Repair work evidence" className="compare-img" />
+                    ) : (
+                      <div className="compare-empty">Repair photo pending upload</div>
+                    )}
+                  </div>
+                </div>
+
+                {complaint.resolutionNotes && (
+                  <div className="resolution-notes-box mb-2">
+                    <strong>Field Officer Report:</strong> {complaint.resolutionNotes}
+                    {complaint.assignedOfficer && <span> ({complaint.assignedOfficer})</span>}
+                  </div>
+                )}
+
+                {complaint.verificationConfidence !== undefined && (
+                  <div className="ai-verification-meta">
+                    <span>Gemini Vision Audit Confidence: <strong>{complaint.verificationConfidence}%</strong></span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Activity Timeline & Audit Logs */}
           <div className="admin-card">
             <div className="admin-card-header">
@@ -486,6 +563,14 @@ export const AdminComplaintDetailPage = () => {
 
               <button
                 type="button"
+                className="btn btn-primary btn-block mb-2"
+                onClick={() => setShowResolveModal(true)}
+              >
+                ⚡ Resolve with Repair Photo (AI Audit)
+              </button>
+
+              <button
+                type="button"
                 className="btn btn-outline btn-block"
                 onClick={() => {
                   setNewStatus('RESOLVED');
@@ -498,6 +583,73 @@ export const AdminComplaintDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* RESOLVE WITH PHOTO MODAL */}
+      {showResolveModal && (
+        <div className="admin-modal-backdrop" onClick={() => !isResolving && setShowResolveModal(false)} role="dialog" aria-modal="true">
+          <div className="admin-modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h3 className="admin-modal-title">Resolve Grievance with Repair Evidence</h3>
+              <button type="button" className="admin-modal-close-btn" onClick={() => setShowResolveModal(false)} disabled={isResolving}>&times;</button>
+            </div>
+            <form onSubmit={handleResolveWithVerification}>
+              <div className="admin-modal-body">
+                <p className="text-sm text-muted mb-3">
+                  Upload repair photo evidence. Gemini AI vision engine will audit the work before final citizen notification.
+                </p>
+                <div className="form-group">
+                  <label htmlFor="resolve-img-url" className="form-label">Repair Work Photo URL</label>
+                  <input
+                    type="url"
+                    id="resolve-img-url"
+                    className="form-input"
+                    placeholder="https://images.unsplash.com/... or paste image URL"
+                    value={resolutionImageUrl}
+                    onChange={(e) => setResolutionImageUrl(e.target.value)}
+                  />
+                  <div className="d-flex gap-1 mt-1">
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-outline"
+                      onClick={() => setResolutionImageUrl('https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800')}
+                    >
+                      Use Demo Asphalt Repair Photo
+                    </button>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="resolve-officer" className="form-label">Assigned Field Officer</label>
+                  <input
+                    type="text"
+                    id="resolve-officer"
+                    className="form-input"
+                    value={assignedOfficer}
+                    onChange={(e) => setAssignedOfficer(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="resolve-notes-text" className="form-label">Field Remediation Notes</label>
+                  <textarea
+                    id="resolve-notes-text"
+                    rows={3}
+                    className="form-textarea"
+                    placeholder="Describe actions taken, materials used, and final status..."
+                    value={resolutionNotes}
+                    onChange={(e) => setResolutionNotes(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="admin-modal-footer">
+                <button type="button" className="btn btn-outline" onClick={() => setShowResolveModal(false)} disabled={isResolving}>Cancel</button>
+                <button type="submit" className="btn btn-success" disabled={isResolving}>
+                  {isResolving ? 'Auditing with Gemini AI...' : 'Verify & Mark Resolved'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
