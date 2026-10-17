@@ -1,29 +1,28 @@
 {
-  "name": "civicai-mobile",
+  "name": "frontend",
   "version": "1.0.0",
   "private": true,
-  "main": "index.ts",
+  "type": "module",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web --port 5173",
-    "typecheck": "tsc --noEmit"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~57.0.16",
-    "expo": "~57.0.27",
-    "expo-constants": "~57.0.21",
-    "expo-device": "~57.0.2",
-    "expo-secure-store": "~57.0.4",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.86.3",
-    "react-native-web": "^0.21.2"
+    "axios": "^1.7.9",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.2.0"
   },
   "devDependencies": {
-    "@expo/ngrok": "^4.1.0",
-    "@types/react": "~19.2.0",
-    "typescript": "~6.0.3"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^26.0.0",
+    "vite": "^6.2.0",
+    "vitest": "^3.0.7"
   }
 }

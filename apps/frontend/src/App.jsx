@@ -3,8 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminProtectedRoute } from './components/AdminProtectedRoute';
 
 // Citizen Pages
+import { SplashScreen } from './pages/SplashScreen';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -14,6 +16,8 @@ import { ComplaintDetailPage } from './pages/ComplaintDetailPage';
 
 // Admin Components & Pages
 import { AdminLayout } from './components/admin/AdminLayout';
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { AdminComplaintDetailPage } from './pages/admin/AdminComplaintDetailPage';
 import { SuperAdminDashboardPage } from './pages/admin/SuperAdminDashboardPage';
 import { DepartmentsPage } from './pages/admin/DepartmentsPage';
 import { DepartmentAdminsPage } from './pages/admin/DepartmentAdminsPage';
@@ -39,22 +43,22 @@ const RootIndexRedirect = () => {
     );
   }
 
-  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/splash'} replace />;
 };
 
 /**
  * Intelligent Dashboard Dispatcher:
- * Super Admins and Admins automatically see the municipal administration portal.
+ * Super Admins and Admins automatically land on the Admin Complaint Dashboard.
  * Citizens see their civic grievances portal.
  */
 const DashboardDispatcher = () => {
   const { user } = useAuth();
-  const role = user?.role || 'CITIZEN';
+  const role = (user?.role || 'CITIZEN').toUpperCase();
 
   if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
     return (
       <AdminLayout>
-        <SuperAdminDashboardPage />
+        <AdminDashboardPage />
       </AdminLayout>
     );
   }
@@ -71,7 +75,8 @@ export const App = () => {
             {/* Index Route */}
             <Route path="/" element={<RootIndexRedirect />} />
 
-            {/* Public Auth Routes */}
+            {/* Public Welcome & Auth Routes */}
+            <Route path="/splash" element={<SplashScreen />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 
@@ -115,85 +120,115 @@ export const App = () => {
               element={<Navigate to="/complaints/new" replace />}
             />
 
-            {/* Super Admin Control Center Routes */}
+            {/* Administrative Portal Routes (Protected by AdminProtectedRoute) */}
             <Route
               path="/admin"
               element={
-                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <AdminProtectedRoute>
                   <AdminLayout>
-                    <SuperAdminDashboardPage />
+                    <AdminDashboardPage />
                   </AdminLayout>
-                </ProtectedRoute>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminDashboardPage />
+                  </AdminLayout>
+                </AdminProtectedRoute>
               }
             />
             <Route
               path="/admin/complaints"
               element={
-                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <AdminProtectedRoute>
                   <AdminLayout>
-                    <AdminComplaintsPage />
+                    <AdminDashboardPage />
                   </AdminLayout>
-                </ProtectedRoute>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/complaints/:id"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminComplaintDetailPage />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/super-dashboard"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <SuperAdminDashboardPage />
+                  </AdminLayout>
+                </AdminProtectedRoute>
               }
             />
             <Route
               path="/admin/departments"
               element={
-                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <AdminProtectedRoute>
                   <AdminLayout>
                     <DepartmentsPage />
                   </AdminLayout>
-                </ProtectedRoute>
+                </AdminProtectedRoute>
               }
             />
             <Route
               path="/admin/department-admins"
               element={
-                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <AdminProtectedRoute>
                   <AdminLayout>
                     <DepartmentAdminsPage />
                   </AdminLayout>
-                </ProtectedRoute>
+                </AdminProtectedRoute>
               }
             />
             <Route
               path="/admin/citizens"
               element={
-                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminCitizensPage />
                   </AdminLayout>
-                </ProtectedRoute>
+                </AdminProtectedRoute>
               }
             />
             <Route
               path="/admin/analytics"
               element={
-                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminAnalyticsPage />
                   </AdminLayout>
-                </ProtectedRoute>
+                </AdminProtectedRoute>
               }
             />
             <Route
               path="/admin/notifications"
               element={
-                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminNotificationsPage />
                   </AdminLayout>
-                </ProtectedRoute>
+                </AdminProtectedRoute>
               }
             />
             <Route
               path="/admin/settings"
               element={
-                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminSettingsPage />
                   </AdminLayout>
-                </ProtectedRoute>
+                </AdminProtectedRoute>
               }
             />
 
