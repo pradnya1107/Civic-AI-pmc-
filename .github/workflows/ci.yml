@@ -71,3 +71,32 @@ jobs:
 
       - name: Typecheck frontend
         run: npm --prefix apps/frontend run typecheck
+
+  web-ci:
+    name: Web CI (Build & Test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web
+        run: pnpm --filter web build
+
+      - name: Run web tests
+        run: pnpm --filter web test
+
