@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminProtectedRoute } from './components/AdminProtectedRoute';
 
@@ -71,7 +72,8 @@ export const App = () => {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
           <Routes>
             {/* Index Route */}
             <Route path="/" element={<RootIndexRedirect />} />
@@ -245,7 +247,8 @@ export const App = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
-      </ThemeProvider>
+      </LanguageProvider>
+    </ThemeProvider>
     </BrowserRouter>
   );
 };

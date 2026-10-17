@@ -113,6 +113,8 @@ export const ComplaintFormPage = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoNotice, setGeoNotice] = useState('');
+  const [step7Completed, setStep7Completed] = useState(false);
+  const [createdComplaintData, setCreatedComplaintData] = useState(null);
 
   // Handle input change
   const handleChange = (e) => {
@@ -369,19 +371,20 @@ export const ComplaintFormPage = () => {
       const createdComplaint = response?.data?.complaint || response?.complaint || response?.data;
       const complaintId = createdComplaint?._id || createdComplaint?.id || '';
 
-      setToastMessage('Grievance submitted successfully! Redirecting to tracking...');
+      setCreatedComplaintData(createdComplaint || payload);
+      setStep7Completed(true);
+      setToastMessage('Grievance submitted successfully! Step 7 Notification dispatched to municipal ward desk.');
+      setIsSubmitting(false);
 
-      setTimeout(() => {
-        if (complaintId) {
-          navigate(`/complaints/${complaintId}`, {
-            state: { message: 'Complaint registered successfully!' },
-          });
-        } else {
-          navigate('/complaints', {
-            state: { message: 'Complaint registered successfully!' },
-          });
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        try {
+          const utterance = new SpeechSynthesisUtterance('Your complaint has been successfully reported to Pune Municipal Corporation.');
+          utterance.rate = 1.0;
+          window.speechSynthesis.speak(utterance);
+        } catch {
+          // Ignore
         }
-      }, 900);
+      }
     } catch (err) {
       const msg = err.message || 'Failed to submit grievance. Please verify details and try again.';
       setServerError(msg);
@@ -429,6 +432,81 @@ export const ComplaintFormPage = () => {
             </svg>
             <span>{toastMessage}</span>
           </div>
+        )}
+
+        {/* Step 7: Explicit Notification & Success Screen */}
+        {step7Completed && createdComplaintData && (
+          <section className="step7-success-card mb-4" role="region" aria-label="Step 7: Complaint Successfully Reported">
+            <div className="step7-banner-header">
+              <div className="step7-badge-pill">Step 7 of 7: Notification Dispatched</div>
+              <div className="step7-icon-circle" aria-hidden="true">✓</div>
+              <h2 className="step7-title">Your Complaint Has Been Successfully Reported!</h2>
+              <p className="step7-subtitle">
+                Grievance registered in the Pune Municipal Corporation civic intelligence network. In-app notification and SMS dispatch completed to the relevant department officer.
+              </p>
+            </div>
+
+            <div className="step7-summary-grid">
+              <div className="step7-detail-item">
+                <span className="step7-detail-label">Grievance Tracking ID</span>
+                <span className="step7-detail-value font-mono text-teal">
+                  {createdComplaintData.complaintNumber || createdComplaintData._id || 'CIV-REG-001'}
+                </span>
+              </div>
+              <div className="step7-detail-item">
+                <span className="step7-detail-label">Category</span>
+                <span className="step7-detail-value">{createdComplaintData.category || formData.category}</span>
+              </div>
+              <div className="step7-detail-item">
+                <span className="step7-detail-label">Location / Ward</span>
+                <span className="step7-detail-value">{createdComplaintData.location?.address || formData.address}</span>
+              </div>
+              <div className="step7-detail-item">
+                <span className="step7-detail-label">Notification Status</span>
+                <span className="step7-detail-value text-success">
+                  🔔 Active — Notification Sent to Ward Desk
+                </span>
+              </div>
+            </div>
+
+            <div className="step7-actions-row">
+              <Link
+                to={`/complaints/${createdComplaintData._id || createdComplaintData.id || ''}`}
+                className="btn btn-primary"
+              >
+                🔍 Track Live SLA Status &rarr;
+              </Link>
+              <Link to="/heatmap" className="btn btn-outline">
+                🗺️ View on PMC Heatmap
+              </Link>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => {
+                  setStep7Completed(false);
+                  setCreatedComplaintData(null);
+                  setFormData({
+                    title: '',
+                    description: '',
+                    category: '',
+                    priority: 'MEDIUM',
+                    address: '',
+                    ward: '',
+                    latitude: '',
+                    longitude: '',
+                    imageUrl: '',
+                  });
+                  setImagePreview('');
+                  setImageBase64('');
+                  setAiResult(null);
+                  setDuplicateMatches([]);
+                  setToastMessage('');
+                }}
+              >
+                + Report Another Issue
+              </button>
+            </div>
+          </section>
         )}
 
         {/* Server Error Alert */}
