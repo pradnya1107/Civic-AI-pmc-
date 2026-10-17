@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/authenticate";
+import { authorize } from "../../middleware/authorize";
 import { asyncHandler } from "../../middleware/async-handler";
 import { validateRequest } from "../../middleware/validate-request";
 import {
@@ -10,6 +11,7 @@ import {
 } from "./complaint.validation";
 import {
   create,
+  getAiAnalysis,
   getById,
   list,
   remove,
@@ -33,6 +35,12 @@ complaintRouter.get(
   "/:id",
   validateRequest(complaintIdSchema, "params"),
   asyncHandler(getById),
+);
+complaintRouter.get(
+  "/:id/ai",
+  authorize("ADMIN", "DEPARTMENT_ADMIN", "SUPER_ADMIN"),
+  validateRequest(complaintIdSchema, "params"),
+  asyncHandler(getAiAnalysis),
 );
 complaintRouter.patch(
   "/:id",

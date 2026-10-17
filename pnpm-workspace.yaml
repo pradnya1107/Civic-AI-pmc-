@@ -1,4 +1,4 @@
-packages:
+git branch --show-currentpackages:
   - "apps/backend"
   - "packages/*"
 

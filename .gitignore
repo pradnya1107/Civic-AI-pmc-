@@ -1,27 +1,30 @@
-# Dependencies
-node_modules/
-.npm/
-.pnpm-store/
 
-# Build outputs
-dist/
-build/
-coverage/
-.vite/
-.turbo/
-logs/
-tmp/
-temp/
-uploads/
-*.log
-*.tsbuildinfo
+Step 1: Open your project folde
+cd "C:\Users\PRADNYA\Civic AI"
+Step 2: Check your current branch and changes
+git status
+git branch
+Step 3: Switch to the dev branch
+git checkout dev
+Step 4: Pull the latest code from GitHub
+git pull origin dev
+Step 5: Create your feature branch
+git checkout -b feature/ai-service-integration
+Step 6: Check your branch
+git branch
+Step 7: Add your code
+git add .
+Step 8: Commit your changes
+git commit -m "feat: implement AI service integration"
+Step 9: Push your feature branch to GitHub
+git push -u origin feature/ai-service-integration
 
-# Local environment files
-.env
-.env.*
-!.env.example
+Step 10: Create a Pull Request on GitHub
+Open your repository: CivicAI PMC on GitHub
+Select Pull requests → New pull request and choose:
+Option	Branch
+Base	dev
+Compare	feature/ai-service-integration
 
-# Local tool and operating-system files
-.expo/
-.DS_Store
-Thumbs.db
+Then click Create pull request.
+Important: Before committing, check git status to ensure you aren't accidentally committing unrelated files or secrets from your .env file.

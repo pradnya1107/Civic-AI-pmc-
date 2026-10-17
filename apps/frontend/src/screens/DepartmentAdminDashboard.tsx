@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { ActionButton, Notice, Page } from "../components/Controls";
 import { CivicLogo } from "../components/CivicLogo";
+import { AISuggestionsCard } from "../components/AISuggestionsCard";
 import { colors } from "../theme";
 import type { AuthUser } from "../services/auth-api";
 import {
@@ -28,6 +30,7 @@ export function DepartmentAdminDashboard({
 }: DepartmentAdminDashboardProps) {
   const [dashboardData, setDashboardData] = useState<DepartmentDashboardData | null>(null);
   const [complaints, setComplaints] = useState<DepartmentComplaintItem[]>([]);
+  const [expandedAiId, setExpandedAiId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -197,6 +200,43 @@ export function DepartmentAdminDashboard({
                         year: "numeric",
                       })}
                     </Text>
+
+                    <View style={styles.aiActionRow}>
+                      <Pressable
+                        style={styles.aiToggleBtn}
+                        onPress={() =>
+                          setExpandedAiId(expandedAiId === c._id ? null : c._id)
+                        }
+                      >
+                        <Text style={styles.aiToggleText}>
+                          {expandedAiId === c._id
+                            ? "Hide AI Suggestions"
+                            : "✨ Review AI Suggestions"}
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {expandedAiId === c._id ? (
+                      <AISuggestionsCard
+                        complaintId={c._id}
+                        currentCategory={c.category}
+                        currentPriority={c.priority}
+                        token={token}
+                        onComplaintUpdated={(updated) => {
+                          setComplaints((prev) =>
+                            prev.map((item) =>
+                              item._id === updated._id
+                                ? {
+                                    ...item,
+                                    category: updated.category,
+                                    priority: updated.priority,
+                                  }
+                                : item,
+                            ),
+                          );
+                        }}
+                      />
+                    ) : null}
                   </View>
                 );
               })
@@ -328,4 +368,21 @@ const styles = StyleSheet.create({
   priorityText: { color: "#991B1B", fontSize: 10, fontWeight: "600" },
   locationText: { color: colors.muted, fontSize: 12, marginBottom: 4 },
   dateText: { color: colors.muted, fontSize: 11, fontStyle: "italic" },
+  aiActionRow: {
+    marginTop: 8,
+    alignItems: "flex-start",
+  },
+  aiToggleBtn: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#BBF7D0",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  aiToggleText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.emeraldDark,
+  },
 });

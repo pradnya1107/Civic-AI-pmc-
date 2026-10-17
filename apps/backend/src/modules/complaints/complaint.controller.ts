@@ -12,6 +12,7 @@ import {
   listComplaints,
   updateComplaint,
 } from "./complaint.service";
+import { getAnalysisByComplaintId } from "../ai/ai.service";
 
 function actorFromRequest(request: Parameters<RequestHandler>[0]) {
   const user = request.user;
@@ -84,3 +85,26 @@ export const remove: RequestHandler = async (request, response) => {
     message: "Complaint deleted successfully.",
   });
 };
+
+export const getAiAnalysis: RequestHandler = async (request, response) => {
+  const complaintId = complaintIdFromRequest(request);
+  const actor = actorFromRequest(request);
+
+  // Verify complaint exists and actor has permission
+  const complaint = await getComplaint(actor, complaintId);
+
+  const analysis = await getAnalysisByComplaintId(complaint._id);
+  if (!analysis) {
+    throw new AppError(
+      "AI analysis not found for this complaint.",
+      404,
+      "ANALYSIS_NOT_FOUND",
+    );
+  }
+
+  response.status(200).json({
+    success: true,
+    data: { analysis },
+  });
+};
+

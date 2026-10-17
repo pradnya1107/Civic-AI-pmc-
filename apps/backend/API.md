@@ -152,6 +152,10 @@ Pagination defaults to page 1 and 20 records; the maximum page size is 100.
 
 - `GET /api/v1/complaints/{id}` — citizens can read their own record; admins
   can read any record.
+- `GET /api/v1/complaints/{id}/ai` — administrators (`ADMIN`, `DEPARTMENT_ADMIN`,
+  `SUPER_ADMIN`) can retrieve AI categorization, priority recommendations,
+  plain-language summary, and confidence score for the complaint. Returns `404` with
+  `ANALYSIS_NOT_FOUND` if analysis is not yet ready or unavailable.
 - `PATCH /api/v1/complaints/{id}` — citizens may edit content/location while
   the complaint is still `SUBMITTED`. Administrators may additionally set
   `status`, `priority`, and `departmentId`.
@@ -177,6 +181,13 @@ status/assignment changes create notifications for the owning citizen.
 
 Departments are managed separately from complaints. No department-management
 write endpoint is currently exposed.
+
+## AI Intelligence Service
+- Internal Python FastAPI microservice located in `services/ai/`.
+- Protected by `X-AI-Service-Secret` header using constant-time comparison.
+- `POST /analyze` receives `{ complaintId, complaintText }` and returns `{ category, priority, summary, confidence, modelVersion }`.
+- Configurable via `AI_SERVICE_URL`, `AI_SERVICE_SECRET`, and `AI_PROVIDER` (`stub` or `openai`).
+- Real AI inference is performed using `openai` when `OPENAI_API_KEY` is configured; otherwise deterministic local stub categorizes complaints by municipal keywords.
 
 ## Health and errors
 

@@ -59,10 +59,22 @@ export type CreateAdminResponse = {
   confirmationOtp?: string;
 };
 
+export type AIAnalysisData = {
+  _id?: string;
+  complaintRef: string;
+  suggestedCategory: string;
+  suggestedPriority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  summary: string;
+  confidence: number;
+  modelVersion: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 async function apiCall<T>(
   path: string,
   options: {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "PATCH" | "DELETE";
     body?: unknown;
     token?: string;
   } = {},
@@ -168,4 +180,29 @@ export const departmentAdminApi = {
     }
     return data;
   },
+
+  async getComplaintAiAnalysis(token: string, complaintId: string): Promise<AIAnalysisData> {
+    const data = await apiCall<{ analysis: AIAnalysisData }>(
+      `/api/v1/complaints/${complaintId}/ai`,
+      { token },
+    );
+    return data.analysis;
+  },
+
+  async updateComplaint(
+    token: string,
+    complaintId: string,
+    patch: { category?: string; priority?: string },
+  ): Promise<DepartmentComplaintItem> {
+    const data = await apiCall<{ complaint: DepartmentComplaintItem }>(
+      `/api/v1/complaints/${complaintId}`,
+      {
+        method: "PATCH",
+        token,
+        body: patch,
+      },
+    );
+    return data.complaint;
+  },
 };
+

@@ -13,6 +13,7 @@ import {
   recordComplaintUpdate,
 } from "../notifications/notification.service";
 import { Notification } from "../notifications/notification.model";
+import { triggerAnalysisAsync } from "../ai/ai.service";
 
 interface RequestActor {
   id: string;
@@ -71,6 +72,11 @@ export async function createComplaint(
     citizenId: requireObjectId(actor.id),
   });
   await recordComplaintSubmission(complaint);
+
+  // Trigger AI analysis asynchronously in background without blocking
+  const analysisText = `${complaint.title}. ${complaint.description}`;
+  triggerAnalysisAsync(complaint._id, analysisText);
+
   return complaint.toJSON();
 }
 
