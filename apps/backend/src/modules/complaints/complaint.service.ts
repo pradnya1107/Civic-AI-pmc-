@@ -519,11 +519,11 @@ export async function getSlaMonitoringOverview() {
   };
 
   const [totalOpen, overdueComplaints, approachingComplaints, resolvedCount] = await Promise.all([
-    Complaint.countDocuments(openFilter),
+    Complaint.countDocuments(openFilter as any),
     Complaint.find({
       ...openFilter,
       slaDeadline: { $lt: now },
-    })
+    } as any)
       .sort({ slaDeadline: 1 })
       .populate("departmentId", "name slug")
       .limit(50)
@@ -531,7 +531,7 @@ export async function getSlaMonitoringOverview() {
     Complaint.find({
       ...openFilter,
       slaDeadline: { $gte: now, $lte: approaching },
-    })
+    } as any)
       .sort({ slaDeadline: 1 })
       .populate("departmentId", "name slug")
       .limit(50)

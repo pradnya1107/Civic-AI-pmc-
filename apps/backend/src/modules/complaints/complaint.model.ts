@@ -150,7 +150,7 @@ const complaintSchema = new Schema<ComplaintRecord>(
     supportCount: { type: Number, default: 0, min: 0 },
     slaDeadline: {
       type: Date,
-      default: function () {
+      default: function (this: any) {
         return calculateSlaDeadline(this.priority || "MEDIUM");
       },
     },
