@@ -437,6 +437,128 @@ export const notificationApi = {
   },
 };
 
+export const departmentAdminApi = {
+  /**
+   * Fetch authenticated department admin profile and assigned department
+   * GET /api/v1/department-admin/me
+   */
+  async getMe() {
+    const response = await api.get('/api/v1/department-admin/me');
+    return response.data;
+  },
+
+  /**
+   * Fetch department dashboard KPIs, counts, priority queue, and recent activity
+   * GET /api/v1/department-admin/dashboard
+   */
+  async getDashboard() {
+    const response = await api.get('/api/v1/department-admin/dashboard');
+    return response.data;
+  },
+
+  /**
+   * Fetch department analytics, received vs resolved trends, and ward distributions
+   * GET /api/v1/department-admin/analytics
+   */
+  async getAnalytics(params = {}) {
+    const response = await api.get('/api/v1/department-admin/analytics', { params });
+    return response.data;
+  },
+
+  /**
+   * Fetch department complaints with search, filter, sort, and pagination
+   * GET /api/v1/department-admin/complaints
+   */
+  async getComplaints(params = {}) {
+    const response = await api.get('/api/v1/department-admin/complaints', { params });
+    return response.data;
+  },
+
+  /**
+   * Fetch single department complaint details with audit logs
+   * GET /api/v1/department-admin/complaints/:id
+   */
+  async getComplaintById(id) {
+    const response = await api.get(`/api/v1/department-admin/complaints/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Update complaint status
+   * PATCH /api/v1/department-admin/complaints/:id/status
+   */
+  async updateComplaintStatus(id, data) {
+    const response = await api.patch(`/api/v1/department-admin/complaints/${id}/status`, data);
+    return response.data;
+  },
+
+  /**
+   * Update complaint priority
+   * PATCH /api/v1/department-admin/complaints/:id/priority
+   */
+  async updateComplaintPriority(id, data) {
+    const response = await api.patch(`/api/v1/department-admin/complaints/${id}/priority`, data);
+    return response.data;
+  },
+
+  /**
+   * Assign or reassign officer to complaint
+   * PATCH /api/v1/department-admin/complaints/:id/assign-officer
+   */
+  async assignOfficer(id, data) {
+    const response = await api.patch(`/api/v1/department-admin/complaints/${id}/assign-officer`, data);
+    return response.data;
+  },
+
+  /**
+   * Add internal investigation note
+   * POST /api/v1/department-admin/complaints/:id/notes
+   */
+  async addInternalNote(id, data) {
+    const response = await api.post(`/api/v1/department-admin/complaints/${id}/notes`, data);
+    return response.data;
+  },
+
+  /**
+   * Verify or reject submitted resolution evidence
+   * PATCH /api/v1/department-admin/complaints/:id/verify-resolution
+   */
+  async verifyResolution(id, data) {
+    const response = await api.patch(`/api/v1/department-admin/complaints/${id}/verify-resolution`, data);
+    return response.data;
+  },
+
+  /**
+   * Fetch department officers and field workers
+   * GET /api/v1/department-admin/officers
+   */
+  async getOfficers() {
+    const response = await api.get('/api/v1/department-admin/officers');
+    return response.data;
+  },
+
+  /**
+   * Create new department field officer
+   * POST /api/v1/department-admin/officers
+   */
+  async createOfficer(data) {
+    const response = await api.post('/api/v1/department-admin/officers', data);
+    return response.data;
+  },
+
+  /**
+   * Export department complaints CSV
+   * GET /api/v1/department-admin/complaints/export
+   */
+  async exportComplaintsCsv() {
+    const response = await api.get('/api/v1/department-admin/complaints/export', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+};
+
 export default api;
+
 
 

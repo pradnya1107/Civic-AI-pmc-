@@ -69,6 +69,15 @@ export const AuthProvider = ({ children }) => {
    */
   const login = async (credentials) => {
     const response = await authApi.login(credentials);
+
+    if (response?.requiresOtp || response?.data?.requiresOtp) {
+      return {
+        requiresOtp: true,
+        data: response.data || response,
+        message: response.message || 'Two-factor OTP required.',
+      };
+    }
+
     const sessionData = response?.data;
 
     if (!sessionData?.accessToken || !sessionData?.user) {

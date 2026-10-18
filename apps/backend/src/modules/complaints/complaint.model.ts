@@ -56,6 +56,15 @@ export interface CitizenConfirmation {
   disputedAt?: Date;
 }
 
+export interface InternalNote {
+  _id?: Types.ObjectId;
+  authorId?: Types.ObjectId;
+  authorName?: string;
+  authorRole?: string;
+  note: string;
+  createdAt: Date;
+}
+
 export interface ComplaintRecord {
   complaintNumber: string;
   title: string;
@@ -75,6 +84,7 @@ export interface ComplaintRecord {
   slaDeadline: Date;
   assignedOfficer?: AssignedOfficer;
   citizenConfirmation?: CitizenConfirmation;
+  internalNotes?: InternalNote[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -170,6 +180,15 @@ const complaintSchema = new Schema<ComplaintRecord>(
       confirmedAt: { type: Date },
       disputedAt: { type: Date },
     },
+    internalNotes: [
+      {
+        authorId: { type: Schema.Types.ObjectId, ref: "User" },
+        authorName: { type: String, trim: true },
+        authorRole: { type: String, trim: true },
+        note: { type: String, trim: true, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true },
 );
