@@ -5,6 +5,8 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
+    "dev": "expo start --web --port 5173",
+    "build": "expo export -p web",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web --port 5173",

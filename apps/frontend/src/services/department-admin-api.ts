@@ -79,7 +79,13 @@ async function apiCall<T>(
     token?: string;
   } = {},
 ): Promise<T> {
-  const url = `${getApiBaseUrl()}${path}`;
+  const normalizedPath = path.startsWith("/api/v1")
+    ? path.slice("/api/v1".length)
+    : path;
+  const cleanPath = normalizedPath.startsWith("/")
+    ? normalizedPath
+    : `/${normalizedPath}`;
+  const url = `${getApiBaseUrl()}${cleanPath}`;
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
@@ -169,21 +175,19 @@ export const departmentAdminApi = {
   },
 
   async resendDepartmentAdminOtp(email: string): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`${getApiBaseUrl()}/api/v1/auth/department-admin/resend-otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new ApiError(data?.message || "Failed to resend OTP.", response.status);
-    }
+    const data = await apiCall<{ success: boolean; message: string }>(
+      "/auth/department-admin/resend-otp",
+      {
+        method: "POST",
+        body: { email },
+      },
+    );
     return data;
   },
 
   async getComplaintAiAnalysis(token: string, complaintId: string): Promise<AIAnalysisData> {
     const data = await apiCall<{ analysis: AIAnalysisData }>(
-      `/api/v1/complaints/${complaintId}/ai`,
+      `/complaints/${complaintId}/ai`,
       { token },
     );
     return data.analysis;
@@ -195,7 +199,7 @@ export const departmentAdminApi = {
     patch: { category?: string; priority?: string },
   ): Promise<DepartmentComplaintItem> {
     const data = await apiCall<{ complaint: DepartmentComplaintItem }>(
-      `/api/v1/complaints/${complaintId}`,
+      `/complaints/${complaintId}`,
       {
         method: "PATCH",
         token,

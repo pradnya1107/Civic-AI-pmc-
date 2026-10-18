@@ -10,6 +10,9 @@
     "test": "pnpm --filter backend test",
     "test:types": "pnpm --filter backend test:types",
     "lint": "pnpm --filter backend test:types",
+    "frontend:start": "npm --prefix apps/frontend start",
+    "frontend:dev": "npm --prefix apps/frontend run dev",
+    "frontend:build": "npm --prefix apps/frontend run build",
     "frontend:typecheck": "npm --prefix apps/frontend run typecheck",
     "mobile:typecheck": "npm --prefix apps/frontend run typecheck"
   },
