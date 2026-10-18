@@ -94,12 +94,12 @@ export const DepartmentTopNav = ({
   };
 
   return (
-    <header className="dept-topnav admin-topnav" role="banner" style={{ borderBottom: '1px solid var(--border-color, #E2E8F0)' }}>
+    <header className="dept-topnav admin-topnav" role="banner">
       {/* Left: Mobile hamburger & Department Title */}
-      <div className="admin-topnav-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      <div className="admin-topnav-left">
         <button
           type="button"
-          className="admin-mobile-menu-btn"
+          className="admin-mobile-toggle-btn"
           onClick={onOpenMobile}
           aria-label="Open navigation sidebar"
         >
@@ -112,8 +112,8 @@ export const DepartmentTopNav = ({
 
         <div className="dept-header-title-block">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text-primary, #0B1D33)' }}>
-              Department Operations Dashboard
+            <h1 style={{ fontSize: '17px', fontWeight: 700, margin: 0, color: 'var(--color-text-main, #0B1D33)' }}>
+              Department Operations
             </h1>
             <span
               style={{
@@ -131,59 +131,50 @@ export const DepartmentTopNav = ({
               {deptTitle}
             </span>
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted, #64748B)', marginTop: '2px', display: 'flex', gap: '12px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--color-text-dim, #64748B)', marginTop: '2px', display: 'flex', gap: '10px' }}>
             <span>📅 {currentDateStr}</span>
             <span>•</span>
             <span>
-              Updated: <strong style={{ color: 'var(--text-primary, #0B1D33)' }}>{lastRefreshStr}</strong>
+              Updated: <strong style={{ color: 'var(--color-text-main, #0B1D33)' }}>{lastRefreshStr}</strong>
             </span>
           </div>
         </div>
       </div>
 
       {/* Middle: Search bar */}
-      <div className="admin-topnav-center" style={{ flex: 1, maxWidth: '420px', margin: '0 20px' }}>
-        <form onSubmit={handleSearchSubmit} style={{ position: 'relative', width: '100%' }}>
-          <input
-            type="search"
-            placeholder="Search complaint #, category, or location..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="form-input"
-            style={{
-              paddingLeft: '34px',
-              height: '38px',
-              fontSize: '13px',
-              borderRadius: '8px',
-              background: 'var(--bg-card, #FFFFFF)',
-              border: '1px solid var(--border-color, #E2E8F0)',
-            }}
-          />
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{
-              position: 'absolute',
-              left: '10px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#94A3B8',
-            }}
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+      <div className="admin-topnav-center">
+        <form onSubmit={handleSearchSubmit} className="admin-quick-search-form" role="search">
+          <div className="admin-search-input-wrap">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="admin-search-icon"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="search"
+              className="admin-quick-search-input"
+              placeholder="Search complaint #, category, location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search department complaints"
+              id="dept-global-search"
+            />
+          </div>
         </form>
       </div>
 
       {/* Right: Actions, Refresh, Dark mode, Notifications, Profile */}
-      <div className="admin-topnav-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div className="admin-topnav-right">
         {/* Refresh Button */}
         {onRefresh && (
           <button
@@ -191,7 +182,7 @@ export const DepartmentTopNav = ({
             className="btn btn-secondary btn-sm"
             onClick={onRefresh}
             title="Refresh dashboard data"
-            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="23 4 23 10 17 10" />
@@ -205,74 +196,52 @@ export const DepartmentTopNav = ({
         {/* Theme Toggle Button */}
         <button
           type="button"
-          className="admin-icon-btn"
+          className="admin-theme-toggle-btn"
           onClick={toggleTheme}
-          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          aria-label="Toggle Theme"
-          style={{
-            background: 'transparent',
-            border: '1px solid var(--border-color, #E2E8F0)',
-            borderRadius: '8px',
-            padding: '8px',
-            cursor: 'pointer',
-            color: 'var(--text-primary, #0B1D33)',
-          }}
+          aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          title={theme === 'dark' ? 'Switch to Light Mode (Sun ☀️)' : 'Switch to Dark Mode (Moon 🌙)'}
+          id="dept-theme-toggle"
         >
-          {theme === 'dark' ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="5" />
-              <line x1="12" y1="1" x2="12" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="23" />
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-              <line x1="1" y1="12" x2="3" y2="12" />
-              <line x1="21" y1="12" x2="23" y2="12" />
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-          )}
+          <div className={`theme-toggle-inner ${theme === 'dark' ? 'is-dark' : 'is-light'}`}>
+            {theme === 'dark' ? (
+              <span className="theme-icon moon-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              </span>
+            ) : (
+              <span className="theme-icon sun-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+              </span>
+            )}
+          </div>
         </button>
 
         {/* Notifications Dropdown */}
         <div style={{ position: 'relative' }} ref={notifRef}>
           <button
             type="button"
-            className="admin-icon-btn"
+            className="admin-notif-btn"
             onClick={() => setShowNotificationMenu((prev) => !prev)}
             aria-label={`Notifications, ${unreadCount} unread`}
-            style={{
-              position: 'relative',
-              background: 'transparent',
-              border: '1px solid var(--border-color, #E2E8F0)',
-              borderRadius: '8px',
-              padding: '8px',
-              cursor: 'pointer',
-              color: 'var(--text-primary, #0B1D33)',
-            }}
+            title="Notifications"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
             {unreadCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-4px',
-                  right: '-4px',
-                  background: '#EF4444',
-                  color: '#FFFFFF',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  borderRadius: '10px',
-                  padding: '1px 5px',
-                  lineHeight: '14px',
-                }}
-              >
+              <span className="admin-notif-badge" aria-hidden="true">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -280,15 +249,12 @@ export const DepartmentTopNav = ({
 
           {showNotificationMenu && (
             <div
+              className="admin-dropdown-menu"
               style={{
                 position: 'absolute',
                 right: 0,
                 top: 'calc(100% + 8px)',
                 width: '320px',
-                background: 'var(--bg-card, #FFFFFF)',
-                border: '1px solid var(--border-color, #E2E8F0)',
-                borderRadius: '10px',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
                 zIndex: 1000,
                 overflow: 'hidden',
               }}
@@ -296,13 +262,13 @@ export const DepartmentTopNav = ({
               <div
                 style={{
                   padding: '12px 16px',
-                  borderBottom: '1px solid var(--border-color, #E2E8F0)',
+                  borderBottom: '1px solid var(--color-border)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}
               >
-                <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary, #0B1D33)' }}>
+                <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-main)' }}>
                   Notifications ({unreadCount})
                 </span>
                 <Link
@@ -316,7 +282,7 @@ export const DepartmentTopNav = ({
 
               <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
                 {notifications.length === 0 ? (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px' }}>
                     No new notifications
                   </div>
                 ) : (
@@ -326,19 +292,19 @@ export const DepartmentTopNav = ({
                       onClick={() => handleMarkAsRead(n._id || n.id)}
                       style={{
                         padding: '10px 14px',
-                        borderBottom: '1px solid var(--border-color, #F1F5F9)',
-                        background: n.isRead ? 'transparent' : 'rgba(13, 148, 136, 0.05)',
+                        borderBottom: '1px solid var(--color-border)',
+                        background: n.isRead ? 'transparent' : 'rgba(13, 148, 136, 0.08)',
                         cursor: 'pointer',
                         fontSize: '12px',
                       }}
                     >
-                      <div style={{ fontWeight: n.isRead ? 500 : 700, color: 'var(--text-primary, #0B1D33)' }}>
+                      <div style={{ fontWeight: n.isRead ? 500 : 700, color: 'var(--color-text-main)' }}>
                         {n.title}
                       </div>
-                      <div style={{ color: 'var(--text-muted, #64748B)', marginTop: '2px', lineHeight: 1.4 }}>
+                      <div style={{ color: 'var(--color-text-muted)', marginTop: '2px', lineHeight: 1.4 }}>
                         {n.message}
                       </div>
-                      <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '4px' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--color-text-dim)', marginTop: '4px' }}>
                         {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
                       </div>
                     </div>
@@ -350,131 +316,102 @@ export const DepartmentTopNav = ({
         </div>
 
         {/* Profile Dropdown */}
-        <div style={{ position: 'relative' }} ref={profileRef}>
+        <div className="admin-profile-dropdown-wrap" ref={profileRef}>
           <button
             type="button"
+            className="admin-profile-trigger-btn"
             onClick={() => setShowProfileMenu((prev) => !prev)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'transparent',
-              border: '1px solid var(--border-color, #E2E8F0)',
-              borderRadius: '8px',
-              padding: '4px 10px 4px 6px',
-              cursor: 'pointer',
-            }}
+            aria-expanded={showProfileMenu}
+            aria-haspopup="true"
+            aria-label="Department Administrator profile menu"
           >
             <div
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#0D9488',
-                color: '#FFFFFF',
-                fontWeight: 700,
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              className="admin-profile-avatar"
+              style={{ background: 'linear-gradient(135deg, #0D9488, #0B1D33)' }}
+              aria-hidden="true"
             >
               {initial}
             </div>
-            <div style={{ textAlign: 'left', lineHeight: 1.2 }} className="hidden-sm">
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary, #0B1D33)', display: 'block' }}>
-                {displayName}
-              </span>
-              <span style={{ fontSize: '10px', color: '#0D9488', fontWeight: 600 }}>
+            <div className="admin-profile-summary hidden-sm">
+              <span className="admin-profile-name-short">{displayName}</span>
+              <span className="admin-role-pill" style={{ color: '#0D9488' }}>
                 {deptTitle}
               </span>
             </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#94A3B8' }}>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`dropdown-chevron ${showProfileMenu ? 'open' : ''}`}
+              aria-hidden="true"
+            >
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
 
           {showProfileMenu && (
-            <div
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 'calc(100% + 8px)',
-                width: '220px',
-                background: 'var(--bg-card, #FFFFFF)',
-                border: '1px solid var(--border-color, #E2E8F0)',
-                borderRadius: '10px',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-                zIndex: 1000,
-                padding: '6px 0',
-              }}
-            >
-              <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border-color, #E2E8F0)' }}>
-                <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary, #0B1D33)' }}>
-                  {displayName}
-                </div>
-                <div style={{ fontSize: '11px', color: '#64748B' }}>{user?.email}</div>
-                <div style={{ fontSize: '10px', color: '#0D9488', fontWeight: 700, marginTop: '2px' }}>
+            <div className="admin-dropdown-menu" role="menu" style={{ width: '230px' }}>
+              <div className="admin-dropdown-header">
+                <div className="admin-dropdown-user-name">{displayName}</div>
+                <div className="admin-dropdown-user-email">{user?.email}</div>
+                <div className="admin-dropdown-role-tag" style={{ color: '#0D9488' }}>
                   {deptTitle} Admin
                 </div>
               </div>
 
+              <div className="admin-dropdown-divider" />
+
               <Link
                 to="/department/settings"
+                className="admin-dropdown-item"
+                role="menuitem"
                 onClick={() => setShowProfileMenu(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 14px',
-                  fontSize: '13px',
-                  color: 'var(--text-primary, #0B1D33)',
-                  textDecoration: 'none',
-                }}
               >
-                <span>⚙️ Profile & Settings</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                <span>Profile & Settings</span>
               </Link>
 
               <Link
                 to="/department/help"
+                className="admin-dropdown-item"
+                role="menuitem"
                 onClick={() => setShowProfileMenu(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 14px',
-                  fontSize: '13px',
-                  color: 'var(--text-primary, #0B1D33)',
-                  textDecoration: 'none',
-                }}
               >
-                <span>❓ Help & Support</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span>Help & Guidelines</span>
               </Link>
 
-              <div style={{ borderTop: '1px solid var(--border-color, #E2E8F0)', margin: '4px 0' }} />
+              <div className="admin-dropdown-divider" />
 
               <button
                 type="button"
+                className="admin-dropdown-item admin-logout-item"
+                role="menuitem"
                 onClick={async () => {
                   setShowProfileMenu(false);
                   await logout();
                   navigate('/login', { replace: true });
                 }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 14px',
-                  fontSize: '13px',
-                  color: '#EF4444',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
+                style={{ width: '100%', textAlign: 'left', color: 'var(--color-error)' }}
               >
-                <span>🚪 Sign Out</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span>Sign Out</span>
               </button>
             </div>
           )}

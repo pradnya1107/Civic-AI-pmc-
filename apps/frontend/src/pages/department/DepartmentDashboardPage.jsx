@@ -211,7 +211,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
         className="dept-kpi-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
           gap: '16px',
           marginBottom: '28px',
         }}
@@ -221,8 +221,8 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           onClick={() => handleCardClick('all')}
           className="dept-kpi-card"
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderTop: '4px solid #0B1D33',
             borderRadius: '12px',
             padding: '18px 20px',
@@ -233,12 +233,12 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           title="Click to view all department complaints"
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted, #64748B)', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-dim, #64748B)', textTransform: 'uppercase' }}>
               Total Complaints
             </span>
             <span style={{ fontSize: '18px' }}>📋</span>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary, #0B1D33)', margin: '10px 0 4px 0' }}>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--color-text-main, #0B1D33)', margin: '10px 0 4px 0' }}>
             {counts.total}
           </div>
           <div style={{ fontSize: '12px', color: '#0D9488', fontWeight: 600 }}>Click to view all →</div>
@@ -249,8 +249,8 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           onClick={() => handleCardClick('status', 'SUBMITTED')}
           className="dept-kpi-card"
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderTop: '4px solid #F59E0B',
             borderRadius: '12px',
             padding: '18px 20px',
@@ -261,7 +261,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           title="Click to view submitted & under review complaints"
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted, #64748B)', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-dim, #64748B)', textTransform: 'uppercase' }}>
               New / Pending
             </span>
             <span style={{ fontSize: '18px' }}>⏳</span>
@@ -269,7 +269,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           <div style={{ fontSize: '28px', fontWeight: 800, color: '#D97706', margin: '10px 0 4px 0' }}>
             {counts.pending}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted, #64748B)' }}>Awaiting review</div>
+          <div style={{ fontSize: '12px', color: 'var(--color-text-dim, #64748B)' }}>Awaiting review</div>
         </div>
 
         {/* In Progress */}
@@ -277,8 +277,8 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           onClick={() => handleCardClick('status', 'IN_PROGRESS')}
           className="dept-kpi-card"
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderTop: '4px solid #0284C7',
             borderRadius: '12px',
             padding: '18px 20px',
@@ -289,7 +289,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           title="Click to view assigned & in-progress complaints"
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted, #64748B)', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-dim, #64748B)', textTransform: 'uppercase' }}>
               In Progress
             </span>
             <span style={{ fontSize: '18px' }}>🔧</span>
@@ -297,7 +297,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           <div style={{ fontSize: '28px', fontWeight: 800, color: '#0284C7', margin: '10px 0 4px 0' }}>
             {counts.inProgress}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted, #64748B)' }}>Field work active</div>
+          <div style={{ fontSize: '12px', color: 'var(--color-text-dim, #64748B)' }}>Field work active</div>
         </div>
 
         {/* Overdue Complaints */}
@@ -305,8 +305,8 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           onClick={() => handleCardClick('overdue')}
           className="dept-kpi-card"
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderTop: '4px solid #EF4444',
             borderRadius: '12px',
             padding: '18px 20px',
@@ -317,7 +317,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           title="Click to view overdue complaints"
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted, #64748B)', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-dim, #64748B)', textTransform: 'uppercase' }}>
               Overdue Cases
             </span>
             <span style={{ fontSize: '18px' }}>⚠️</span>
@@ -333,8 +333,8 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           onClick={() => handleCardClick('status', 'RESOLVED')}
           className="dept-kpi-card"
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderTop: '4px solid #10B981',
             borderRadius: '12px',
             padding: '18px 20px',
@@ -345,7 +345,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           title="Click to view resolved complaints"
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted, #64748B)', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-dim, #64748B)', textTransform: 'uppercase' }}>
               Resolved
             </span>
             <span style={{ fontSize: '18px' }}>✅</span>
@@ -353,15 +353,15 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           <div style={{ fontSize: '28px', fontWeight: 800, color: '#059669', margin: '10px 0 4px 0' }}>
             {counts.resolved}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted, #64748B)' }}>Completed & closed</div>
+          <div style={{ fontSize: '12px', color: 'var(--color-text-dim, #64748B)' }}>Completed & closed</div>
         </div>
 
         {/* Resolution Rate */}
         <div
           className="dept-kpi-card"
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderTop: '4px solid #0D9488',
             borderRadius: '12px',
             padding: '18px 20px',
@@ -369,7 +369,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted, #64748B)', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-dim, #64748B)', textTransform: 'uppercase' }}>
               Resolution Rate
             </span>
             <span style={{ fontSize: '18px' }}>🎯</span>
@@ -377,28 +377,28 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           <div style={{ fontSize: '28px', fontWeight: 800, color: '#0D9488', margin: '10px 0 4px 0' }}>
             {counts.resolutionRate}%
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted, #64748B)' }}>Performance index</div>
+          <div style={{ fontSize: '12px', color: 'var(--color-text-dim, #64748B)' }}>Performance index</div>
         </div>
       </div>
 
       {/* Analytics & Officer Workload Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px', marginBottom: '28px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '20px', marginBottom: '28px' }}>
         {/* Complaints Trend Chart */}
         <div
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderRadius: '12px',
             padding: '20px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary, #0B1D33)' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--color-text-main, #0B1D33)' }}>
                 Complaints Trend (Received vs Resolved)
               </h3>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted, #64748B)' }}>Past {analyticsDays} days timeline</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-dim, #64748B)' }}>Past {analyticsDays} days timeline</span>
             </div>
 
             <div style={{ display: 'flex', gap: '6px' }}>
@@ -501,8 +501,8 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
         {/* Officer Workload Breakdown */}
         <div
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderRadius: '12px',
             padding: '20px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
@@ -510,10 +510,10 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary, #0B1D33)' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--color-text-main, #0B1D33)' }}>
                 Field Officers & Workload
               </h3>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted, #64748B)' }}>Active assignments & capacity</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-dim, #64748B)' }}>Active assignments & capacity</span>
             </div>
             <Link
               to="/department/officers"
@@ -534,16 +534,16 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
                   style={{
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    background: 'var(--bg-main, #F8FAFC)',
-                    border: '1px solid var(--border-color, #E2E8F0)',
+                    background: 'var(--color-bg-surface-hover, #F8FAFC)',
+                    border: '1px solid var(--color-border, #E2E8F0)',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <div>
-                      <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary, #0B1D33)' }}>
+                      <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-main, #0B1D33)' }}>
                         {officer.name}
                       </span>
-                      <span style={{ fontSize: '11px', color: '#64748B', marginLeft: '6px' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-dim, #64748B)', marginLeft: '6px' }}>
                         ({officer.designation})
                       </span>
                     </div>
@@ -562,7 +562,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ flex: 1, height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: '6px', background: 'var(--color-border, #E2E8F0)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div
                         style={{
                           width: `${loadPercent}%`,
@@ -572,7 +572,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
                         }}
                       />
                     </div>
-                    <span style={{ fontSize: '11px', color: '#64748B', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-dim, #64748B)', whiteSpace: 'nowrap' }}>
                       <strong>{officer.activeCount}</strong> open / {officer.completedCount} done
                     </span>
                   </div>
@@ -584,12 +584,12 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
       </div>
 
       {/* Priority Queue & Recent Activity Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '20px' }}>
         {/* Priority Queue */}
         <div
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderRadius: '12px',
             padding: '20px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
@@ -598,7 +598,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '18px' }}>🚨</span>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary, #0B1D33)' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--color-text-main, #0B1D33)' }}>
                 Urgent & Overdue Priority Queue
               </h3>
             </div>
@@ -622,8 +622,8 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
                   style={{
                     padding: '12px 14px',
                     borderRadius: '8px',
-                    border: '1px solid var(--border-color, #E2E8F0)',
-                    background: c.isOverdue ? 'rgba(239, 68, 68, 0.03)' : 'var(--bg-card, #FFFFFF)',
+                    border: '1px solid var(--color-border, #E2E8F0)',
+                    background: c.isOverdue ? 'rgba(239, 68, 68, 0.05)' : 'var(--color-bg-card, #FFFFFF)',
                     borderLeft: `4px solid ${c.isOverdue ? '#EF4444' : '#F59E0B'}`,
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -666,7 +666,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
                       style={{
                         fontWeight: 600,
                         fontSize: '13px',
-                        color: 'var(--text-primary, #0B1D33)',
+                        color: 'var(--color-text-main, #0B1D33)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -674,7 +674,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
                     >
                       {c.title}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-dim, #64748B)', marginTop: '2px' }}>
                       📍 {c.location?.ward || c.location?.address?.slice(0, 30) || 'Pune'} • {getTimeAgo(c.createdAt)}
                     </div>
                   </div>
@@ -695,8 +695,8 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
         {/* Recent Department Activity */}
         <div
           style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
+            background: 'var(--color-bg-card, #FFFFFF)',
+            border: '1px solid var(--color-border, #E2E8F0)',
             borderRadius: '12px',
             padding: '20px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
@@ -705,11 +705,11 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '18px' }}>⚡</span>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary, #0B1D33)' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--color-text-main, #0B1D33)' }}>
                 Recent Operational Activity
               </h3>
             </div>
-            <span style={{ fontSize: '12px', color: '#64748B' }}>Audit Log Feed</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-text-dim, #64748B)' }}>Audit Log Feed</span>
           </div>
 
           {recentActivity.length === 0 ? (

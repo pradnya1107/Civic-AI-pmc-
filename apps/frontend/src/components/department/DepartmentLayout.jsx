@@ -30,7 +30,11 @@ export const DepartmentLayout = ({ children, onGlobalRefresh, departmentProfile 
   };
 
   return (
-    <div className="dept-app-shell admin-app-shell">
+    <div className={`admin-portal-root dept-portal-root ${isCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
+      <a href="#department-main-content" className="skip-link">
+        Skip to main content
+      </a>
+
       <DepartmentSidebar
         isCollapsed={isCollapsed}
         onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
@@ -39,7 +43,7 @@ export const DepartmentLayout = ({ children, onGlobalRefresh, departmentProfile 
         departmentName={departmentInfo?.name}
       />
 
-      <div className={`admin-main-wrap ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <div className="admin-main-wrapper">
         <DepartmentTopNav
           departmentName={departmentInfo?.name}
           lastRefreshed={lastRefreshed}
@@ -47,7 +51,7 @@ export const DepartmentLayout = ({ children, onGlobalRefresh, departmentProfile 
           onOpenMobile={() => setIsMobileOpen(true)}
         />
 
-        <main className="admin-page-content" style={{ padding: '24px', background: 'var(--bg-main, #F3F6FA)' }}>
+        <main id="department-main-content" className="admin-content-area" tabIndex={-1}>
           {React.Children.map(children, (child) => {
             if (React.isValidElement(child)) {
               return React.cloneElement(child, {
