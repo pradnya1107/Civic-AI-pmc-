@@ -74,7 +74,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       removeStoredToken();
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login';
+        try {
+          window.location.href = '/login';
+        } catch {
+          // Graceful fallback for non-browser/jsdom environments
+        }
       }
     }
 
