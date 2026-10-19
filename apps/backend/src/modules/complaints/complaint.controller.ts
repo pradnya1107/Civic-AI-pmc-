@@ -17,6 +17,7 @@ import {
   disputeResolutionByCitizen,
   getSlaMonitoringOverview,
 } from "./complaint.service";
+import { getAnalysisByComplaintId } from "../ai/ai.service";
 import {
   findDuplicateComplaints,
   supportComplaint,
@@ -91,6 +92,28 @@ export const remove: RequestHandler = async (request, response) => {
   response.status(200).json({
     success: true,
     message: "Complaint deleted successfully.",
+  });
+};
+
+export const getAiAnalysis: RequestHandler = async (request, response) => {
+  const complaintId = complaintIdFromRequest(request);
+  const actor = actorFromRequest(request);
+
+  // Verify complaint exists and actor has permission
+  const complaint = await getComplaint(actor, complaintId);
+
+  const analysis = await getAnalysisByComplaintId(complaint._id);
+  if (!analysis) {
+    throw new AppError(
+      "AI analysis not found for this complaint.",
+      404,
+      "ANALYSIS_NOT_FOUND",
+    );
+  }
+
+  response.status(200).json({
+    success: true,
+    data: { analysis },
   });
 };
 

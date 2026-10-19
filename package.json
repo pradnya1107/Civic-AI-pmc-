@@ -24,7 +24,6 @@
     "test:frontend": "pnpm --filter frontend test",
     "test:backend": "pnpm --filter backend test",
     "test:types": "pnpm --filter backend test:types",
-    "lint": "pnpm --filter backend test:types",
     "web": "pnpm --filter frontend dev",
     "dev:web": "pnpm --filter frontend dev",
     "web:dev": "pnpm --filter frontend dev",

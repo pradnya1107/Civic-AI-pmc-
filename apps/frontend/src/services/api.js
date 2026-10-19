@@ -251,6 +251,15 @@ export const complaintApi = {
     const response = await api.delete(`/api/v1/complaints/${id}`);
     return response.data;
   },
+
+  /**
+   * Get AI category, priority, and summary suggestions for a complaint (ISSUE-09)
+   * GET /api/v1/complaints/:id/ai
+   */
+  async getAiAnalysis(id) {
+    const response = await api.get(`/api/v1/complaints/${id}/ai`);
+    return response.data;
+  },
 };
 
 export const aiApi = {
@@ -260,6 +269,15 @@ export const aiApi = {
    */
   async getAiStatus() {
     const response = await api.get('/api/v1/ai/status');
+    return response.data;
+  },
+
+  /**
+   * Get AI category, priority, and summary suggestions for a complaint (ISSUE-09)
+   * GET /api/v1/complaints/:id/ai
+   */
+  async getAiAnalysis(complaintId) {
+    const response = await api.get(`/api/v1/complaints/${complaintId}/ai`);
     return response.data;
   },
 
