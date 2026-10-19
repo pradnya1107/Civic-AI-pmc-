@@ -12,7 +12,8 @@
     "db:test": "tsx src/scripts/test-db.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:types": "tsc --noEmit -p tsconfig.test.json"
+    "test:types": "tsc --noEmit -p tsconfig.test.json",
+    "test:complaints": "tsx src/scripts/verify-issue-7.ts"
   },
   "keywords": [],
   "author": "",

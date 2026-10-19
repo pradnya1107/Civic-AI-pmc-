@@ -5,6 +5,7 @@ export const USER_ROLES = [
   "ADMIN",
   "DEPARTMENT_ADMIN",
   "SUPER_ADMIN",
+  "OFFICER",
 ] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 

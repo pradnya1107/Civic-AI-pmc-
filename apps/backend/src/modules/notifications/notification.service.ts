@@ -57,17 +57,34 @@ export async function listUserNotifications(
   recipientId: string,
   page: number,
   limit: number,
+  unreadOnly?: boolean,
 ) {
-  const filter = { recipientId: new Types.ObjectId(recipientId) };
-  const [notifications, total, unread] = await Promise.all([
+  const filter: Record<string, unknown> = {
+    recipientId: new Types.ObjectId(recipientId),
+  };
+  if (unreadOnly) {
+    filter.readAt = { $exists: false };
+  }
+
+  const [rawNotifications, total, unread] = await Promise.all([
     Notification.find(filter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
     Notification.countDocuments(filter),
-    Notification.countDocuments({ ...filter, readAt: { $exists: false } }),
+    Notification.countDocuments({
+      recipientId: new Types.ObjectId(recipientId),
+      readAt: { $exists: false },
+    }),
   ]);
+
+  const notifications = rawNotifications.map((n) => ({
+    ...n,
+    id: n._id.toString(),
+    isRead: Boolean(n.readAt),
+  }));
+
   return {
     notifications,
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
@@ -95,5 +112,20 @@ export async function markNotificationRead(
       "NOTIFICATION_NOT_FOUND",
     );
   }
-  return notification;
+  return {
+    ...notification,
+    id: notification._id.toString(),
+    isRead: Boolean(notification.readAt),
+  };
+}
+
+export async function markAllNotificationsRead(recipientId: string) {
+  const result = await Notification.updateMany(
+    {
+      recipientId: new Types.ObjectId(recipientId),
+      readAt: { $exists: false },
+    },
+    { $set: { readAt: new Date() } },
+  );
+  return { modifiedCount: result.modifiedCount };
 }
