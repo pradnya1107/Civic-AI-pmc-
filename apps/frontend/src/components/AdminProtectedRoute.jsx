@@ -26,6 +26,9 @@ export const AdminProtectedRoute = ({ children }) => {
   }
 
   const userRole = (user?.role || 'CITIZEN').toUpperCase();
+  if (userRole === 'DEPARTMENT_ADMIN') {
+    return <Navigate to="/department/dashboard" replace />;
+  }
   if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
     return <Navigate to="/dashboard" replace />;
   }

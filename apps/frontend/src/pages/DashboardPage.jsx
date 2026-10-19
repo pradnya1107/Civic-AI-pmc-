@@ -589,10 +589,10 @@ export const DashboardPage = () => {
                       const id = c._id || c.id;
                       const dateStr = c.createdAt
                         ? new Date(c.createdAt).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
                         : 'Recent';
 
                       return (

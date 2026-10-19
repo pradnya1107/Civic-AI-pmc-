@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ComplaintFormPage } from '../pages/ComplaintFormPage';
@@ -21,6 +21,7 @@ vi.mock('../services/api', () => ({
     createComplaint: vi.fn(),
     getComplaints: vi.fn(),
     getComplaintById: vi.fn(),
+    checkDuplicates: vi.fn().mockResolvedValue({ success: true, data: { duplicates: [] } }),
   },
 }));
 
@@ -96,8 +97,8 @@ describe('ComplaintFormPage Component', () => {
     const descInput = screen.getByLabelText(/Detailed Description/i);
     const submitBtn = screen.getByRole('button', { name: /Submit Grievance/i });
 
-    await user.type(titleInput, 'Severe water leakage in street pipe');
-    await user.type(descInput, 'Water is overflowing on the road for the past 48 hours causing wastage.');
+    fireEvent.change(titleInput, { target: { value: 'Severe water leakage in street pipe' } });
+    fireEvent.change(descInput, { target: { value: 'Water is overflowing on the road for the past 48 hours causing wastage.' } });
     await user.click(submitBtn);
 
     expect(screen.getByText('Please select a grievance category.')).toBeInTheDocument();
@@ -135,10 +136,10 @@ describe('ComplaintFormPage Component', () => {
     const addrInput = screen.getByLabelText(/Street Address \/ Landmark/i);
     const submitBtn = screen.getByRole('button', { name: /Submit Grievance/i });
 
-    await user.type(titleInput, 'Severe water leakage in street pipe');
-    await user.selectOptions(catSelect, 'Water Supply');
-    await user.type(descInput, 'Water is overflowing on the road for the past 48 hours causing wastage.');
-    await user.type(addrInput, 'FC Road, Deccan Gymkhana, Pune');
+    fireEvent.change(titleInput, { target: { value: 'Severe water leakage in street pipe' } });
+    fireEvent.change(catSelect, { target: { value: 'Water Supply' } });
+    fireEvent.change(descInput, { target: { value: 'Water is overflowing on the road for the past 48 hours causing wastage.' } });
+    fireEvent.change(addrInput, { target: { value: 'FC Road, Deccan Gymkhana, Pune' } });
 
     await user.click(submitBtn);
 
@@ -178,10 +179,10 @@ describe('ComplaintFormPage Component', () => {
     const addrInput = screen.getByLabelText(/Street Address \/ Landmark/i);
     const submitBtn = screen.getByRole('button', { name: /Submit Grievance/i });
 
-    await user.type(titleInput, 'Severe water leakage in street pipe');
-    await user.selectOptions(catSelect, 'Water Supply');
-    await user.type(descInput, 'Water is overflowing on the road for the past 48 hours causing wastage.');
-    await user.type(addrInput, 'FC Road, Deccan Gymkhana, Pune');
+    fireEvent.change(titleInput, { target: { value: 'Severe water leakage in street pipe' } });
+    fireEvent.change(catSelect, { target: { value: 'Water Supply' } });
+    fireEvent.change(descInput, { target: { value: 'Water is overflowing on the road for the past 48 hours causing wastage.' } });
+    fireEvent.change(addrInput, { target: { value: 'FC Road, Deccan Gymkhana, Pune' } });
 
     await user.click(submitBtn);
 
