@@ -43,9 +43,41 @@ export const AdminComplaintDetailPage = () => {
   const [assignedOfficer, setAssignedOfficer] = useState('Officer R. Shinde (PMC Field Team 4)');
   const [isResolving, setIsResolving] = useState(false);
 
+  // AI Suggestions state (ISSUE-09)
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [isApplyingAi, setIsApplyingAi] = useState(false);
+
   const showToast = (message) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleAcceptCategory = async () => {
+    if (!aiAnalysis?.suggestedCategory || isApplyingAi) return;
+    setIsApplyingAi(true);
+    try {
+      await complaintApi.updateComplaint(id, { category: aiAnalysis.suggestedCategory });
+      showToast(`Category updated to AI suggestion: ${aiAnalysis.suggestedCategory}`);
+      loadData();
+    } catch (err) {
+      showToast(`Failed to accept category: ${err.message || 'Please try again.'}`);
+    } finally {
+      setIsApplyingAi(false);
+    }
+  };
+
+  const handleAcceptPriority = async () => {
+    if (!aiAnalysis?.suggestedPriority || isApplyingAi) return;
+    setIsApplyingAi(true);
+    try {
+      await complaintApi.updateComplaint(id, { priority: aiAnalysis.suggestedPriority });
+      showToast(`Priority updated to AI suggestion: ${aiAnalysis.suggestedPriority}`);
+      loadData();
+    } catch (err) {
+      showToast(`Failed to accept priority: ${err.message || 'Please try again.'}`);
+    } finally {
+      setIsApplyingAi(false);
+    }
   };
 
   const handleResolveWithVerification = async (e) => {
@@ -91,6 +123,15 @@ export const AdminComplaintDetailPage = () => {
 
       const deptList = deptsRes?.data?.departments || deptsRes?.departments || deptsRes?.data || [];
       setDepartments(Array.isArray(deptList) ? deptList : []);
+
+      // Attempt to load AI Analysis suggestions (ISSUE-09)
+      try {
+        const aiRes = await complaintApi.getAiAnalysis(id);
+        const analysis = aiRes?.data?.analysis || aiRes?.analysis || null;
+        setAiAnalysis(analysis);
+      } catch {
+        setAiAnalysis(null);
+      }
     } catch (err) {
       setError(err?.message || 'Failed to load complaint details.');
     } finally {
@@ -437,6 +478,72 @@ export const AdminComplaintDetailPage = () => {
 
         {/* Right Column: Administrative Controls */}
         <div className="admin-detail-sidebar">
+          {/* AI Suggestions Card (ISSUE-09) */}
+          {aiAnalysis && (
+            <div className="admin-card mb-4" id="ai-suggestions-card" style={{ borderLeft: '3px solid var(--color-primary)' }}>
+              <div className="admin-card-header d-flex justify-between align-center">
+                <div className="d-flex align-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--color-primary)' }}>
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                  </svg>
+                  <h2 className="admin-card-title">AI Suggestions</h2>
+                </div>
+                <span className="badge badge-primary text-xs">
+                  {Math.round((aiAnalysis.confidence || 0.85) * 100)}% Confidence
+                </span>
+              </div>
+              <div className="admin-card-body">
+                {aiAnalysis.summary && (
+                  <div className="ai-summary-snippet mb-3 p-2 rounded text-xs" style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <strong style={{ color: 'var(--color-primary)' }}>Summary:</strong> {aiAnalysis.summary}
+                  </div>
+                )}
+
+                <div className="ai-suggestion-item mb-3">
+                  <div className="d-flex justify-between align-center mb-1">
+                    <span className="text-xs text-muted">Suggested Category:</span>
+                    <strong className="text-xs">{aiAnalysis.suggestedCategory}</strong>
+                  </div>
+                  {complaint.category !== aiAnalysis.suggestedCategory ? (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-xs w-full"
+                      onClick={handleAcceptCategory}
+                      disabled={isApplyingAi}
+                      id="accept-ai-category-btn"
+                    >
+                      {isApplyingAi ? 'Updating...' : `Accept Category (${aiAnalysis.suggestedCategory})`}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-success font-semibold">✓ Category matches AI suggestion</span>
+                  )}
+                </div>
+
+                <div className="ai-suggestion-item mb-2">
+                  <div className="d-flex justify-between align-center mb-1">
+                    <span className="text-xs text-muted">Suggested Priority:</span>
+                    <span className={`priority-pill priority-${(aiAnalysis.suggestedPriority || 'medium').toLowerCase()}`}>
+                      {aiAnalysis.suggestedPriority}
+                    </span>
+                  </div>
+                  {complaint.priority !== aiAnalysis.suggestedPriority ? (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-xs w-full"
+                      onClick={handleAcceptPriority}
+                      disabled={isApplyingAi}
+                      id="accept-ai-priority-btn"
+                    >
+                      {isApplyingAi ? 'Updating...' : `Accept Priority (${aiAnalysis.suggestedPriority})`}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-success font-semibold">✓ Priority matches AI suggestion</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Control 1: Update Status */}
           <div className="admin-card mb-4">
             <div className="admin-card-header">
