@@ -6,6 +6,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminProtectedRoute } from './components/AdminProtectedRoute';
 import { DepartmentProtectedRoute } from './components/DepartmentProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Citizen Pages
 import { SplashScreen } from './pages/SplashScreen';
@@ -155,7 +156,9 @@ export const App = () => {
                 path="/heatmap"
                 element={
                   <ProtectedRoute>
-                    <HeatmapPage />
+                    <ErrorBoundary>
+                      <HeatmapPage />
+                    </ErrorBoundary>
                   </ProtectedRoute>
                 }
               />
