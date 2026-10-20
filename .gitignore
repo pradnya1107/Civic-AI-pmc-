@@ -16,6 +16,17 @@ uploads/
 *.log
 *.tsbuildinfo
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+env/
+venv/
+.pytest_cache/
+
 # Local environment files
 .env
 .env.*

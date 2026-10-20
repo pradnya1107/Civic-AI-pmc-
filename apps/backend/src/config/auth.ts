@@ -13,7 +13,7 @@ export function getJwtSecret(): string {
 }
 
 export function getJwtExpiresIn(): number {
-  const expiresIn = process.env.JWT_EXPIRES_IN?.trim() || "15m";
+  const expiresIn = process.env.JWT_EXPIRES_IN?.trim() || "7d";
   const match = expiresIn.match(/^(\d+)([smhd])$/);
   if (!match) {
     throw new AppError(

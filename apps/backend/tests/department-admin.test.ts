@@ -85,6 +85,8 @@ describe("Department Admin Management (Demo Mode)", () => {
       expect(response.body.data.admin.email).toBe("roads.demo@civicai.local");
       expect(response.body.data.admin.department.id).toBe(roadsDept.id);
       expect(response.body.data.temporaryPassword).toBeDefined();
+      expect(response.body.data.confirmationOtp).toBeDefined();
+      expect(response.body.data.confirmationOtp).toMatch(/^\d{6}$/);
 
       // Check DB password is encrypted
       const userInDb = await User.findOne({ email: "roads.demo@civicai.local" }).select("+passwordHash");
@@ -102,6 +104,73 @@ describe("Department Admin Management (Demo Mode)", () => {
       expect(loginRes.body.data.user.role).toBe("DEPARTMENT_ADMIN");
       expect(loginRes.body.data.user.departmentId).toBe(roadsDept.id);
       expect(loginRes.body.data.user.departmentName).toBe("Roads Department");
+    });
+
+    it("handles 2-step terminal OTP authentication for Department Admin login", async () => {
+      const response = await request(app)
+        .post("/api/v1/admin/department-admins")
+        .set("Authorization", `Bearer ${superAdminToken}`)
+        .send({
+          departmentId: roadsDept.id,
+          fullName: "OTP Admin Demo",
+          email: "otp.demo@civicai.local",
+        });
+
+      expect(response.status).toBe(201);
+      const tempPassword = response.body.data.temporaryPassword;
+      expect(response.body.data.confirmationOtp).toMatch(/^\d{6}$/);
+
+      // 1. Initial login challenge with forceOtp / header
+      const challengeRes = await request(app)
+        .post("/api/v1/auth/login")
+        .set("x-test-admin-otp", "true")
+        .send({
+          email: "otp.demo@civicai.local",
+          password: tempPassword,
+        });
+
+      expect(challengeRes.status).toBe(200);
+      expect(challengeRes.body.requiresOtp).toBe(true);
+      expect(challengeRes.body.data.demoTerminalOtp).toMatch(/^\d{6}$/);
+
+      // 2. Reject incorrect OTP
+      const wrongOtpRes = await request(app)
+        .post("/api/v1/auth/login")
+        .set("x-test-admin-otp", "true")
+        .send({
+          email: "otp.demo@civicai.local",
+          password: tempPassword,
+          otp: "000000",
+        });
+
+      expect(wrongOtpRes.status).toBe(400);
+      expect(wrongOtpRes.body.error.code).toBe("INVALID_OTP");
+
+      // 3. Resend OTP endpoint
+      const resendRes = await request(app)
+        .post("/api/v1/auth/department-admin/resend-otp")
+        .send({
+          email: "otp.demo@civicai.local",
+        });
+      expect(resendRes.status).toBe(200);
+      expect(resendRes.body.success).toBe(true);
+      expect(resendRes.body.data.demoTerminalOtp).toMatch(/^\d{6}$/);
+      const freshOtp = resendRes.body.data.demoTerminalOtp;
+
+      // 4. Confirm authentication with valid terminal OTP
+      const verifyRes = await request(app)
+        .post("/api/v1/auth/login")
+        .set("x-test-admin-otp", "true")
+        .send({
+          email: "otp.demo@civicai.local",
+          password: tempPassword,
+          otp: freshOtp,
+        });
+
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.body.success).toBe(true);
+      expect(verifyRes.body.data.user.role).toBe("DEPARTMENT_ADMIN");
+      expect(verifyRes.body.data.accessToken).toBeDefined();
     });
 
     it("rejects creation if requester is a Citizen", async () => {

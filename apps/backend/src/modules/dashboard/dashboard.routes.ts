@@ -8,7 +8,7 @@ const dashboardRouter = Router();
 dashboardRouter.get(
   "/",
   authenticate,
-  authorize("ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN", "DEPARTMENT_ADMIN"),
   asyncHandler(getDashboard),
 );
 

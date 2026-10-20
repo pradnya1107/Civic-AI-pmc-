@@ -161,14 +161,12 @@ must continue to enforce authorization even if a UI does not expose an action.
 - `POST /complaints/{id}/evidence/{evidenceId}/review` — authorized reviewer
   submits verified/rejected decision and reason.
 
-### AI (Planned)
+### AI (Implemented)
 
-- `POST /complaints/{id}/analysis` — authorized workflow or background
-  service requests an analysis; return job/analysis reference if asynchronous.
-- `GET /complaints/{id}/analysis` — scoped user reads safe recommendation and
-  provenance.
-- `POST /complaints/{id}/analysis/{analysisId}/decision` — authorized human
-  records accept/override/decline; immutable AI result is not overwritten.
+- `GET /complaints/{id}/ai` — authorized administrators (`ADMIN`, `DEPARTMENT_ADMIN`, `SUPER_ADMIN`) read safe category, priority, summary, and confidence recommendations. Returns `404` with `ANALYSIS_NOT_FOUND` if analysis is not yet ready or unavailable.
+- Internal FastAPI AI service `POST /analyze` — internal-only complaint analysis microservice under `services/ai/` protected with `X-AI-Service-Secret`.
+- Automated asynchronous trigger executes after successful complaint submission without delaying creation response.
+
 
 ### Analytics and audit (Planned)
 

@@ -5,6 +5,8 @@ import { asyncHandler } from "../../middleware/async-handler";
 import {
   createAdminHandler,
   listAdminsHandler,
+  updateAdminHandler,
+  listCitizensHandler,
 } from "./department-admin.controller";
 
 export const superAdminDeptRouter = Router();
@@ -14,3 +16,9 @@ superAdminDeptRouter.use(authenticate, authorize("SUPER_ADMIN"));
 
 superAdminDeptRouter.post("/", asyncHandler(createAdminHandler));
 superAdminDeptRouter.get("/", asyncHandler(listAdminsHandler));
+superAdminDeptRouter.patch("/:id", asyncHandler(updateAdminHandler));
+
+export const superAdminCitizenRouter = Router();
+superAdminCitizenRouter.use(authenticate, authorize("SUPER_ADMIN", "ADMIN"));
+superAdminCitizenRouter.get("/", asyncHandler(listCitizensHandler));
+
