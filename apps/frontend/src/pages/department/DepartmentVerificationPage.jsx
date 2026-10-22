@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { departmentAdminApi } from '../../services/api';
 
-export const DepartmentVerificationPage = () => {
+export const DepartmentVerificationPage = ({ lastRefreshed, onRefreshNeeded }) => {
   const [complaints, setComplaints] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [filterMode, setFilterMode] = useState('ALL'); // 'ALL' | 'VERIFIED' | 'PENDING'
   const [toastMessage, setToastMessage] = useState(null);
@@ -39,6 +40,26 @@ export const DepartmentVerificationPage = () => {
   useEffect(() => {
     loadVerificationComplaints();
   }, [loadVerificationComplaints]);
+
+  // Re-fetch whenever global top navigation refresh is triggered
+  useEffect(() => {
+    if (lastRefreshed) {
+      loadVerificationComplaints();
+    }
+  }, [lastRefreshed]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadVerificationComplaints();
+      if (onRefreshNeeded) onRefreshNeeded();
+      showToast('Resolution verification complaints refreshed.');
+    } catch {
+      showToast('Refresh failed. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
@@ -141,32 +162,32 @@ export const DepartmentVerificationPage = () => {
 
         {/* Filter Pills */}
         <div style={{ display: 'flex', gap: '8px' }}>
-          {[
-            { id: 'ALL', label: `All (${complaints.length})` },
-            { id: 'PENDING', label: 'Awaiting Audit' },
-            { id: 'VERIFIED', label: 'Verified & Resolved' },
-          ].map((pill) => (
-            <button
-              key={pill.id}
-              type="button"
-              onClick={() => setFilterMode(pill.id)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '20px',
-                border: '1px solid',
-                borderColor: filterMode === pill.id ? '#0D9488' : 'var(--border-color, #E2E8F0)',
-                background: filterMode === pill.id ? '#0D9488' : 'var(--bg-card, #FFFFFF)',
-                color: filterMode === pill.id ? '#FFFFFF' : 'var(--text-primary, #0B1D33)',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              {pill.label}
-            </button>
-          ))}
+            {[
+              { id: 'ALL', label: `All (${complaints.length})` },
+              { id: 'PENDING', label: 'Awaiting Audit' },
+              { id: 'VERIFIED', label: 'Verified & Resolved' },
+            ].map((pill) => (
+              <button
+                key={pill.id}
+                type="button"
+                onClick={() => setFilterMode(pill.id)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: '1px solid',
+                  borderColor: filterMode === pill.id ? '#0D9488' : 'var(--border-color, #E2E8F0)',
+                  background: filterMode === pill.id ? '#0D9488' : 'var(--bg-card, #FFFFFF)',
+                  color: filterMode === pill.id ? '#FFFFFF' : 'var(--text-primary, #0B1D33)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
       {isLoading ? (
         <div style={{ padding: '60px', textAlign: 'center', color: '#94A3B8' }}>
@@ -302,12 +323,41 @@ export const DepartmentVerificationPage = () => {
                       <span style={{ fontSize: '11px', color: '#94A3B8' }}>Click image to zoom</span>
                     </div>
                     {c.resolutionImageUrl ? (
-                      <img
-                        src={c.resolutionImageUrl}
-                        alt="After repair completion"
-                        onClick={() => setPreviewImage(c.resolutionImageUrl)}
-                        style={{ width: '100%', height: '220px', objectFit: 'cover', borderRadius: '6px', cursor: 'pointer' }}
-                      />
+                      <div>
+                        <img
+                          src={c.resolutionImageUrl}
+                          alt="After repair completion"
+                          onClick={() => setPreviewImage(c.resolutionImageUrl)}
+                          style={{ width: '100%', height: '220px', objectFit: 'cover', borderRadius: '6px', cursor: 'pointer', display: 'block' }}
+                        />
+                        {/* Photo Authenticity Verdict Chip */}
+                        {(() => {
+                          const auth = c.resolutionAuthenticity || c.aiAnalysis?.resolutionAuthenticity;
+                          const isAi = Boolean(auth?.isAiGenerated || auth?.possibleAiGenerated || auth?.assessment === 'POSSIBLE_AI_GENERATED');
+                          return (
+                            <div
+                              style={{
+                                marginTop: '8px',
+                                padding: '6px 10px',
+                                borderRadius: '6px',
+                                background: isAi ? '#FEF3C7' : '#DCFCE7',
+                                border: `1px solid ${isAi ? '#FCD34D' : '#86EFAC'}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: isAi ? '#B45309' : '#15803D',
+                              }}
+                            >
+                              <span>{isAi ? '⚠️ AI-Generated Photo Detected' : '🟢 Authentic Real Camera Photo'}</span>
+                              <span style={{ fontSize: '10px', opacity: 0.9 }}>
+                                ({auth?.confidence || 'HIGH'} Confidence)
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     ) : (
                       <div style={{ height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
                         Completion image pending field officer upload
@@ -332,19 +382,33 @@ export const DepartmentVerificationPage = () => {
                     )}
                   </div>
 
-                  {c.aiAnalysis?.resolutionVerdict && (
-                    <div style={{ borderLeft: '2px solid #0D9488', paddingLeft: '12px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#0D9488', display: 'block', textTransform: 'uppercase' }}>
-                        AI Computer Vision Verification:
-                      </span>
+                  {/* AI Resolution & Authenticity Evaluation */}
+                  <div style={{ borderLeft: '2px solid #0D9488', paddingLeft: '12px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#0D9488', display: 'block', textTransform: 'uppercase' }}>
+                      AI Computer Vision Audit:
+                    </span>
+                    {c.aiAnalysis?.resolutionVerdict && (
                       <div style={{ fontWeight: 700, fontSize: '13px', color: '#15803D', marginTop: '2px' }}>
                         ✓ {c.aiAnalysis.resolutionVerdict.replace(/_/g, ' ')} ({c.aiAnalysis.resolutionConfidence || 92}% Confidence)
                       </div>
-                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B', lineHeight: 1.3 }}>
-                        {c.aiAnalysis.resolutionAnalysis || 'Visual inspection verified the reported issue has been repaired.'}
-                      </p>
-                    </div>
-                  )}
+                    )}
+                    {(() => {
+                      const auth = c.resolutionAuthenticity || c.aiAnalysis?.resolutionAuthenticity;
+                      const isAi = Boolean(auth?.isAiGenerated || auth?.possibleAiGenerated || auth?.assessment === 'POSSIBLE_AI_GENERATED');
+                      return (
+                        <div style={{ marginTop: '6px', fontSize: '12px' }}>
+                          <span style={{ fontWeight: 700, color: isAi ? '#D97706' : '#10B981' }}>
+                            {isAi ? '⚠️ Photo Origin: Possible AI-Generated Image' : '🛡️ Photo Origin: Normal Real Photo'}
+                          </span>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#64748B', lineHeight: 1.3 }}>
+                            {auth?.explanation || (isAi
+                              ? 'Synthetic generative cues flagged. Require on-site verification before closure.'
+                              : 'Real camera optical capture with authentic asphalt and physical repair textures.')}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
 
                   {c.citizenConfirmation && (
                     <div style={{ borderLeft: '2px solid #F59E0B', paddingLeft: '12px' }}>
@@ -479,6 +543,35 @@ export const DepartmentVerificationPage = () => {
                 Reject (Re-open Work) ✕
               </button>
             </div>
+
+            {/* AI Photo Authenticity Advisory */}
+            {activeComplaint.resolutionImageUrl && (() => {
+              const auth = activeComplaint.resolutionAuthenticity || activeComplaint.aiAnalysis?.resolutionAuthenticity;
+              const isAi = Boolean(auth?.isAiGenerated || auth?.possibleAiGenerated || auth?.assessment === 'POSSIBLE_AI_GENERATED');
+              return (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: isAi ? '#FEF3C7' : '#DCFCE7',
+                    border: `1px solid ${isAi ? '#FCD34D' : '#86EFAC'}`,
+                    marginBottom: '16px',
+                    fontSize: '12px',
+                    color: isAi ? '#92400E' : '#166534',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}>
+                    <span>{isAi ? '⚠️' : '🛡️'}</span>
+                    <span>{isAi ? 'AI Authenticity Alert: Likely AI-Generated Photo' : 'AI Authenticity Verified: Authentic Real Camera Photo'}</span>
+                  </div>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '11px', lineHeight: 1.4, opacity: 0.95 }}>
+                    {auth?.explanation || (isAi
+                      ? 'Synthetic diffusion artifacts detected. Field inspection recommended before approval.'
+                      : 'Real optical camera sensor noise and physical asphalt textures confirmed.')}
+                  </p>
+                </div>
+              );
+            })()}
 
             <form onSubmit={handleVerifySubmit}>
               {verdict === 'REJECT' && (

@@ -9,6 +9,7 @@ import {
   getDepartmentComplaintsHandler,
   getDepartmentComplaintByIdHandler,
   updateComplaintStatusHandler,
+  resolveDepartmentComplaintHandler,
   updateComplaintPriorityHandler,
   assignOfficerHandler,
   addInternalNoteHandler,
@@ -47,6 +48,10 @@ departmentAdminRouter.get("/complaints/:id", asyncHandler(getDepartmentComplaint
 
 // Status update with workflow validation
 departmentAdminRouter.patch("/complaints/:id/status", asyncHandler(updateComplaintStatusHandler));
+
+// Complete and resolve complaint with resolution photo and AI authenticity scan
+departmentAdminRouter.post("/complaints/:id/resolve", asyncHandler(resolveDepartmentComplaintHandler));
+departmentAdminRouter.patch("/complaints/:id/resolve", asyncHandler(resolveDepartmentComplaintHandler));
 
 // Priority update & SLA recalculation
 departmentAdminRouter.patch("/complaints/:id/priority", asyncHandler(updateComplaintPriorityHandler));

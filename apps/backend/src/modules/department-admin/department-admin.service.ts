@@ -6,6 +6,7 @@ import { Department } from "../departments/department.model";
 import { User } from "../users/user.model";
 import { AuditLog } from "../audit/auditLog.model";
 import { Notification } from "../notifications/notification.model";
+import { verifyResolution } from "../ai/gemini-ai.service";
 
 export interface DepartmentAdminActor {
   id: string;
@@ -481,11 +482,81 @@ export async function updateDepartmentComplaintStatus(
   complaintId: string,
   newStatus: ComplaintStatus,
   notes?: string,
+  resolutionData?: {
+    resolutionImageUrl?: string;
+    resolutionNotes?: string;
+    assignedOfficer?: any;
+  },
 ) {
   const complaint = await getAndAuthorizeDepartmentComplaint(complaintId, departmentId);
 
   const oldStatus = complaint.status;
   complaint.status = newStatus;
+
+  let aiVerdict: any = undefined;
+  const resImg = resolutionData?.resolutionImageUrl || (newStatus === "RESOLVED" ? complaint.resolutionImageUrl : undefined);
+
+  if (resImg) {
+    complaint.resolutionImageUrl = resImg;
+    if (resolutionData?.resolutionNotes || notes) {
+      complaint.resolutionNotes = resolutionData?.resolutionNotes || notes;
+    }
+
+    try {
+      const verification = await verifyResolution({
+        originalImageUrl: complaint.imageUrl || "",
+        resolutionImageUrl: resImg,
+        title: complaint.title,
+        category: complaint.category,
+      });
+
+      aiVerdict = {
+        resolutionVerdict: verification.verdict,
+        resolutionConfidence: verification.confidence,
+        resolutionAnalysis: verification.analysis,
+        resolutionAuthenticity: verification.authenticityAssessment,
+      };
+
+      complaint.aiAnalysis = {
+        ...(complaint.aiAnalysis || {}),
+        ...aiVerdict,
+      };
+      if (verification.authenticityAssessment) {
+        complaint.resolutionAuthenticity = verification.authenticityAssessment;
+      }
+
+      // STRICT PROTECTION: Block submission if photo is AI generated OR unrelated/irrelevant photo
+      if (newStatus === "RESOLVED") {
+        if (verification.authenticityAssessment?.isAiGenerated) {
+          throw new AppError(
+            "Resolution rejected: Uploaded photo was recognized by AI as an AI-generated or synthetic image. Officers cannot submit AI-generated photos. Please capture and upload an authentic on-site camera photograph.",
+            422,
+            "AI_GENERATED_IMAGE_REJECTED",
+          );
+        }
+        if (verification.authenticityAssessment?.isAnotherUnrelatedPhoto || verification.authenticityAssessment?.isRelevantRepair === false) {
+          throw new AppError(
+            "Resolution rejected: The uploaded photo does not show the repair or remediation of this civic complaint. Officers must upload authentic photo evidence of the actual repair work.",
+            422,
+            "UNRELATED_PHOTO_REJECTED",
+          );
+        }
+      }
+    } catch (verErr: any) {
+      if (
+        verErr instanceof AppError ||
+        verErr?.errorCode === "AI_GENERATED_IMAGE_REJECTED" ||
+        verErr?.errorCode === "UNRELATED_PHOTO_REJECTED" ||
+        verErr?.statusCode === 422
+      ) {
+        throw verErr;
+      }
+      console.warn("AI resolution verification failed in department admin:", verErr);
+    }
+  } else if (resolutionData?.resolutionNotes) {
+    complaint.resolutionNotes = resolutionData.resolutionNotes;
+  }
+
   await complaint.save();
 
   // Audit Log
@@ -497,9 +568,12 @@ export async function updateDepartmentComplaintStatus(
     metadata: {
       oldStatus,
       newStatus,
-      notes: notes || undefined,
+      notes: notes || resolutionData?.resolutionNotes || undefined,
       complaintNumber: complaint.complaintNumber,
       departmentId,
+      resolutionVerdict: aiVerdict?.resolutionVerdict,
+      photoAuthenticity: aiVerdict?.resolutionAuthenticity?.assessment,
+      isAiGenerated: aiVerdict?.resolutionAuthenticity?.isAiGenerated,
     },
   });
 
@@ -576,7 +650,7 @@ export async function assignDepartmentComplaintOfficer(
       id: officerData.officerId && Types.ObjectId.isValid(officerData.officerId)
         ? new Types.ObjectId(officerData.officerId)
         : undefined,
-      name: officerData.name || "Field Officer",
+      name: (officerData.name || "Field Officer").replace(/^Officer\s+/i, "").trim(),
       phone: officerData.phone || "",
       designation: officerData.designation || "Municipal Field Officer",
       assignedAt: new Date(),
@@ -762,10 +836,10 @@ export async function verifyDepartmentComplaintResolution(
 export async function getDepartmentOfficers(departmentId: string) {
   const deptObjectId = requireObjectId(departmentId, "department ID");
 
-  // Query users with role OFFICER or DEPARTMENT_ADMIN in this department
+  // Query users with role OFFICER in this department (exclude department admins)
   const dbOfficers = await User.find({
     departmentId: deptObjectId,
-    role: { $in: ["OFFICER", "DEPARTMENT_ADMIN"] },
+    role: "OFFICER",
   }).lean();
 
   // In addition, find distinct assigned officers from existing complaints
@@ -790,7 +864,7 @@ export async function getDepartmentOfficers(departmentId: string) {
   for (const u of dbOfficers) {
     officerMap[u._id.toString()] = {
       id: u._id.toString(),
-      name: u.fullName,
+      name: (u.fullName || "").replace(/^Officer\s+/i, "").trim(),
       phone: u.phoneNumber || "020-25501000",
       designation: u.role === "DEPARTMENT_ADMIN" ? "Lead Department Officer" : "Senior Field Officer",
       email: u.email,
@@ -803,15 +877,17 @@ export async function getDepartmentOfficers(departmentId: string) {
   for (const c of complaintsWithOfficers) {
     const o = c.assignedOfficer;
     if (!o?.name) continue;
+    if (o.name.toLowerCase().includes('admin')) continue;
 
     const key = o.id ? o.id.toString() : o.name;
     if (!officerMap[key]) {
+      const cleanName = (o.name || "").replace(/^Officer\s+/i, "").trim();
       officerMap[key] = {
         id: o.id ? o.id.toString() : key,
-        name: o.name,
+        name: cleanName,
         phone: o.phone || "020-25501234",
         designation: o.designation || "Field Operations Specialist",
-        email: `${o.name.toLowerCase().replace(/\s+/g, ".")}@pmc.gov.in`,
+        email: `${cleanName.toLowerCase().replace(/\s+/g, ".")}@pmc.gov.in`,
         activeCount: 0,
         completedCount: 0,
       };
@@ -827,9 +903,9 @@ export async function getDepartmentOfficers(departmentId: string) {
   // If no officers exist at all, provide 3 default realistic field officers for this department
   if (Object.keys(officerMap).length === 0) {
     const defaults = [
-      { name: "Officer Ramesh Patil", phone: "9822014521", designation: "Senior Field Inspector" },
-      { name: "Officer Sneha Joshi", phone: "9822018833", designation: "Assistant Engineer" },
-      { name: "Officer Anil Deshmukh", phone: "9822019944", designation: "Junior Field Supervisor" },
+      { name: "Ramesh Patil", phone: "9822014521", designation: "Senior Field Inspector" },
+      { name: "Sneha Joshi", phone: "9822018833", designation: "Assistant Engineer" },
+      { name: "Anil Deshmukh", phone: "9822019944", designation: "Junior Field Supervisor" },
     ];
 
     defaults.forEach((d, idx) => {
@@ -839,7 +915,7 @@ export async function getDepartmentOfficers(departmentId: string) {
         name: d.name,
         phone: d.phone,
         designation: d.designation,
-        email: `${d.name.toLowerCase().replace(/^(officer\s+)/, "").replace(/\s+/g, ".")}@pmc.gov.in`,
+        email: `${d.name.toLowerCase().replace(/\s+/g, ".")}@pmc.gov.in`,
         activeCount: idx * 2 + 1,
         completedCount: (idx + 1) * 3,
       };
@@ -848,6 +924,7 @@ export async function getDepartmentOfficers(departmentId: string) {
 
   return Object.values(officerMap).map((o) => ({
     ...o,
+    name: (o.name || "").replace(/^Officer\s+/i, "").trim(),
     availability: o.activeCount >= 6 ? "BUSY" : o.activeCount >= 3 ? "MODERATE" : "AVAILABLE",
     totalWorkload: o.activeCount + o.completedCount,
     resolutionRate:
@@ -872,7 +949,7 @@ export async function createDepartmentOfficer(
     throw new AppError("Department not found.", 404, "DEPARTMENT_NOT_FOUND");
   }
 
-  const fullName = input.fullName?.trim();
+  const fullName = input.fullName?.trim().replace(/^Officer\s+/i, "").trim();
   if (!fullName || fullName.length < 2) {
     throw new AppError("Valid officer name is required.", 400, "INVALID_INPUT");
   }

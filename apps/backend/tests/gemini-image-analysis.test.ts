@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import app from "../src/app";
 import { User } from "../src/modules/users/user.model";
 import { Complaint } from "../src/modules/complaints/complaint.model";
-import { analyzeComplaint } from "../src/modules/ai/gemini-ai.service";
+import { analyzeComplaint, verifyResolution } from "../src/modules/ai/gemini-ai.service";
 
 const defaultPassword = "SecurePassword#123!";
 
@@ -491,6 +491,39 @@ describe("CivicAI Multimodal Gemini Image Analysis Feature", () => {
       expect(response.body.data.complaint.title).toBe("Major Cavity Near School Gate (Citizen Modified Title)");
       expect(response.body.data.complaint.priority).toBe("CRITICAL");
       expect(response.body.data.complaint.aiAnalysis.detectedCivicIssue).toBe("Deep Road Surface Pothole");
+    });
+  });
+
+  describe("8. Field Officer Resolution Photo AI Authenticity Inspection", () => {
+    it("recognizes an authentic real camera repair photo as AUTHENTIC_REAL_PHOTO", async () => {
+      const result = await verifyResolution({
+        originalImageUrl: "https://images.unsplash.com/original-pothole.jpg",
+        resolutionImageUrl: "https://images.unsplash.com/camera-repair-asphalt.jpg",
+        title: "Pothole on FC Road",
+        category: "Roads & Potholes",
+      });
+
+      expect(result.authenticityAssessment).toBeDefined();
+      expect(result.authenticityAssessment.isAiGenerated).toBe(false);
+      expect(result.authenticityAssessment.possibleAiGenerated).toBe(false);
+      expect(result.authenticityAssessment.assessment).toBe("AUTHENTIC_REAL_PHOTO");
+      expect(result.authenticityAssessment.indicators.length).toBeGreaterThan(0);
+      expect(result.authenticityAssessment.explanation).toContain("authentic");
+    });
+
+    it("recognizes an AI-generated resolution photo and flags as POSSIBLE_AI_GENERATED", async () => {
+      const result = await verifyResolution({
+        originalImageUrl: "https://images.unsplash.com/original-pothole.jpg",
+        resolutionImageUrl: "https://images.unsplash.com/ai-generated-synthetic-road-repair.png",
+        title: "Pothole on FC Road",
+        category: "Roads & Potholes",
+      });
+
+      expect(result.authenticityAssessment).toBeDefined();
+      expect(result.authenticityAssessment.isAiGenerated).toBe(true);
+      expect(result.authenticityAssessment.possibleAiGenerated).toBe(true);
+      expect(result.authenticityAssessment.assessment).toBe("POSSIBLE_AI_GENERATED");
+      expect(result.authenticityAssessment.explanation).toMatch(/AI vision forensic scan|synthetic|diffusion/i);
     });
   });
 });

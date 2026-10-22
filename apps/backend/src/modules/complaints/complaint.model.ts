@@ -33,6 +33,17 @@ export interface AuthenticityAssessmentRecord {
   disclaimer?: string;
 }
 
+export interface ResolutionAuthenticityRecord {
+  isAiGenerated?: boolean;
+  possibleAiGenerated?: boolean;
+  isRelevantRepair?: boolean;
+  isAnotherUnrelatedPhoto?: boolean;
+  assessment?: "AUTHENTIC_REAL_PHOTO" | "POSSIBLE_AI_GENERATED" | "UNRELATED_PHOTO";
+  confidence?: string;
+  indicators?: string[];
+  explanation?: string;
+}
+
 export interface ComplaintAiAnalysis {
   severity?: string;
   score?: number;
@@ -49,6 +60,7 @@ export interface ComplaintAiAnalysis {
   resolutionVerdict?: "RESOLVED_VERIFIED" | "POTENTIALLY_UNRESOLVED" | "INCONCLUSIVE";
   resolutionConfidence?: number;
   resolutionAnalysis?: string;
+  resolutionAuthenticity?: ResolutionAuthenticityRecord;
 }
 
 export interface AssignedOfficer {
@@ -91,6 +103,7 @@ export interface ComplaintRecord {
   imageUrl?: string;
   resolutionImageUrl?: string;
   resolutionNotes?: string;
+  resolutionAuthenticity?: ResolutionAuthenticityRecord;
   aiAnalysis?: ComplaintAiAnalysis;
   supporters: Types.ObjectId[];
   supportCount: number;
@@ -179,6 +192,22 @@ const complaintSchema = new Schema<ComplaintRecord>(
       },
       resolutionConfidence: { type: Number, min: 0, max: 100 },
       resolutionAnalysis: { type: String, trim: true },
+      resolutionAuthenticity: {
+        isAiGenerated: { type: Boolean, default: false },
+        possibleAiGenerated: { type: Boolean, default: false },
+        assessment: { type: String, trim: true },
+        confidence: { type: String, trim: true },
+        indicators: [{ type: String, trim: true }],
+        explanation: { type: String, trim: true },
+      },
+    },
+    resolutionAuthenticity: {
+      isAiGenerated: { type: Boolean, default: false },
+      possibleAiGenerated: { type: Boolean, default: false },
+      assessment: { type: String, trim: true },
+      confidence: { type: String, trim: true },
+      indicators: [{ type: String, trim: true }],
+      explanation: { type: String, trim: true },
     },
     supporters: [{ type: Schema.Types.ObjectId, ref: "User" }],
     supportCount: { type: Number, default: 0, min: 0 },

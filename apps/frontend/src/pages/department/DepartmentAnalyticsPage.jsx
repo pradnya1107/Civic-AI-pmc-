@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { departmentAdminApi } from '../../services/api';
 
-export const DepartmentAnalyticsPage = () => {
+export const DepartmentAnalyticsPage = ({ lastRefreshed, onRefreshNeeded }) => {
   const [analytics, setAnalytics] = useState(null);
   const [officers, setOfficers] = useState([]);
   const [days, setDays] = useState(30);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -35,6 +36,26 @@ export const DepartmentAnalyticsPage = () => {
   useEffect(() => {
     loadAnalytics();
   }, [loadAnalytics]);
+
+  // Re-fetch whenever global top navigation refresh is triggered
+  useEffect(() => {
+    if (lastRefreshed) {
+      loadAnalytics();
+    }
+  }, [lastRefreshed]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadAnalytics();
+      if (onRefreshNeeded) onRefreshNeeded();
+      showToast('Analytics metrics refreshed successfully.');
+    } catch {
+      showToast('Refresh failed. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleExportCsv = async () => {
     try {
@@ -143,6 +164,7 @@ export const DepartmentAnalyticsPage = () => {
             ))}
           </div>
 
+
           <button
             type="button"
             className="btn btn-secondary"
@@ -214,8 +236,8 @@ export const DepartmentAnalyticsPage = () => {
         </div>
       </div>
 
-      {/* Charts Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px', marginBottom: '28px' }}>
+      {/* Trend Chart */}
+      <div style={{ marginBottom: '28px' }}>
         {/* Received vs Resolved Trend Chart */}
         <div
           style={{
@@ -302,56 +324,6 @@ export const DepartmentAnalyticsPage = () => {
               <span style={{ width: '12px', height: '12px', background: '#10B981', borderRadius: '3px' }} />
               <span style={{ color: '#64748B' }}>Complaints Resolved</span>
             </div>
-          </div>
-        </div>
-
-        {/* Category Breakdown */}
-        <div
-          style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
-            borderRadius: '12px',
-            padding: '24px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-          }}
-        >
-          <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 700, color: 'var(--text-primary, #0B1D33)' }}>
-            Category Distribution
-          </h3>
-          <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '20px' }}>
-            Breakdown of issue types within department
-          </span>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {analytics?.categoryDistribution?.length > 0 ? (
-              analytics.categoryDistribution.map((cat, idx) => {
-                const colors = ['#0D9488', '#0284C7', '#F59E0B', '#8B5CF6', '#EC4899'];
-                const color = colors[idx % colors.length];
-
-                return (
-                  <div key={cat.category}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary, #0B1D33)' }}>{cat.category}</span>
-                      <span style={{ color: '#64748B', fontSize: '12px' }}>
-                        <strong>{cat.count}</strong> ({cat.percentage}%)
-                      </span>
-                    </div>
-                    <div style={{ width: '100%', height: '8px', background: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          width: `${cat.percentage}%`,
-                          height: '100%',
-                          background: color,
-                          borderRadius: '4px',
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div style={{ textAlign: 'center', color: '#94A3B8', padding: '30px' }}>No category data</div>
-            )}
           </div>
         </div>
       </div>

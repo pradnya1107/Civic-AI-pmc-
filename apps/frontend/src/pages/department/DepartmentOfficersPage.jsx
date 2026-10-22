@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { departmentAdminApi } from '../../services/api';
 
-export const DepartmentOfficersPage = () => {
+export const DepartmentOfficersPage = ({ lastRefreshed, onRefreshNeeded }) => {
   const navigate = useNavigate();
   const [officers, setOfficers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [filterAvailability, setFilterAvailability] = useState('ALL');
@@ -32,7 +33,11 @@ export const DepartmentOfficersPage = () => {
     try {
       const res = await departmentAdminApi.getOfficers();
       const list = res?.data?.officers || [];
-      setOfficers(Array.isArray(list) ? list : []);
+      const sanitized = (Array.isArray(list) ? list : []).map((o) => ({
+        ...o,
+        name: (o.name || '').replace(/^Officer\s+/i, '').trim(),
+      }));
+      setOfficers(sanitized);
     } catch (err) {
       setError(err.message || 'Failed to load department officers.');
     } finally {
@@ -43,6 +48,26 @@ export const DepartmentOfficersPage = () => {
   useEffect(() => {
     loadOfficers();
   }, [loadOfficers]);
+
+  // Re-fetch whenever global top navigation refresh is triggered
+  useEffect(() => {
+    if (lastRefreshed) {
+      loadOfficers();
+    }
+  }, [lastRefreshed]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadOfficers();
+      if (onRefreshNeeded) onRefreshNeeded();
+      showToast('Field officers directory refreshed.');
+    } catch {
+      showToast('Refresh failed. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleAddOfficerSubmit = async (e) => {
     e.preventDefault();
@@ -224,6 +249,8 @@ export const DepartmentOfficersPage = () => {
             const maxCapacity = 8;
             const loadPercent = Math.min(100, Math.round((officer.activeCount / maxCapacity) * 100));
 
+            const displayName = (officer.name || '').replace(/^Officer\s+/i, '').trim();
+
             return (
               <div
                 key={officer.id || officer.name}
@@ -255,11 +282,11 @@ export const DepartmentOfficersPage = () => {
                           justifyContent: 'center',
                         }}
                       >
-                        {officer.name.charAt(0).toUpperCase()}
+                        {displayName.charAt(0).toUpperCase() || 'O'}
                       </div>
                       <div>
                         <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary, #0B1D33)' }}>
-                          {officer.name}
+                          {displayName}
                         </h4>
                         <span style={{ fontSize: '12px', color: '#0D9488', fontWeight: 600 }}>
                           {officer.designation}

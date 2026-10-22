@@ -427,10 +427,10 @@ export async function resolveComplaintWithVerification(
   if (!complaint) throw notFound();
 
   let aiVerdict: any = undefined;
-  if (complaint.imageUrl && input.resolutionImageUrl) {
+  if (input.resolutionImageUrl) {
     try {
       const verification = await verifyResolution({
-        originalImageUrl: complaint.imageUrl,
+        originalImageUrl: complaint.imageUrl || "",
         resolutionImageUrl: input.resolutionImageUrl,
         title: complaint.title,
         category: complaint.category,
@@ -439,8 +439,33 @@ export async function resolveComplaintWithVerification(
         resolutionVerdict: verification.verdict,
         resolutionConfidence: verification.confidence,
         resolutionAnalysis: verification.analysis,
+        resolutionAuthenticity: verification.authenticityAssessment,
       };
-    } catch (e) {
+
+      // STRICT PROTECTION: If photo is recognized as AI generated or unrelated photo, block submission!
+      if (verification.authenticityAssessment?.isAiGenerated) {
+        throw new AppError(
+          "Resolution rejected: Uploaded photo was recognized by AI as an AI-generated or synthetic image. Officers cannot submit AI-generated photos. Please capture and upload an authentic on-site camera photograph.",
+          422,
+          "AI_GENERATED_IMAGE_REJECTED",
+        );
+      }
+      if (verification.authenticityAssessment?.isAnotherUnrelatedPhoto || verification.authenticityAssessment?.isRelevantRepair === false) {
+        throw new AppError(
+          "Resolution rejected: The uploaded photo does not show the repair or remediation of this civic complaint. Officers must upload authentic photo evidence of the actual repair work.",
+          422,
+          "UNRELATED_PHOTO_REJECTED",
+        );
+      }
+    } catch (e: any) {
+      if (
+        e instanceof AppError ||
+        e?.errorCode === "AI_GENERATED_IMAGE_REJECTED" ||
+        e?.errorCode === "UNRELATED_PHOTO_REJECTED" ||
+        e?.statusCode === 422
+      ) {
+        throw e;
+      }
       console.warn("AI verification error:", e);
     }
   }
@@ -453,6 +478,9 @@ export async function resolveComplaintWithVerification(
       ...(complaint.aiAnalysis || {}),
       ...aiVerdict,
     };
+    if (aiVerdict.resolutionAuthenticity) {
+      complaint.resolutionAuthenticity = aiVerdict.resolutionAuthenticity;
+    }
   }
 
   await complaint.save();
@@ -467,6 +495,7 @@ export async function resolveComplaintWithVerification(
       previousStatus: "IN_PROGRESS",
       newStatus: "RESOLVED",
       resolutionVerdict: aiVerdict?.resolutionVerdict || "MANUAL_VERIFIED",
+      photoAuthenticity: aiVerdict?.resolutionAuthenticity?.assessment || "AUTHENTIC_REAL_PHOTO",
     },
   });
 

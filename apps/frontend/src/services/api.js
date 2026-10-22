@@ -540,6 +540,15 @@ export const departmentAdminApi = {
   },
 
   /**
+   * Complete and resolve complaint with resolution repair photo and AI authenticity scan
+   * POST /api/v1/department-admin/complaints/:id/resolve
+   */
+  async resolveComplaint(id, data) {
+    const response = await api.post(`/api/v1/department-admin/complaints/${id}/resolve`, data);
+    return response.data;
+  },
+
+  /**
    * Update complaint priority
    * PATCH /api/v1/department-admin/complaints/:id/priority
    */

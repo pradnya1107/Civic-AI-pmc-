@@ -422,16 +422,16 @@ async function seedDemoComplaints(): Promise<void> {
 
 /* ─────────────────────── Demo Department Officers ─────────────────────── */
 const DEMO_OFFICERS = [
-  { fullName: "Officer Ramesh Patil", email: "ramesh.patil@civicai.local", phone: "9822014521", deptSlug: "roads", designation: "Senior Road Engineer" },
-  { fullName: "Officer Sneha Joshi", email: "sneha.joshi@civicai.local", phone: "9822018833", deptSlug: "roads", designation: "Assistant Road Inspector" },
-  { fullName: "Officer Anil Deshmukh", email: "anil.deshmukh@civicai.local", phone: "9822019944", deptSlug: "roads", designation: "Junior Field Supervisor" },
-  { fullName: "Officer Santosh Gaikwad", email: "santosh.gaikwad@civicai.local", phone: "9822021144", deptSlug: "waste", designation: "Sanitation Supervisor" },
-  { fullName: "Officer Priya Kulkarni", email: "priya.kulkarni@civicai.local", phone: "9822025566", deptSlug: "waste", designation: "Solid Waste Inspector" },
-  { fullName: "Officer Mahesh Shinde", email: "mahesh.shinde@civicai.local", phone: "9822031122", deptSlug: "water", designation: "Pipeline Maintenance Officer" },
-  { fullName: "Officer Kavita Pawar", email: "kavita.pawar@civicai.local", phone: "9822034455", deptSlug: "water", designation: "Water Quality Analyst" },
-  { fullName: "Officer Vikas Jadhav", email: "vikas.jadhav@civicai.local", phone: "9822043344", deptSlug: "drainage", designation: "Stormwater Drainage Engineer" },
-  { fullName: "Officer Ganesh More", email: "ganesh.more@civicai.local", phone: "9822055566", deptSlug: "street-lighting", designation: "Electrical Field Inspector" },
-  { fullName: "Officer Anita Kamble", email: "anita.kamble@civicai.local", phone: "9822067788", deptSlug: "public-health", designation: "Public Health Inspector" },
+  { fullName: "Ramesh Patil", email: "ramesh.patil@civicai.local", phone: "9822014521", deptSlug: "roads", designation: "Senior Road Engineer" },
+  { fullName: "Sneha Joshi", email: "sneha.joshi@civicai.local", phone: "9822018833", deptSlug: "roads", designation: "Assistant Road Inspector" },
+  { fullName: "Anil Deshmukh", email: "anil.deshmukh@civicai.local", phone: "9822019944", deptSlug: "roads", designation: "Junior Field Supervisor" },
+  { fullName: "Santosh Gaikwad", email: "santosh.gaikwad@civicai.local", phone: "9822021144", deptSlug: "waste", designation: "Sanitation Supervisor" },
+  { fullName: "Priya Kulkarni", email: "priya.kulkarni@civicai.local", phone: "9822025566", deptSlug: "waste", designation: "Solid Waste Inspector" },
+  { fullName: "Mahesh Shinde", email: "mahesh.shinde@civicai.local", phone: "9822031122", deptSlug: "water", designation: "Pipeline Maintenance Officer" },
+  { fullName: "Kavita Pawar", email: "kavita.pawar@civicai.local", phone: "9822034455", deptSlug: "water", designation: "Water Quality Analyst" },
+  { fullName: "Vikas Jadhav", email: "vikas.jadhav@civicai.local", phone: "9822043344", deptSlug: "drainage", designation: "Stormwater Drainage Engineer" },
+  { fullName: "Ganesh More", email: "ganesh.more@civicai.local", phone: "9822055566", deptSlug: "street-lighting", designation: "Electrical Field Inspector" },
+  { fullName: "Anita Kamble", email: "anita.kamble@civicai.local", phone: "9822067788", deptSlug: "public-health", designation: "Public Health Inspector" },
 ];
 
 async function seedDemoOfficers(): Promise<void> {

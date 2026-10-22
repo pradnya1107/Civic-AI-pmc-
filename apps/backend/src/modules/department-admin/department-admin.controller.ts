@@ -102,7 +102,7 @@ export const getDepartmentComplaintByIdHandler: RequestHandler = async (request,
 export const updateComplaintStatusHandler: RequestHandler = async (request, response) => {
   const actor = getActor(request);
   const id = getParamId(request);
-  const { status, notes, note } = request.body;
+  const { status, notes, note, resolutionImageUrl, resolutionNotes, assignedOfficer } = request.body;
 
   if (!status) {
     throw new AppError("Status is required.", 400, "VALIDATION_ERROR");
@@ -114,11 +114,33 @@ export const updateComplaintStatusHandler: RequestHandler = async (request, resp
     id,
     status,
     notes || note,
+    { resolutionImageUrl, resolutionNotes, assignedOfficer },
   );
 
   response.status(200).json({
     success: true,
     message: `Complaint status updated to '${status}'.`,
+    data: { complaint },
+  });
+};
+
+export const resolveDepartmentComplaintHandler: RequestHandler = async (request, response) => {
+  const actor = getActor(request);
+  const id = getParamId(request);
+  const { resolutionImageUrl, resolutionNotes, notes, note, assignedOfficer } = request.body;
+
+  const complaint = await updateDepartmentComplaintStatus(
+    actor.departmentId,
+    actor,
+    id,
+    "RESOLVED",
+    notes || note,
+    { resolutionImageUrl, resolutionNotes, assignedOfficer },
+  );
+
+  response.status(200).json({
+    success: true,
+    message: "Complaint resolved with AI photo authenticity scan.",
     data: { complaint },
   });
 };

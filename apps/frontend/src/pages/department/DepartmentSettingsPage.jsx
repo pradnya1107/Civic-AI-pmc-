@@ -1,10 +1,24 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 
-export const DepartmentSettingsPage = () => {
+export const DepartmentSettingsPage = ({ lastRefreshed, onRefreshNeeded }) => {
   const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleManualRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+      if (onRefreshNeeded) onRefreshNeeded();
+      showToast('Settings & department profile refreshed.');
+    }, 500);
+  };
 
   const displayName = user?.fullName || user?.name || 'Department Administrator';
   const email = user?.email || 'admin@civicai.local';
@@ -13,13 +27,39 @@ export const DepartmentSettingsPage = () => {
 
   return (
     <div className="dept-settings-page" style={{ maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '22px', fontWeight: 800, margin: 0, color: 'var(--text-primary, #0B1D33)' }}>
-          Profile & Department Settings
-        </h2>
-        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted, #64748B)' }}>
-          Configure operations preferences, security settings, and departmental service level agreements.
-        </p>
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            background: '#0B1D33',
+            color: '#FFFFFF',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            zIndex: 9999,
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+        >
+          <span>✓</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, margin: 0, color: 'var(--text-primary, #0B1D33)' }}>
+            Profile & Department Settings
+          </h2>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted, #64748B)' }}>
+            Configure operations preferences, security settings, and departmental service level agreements.
+          </p>
+        </div>
+
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -109,37 +149,6 @@ export const DepartmentSettingsPage = () => {
               <strong style={{ fontSize: '18px', color: '#475569' }}>72 Hours</strong>
               <span style={{ fontSize: '11px', color: '#334155', display: 'block', marginTop: '2px' }}>Routine Maintenance</span>
             </div>
-          </div>
-        </div>
-
-        {/* Display & Appearance Mode */}
-        <div
-          style={{
-            background: 'var(--bg-card, #FFFFFF)',
-            border: '1px solid var(--border-color, #E2E8F0)',
-            borderRadius: '12px',
-            padding: '24px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 700, color: 'var(--text-primary, #0B1D33)' }}>
-                Interface Appearance
-              </h3>
-              <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
-                Toggle between light and dark theme mode for the operations center.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={toggleTheme}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <span>{theme === 'dark' ? '☀️ Switch to Light' : '🌙 Switch to Dark'}</span>
-            </button>
           </div>
         </div>
       </div>
