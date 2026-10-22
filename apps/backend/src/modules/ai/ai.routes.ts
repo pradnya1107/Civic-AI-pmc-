@@ -1,11 +1,40 @@
 import { Router } from "express";
 import { asyncHandler } from "../../middleware/async-handler";
-import { authenticate } from "../../middleware/authenticate";
+import { authenticate, optionalAuthenticate } from "../../middleware/authenticate";
+import { validateRequest } from "../../middleware/validate-request";
 import { analyzeComplaint, verifyResolution } from "./gemini-ai.service";
+import { chatRequestSchema, processCitizenMessage } from "./citizen-chat.service";
 
 export const aiRouter = Router();
 
-// AI analysis and status can be called by authenticated users
+/**
+ * Citizen Support Chatbot Endpoint
+ * POST /api/v1/ai/chat
+ * Open to citizens for municipal guidance, FAQs, and personalized complaint tracking when authenticated
+ */
+aiRouter.post(
+  "/chat",
+  optionalAuthenticate,
+  validateRequest(chatRequestSchema),
+  asyncHandler(async (request, response) => {
+    const user = request.user
+      ? {
+          id: (request.user as any).id || (request.user as any)._id,
+          role: (request.user as any).role,
+          name: (request.user as any).name || (request.user as any).fullName,
+        }
+      : undefined;
+
+    const result = await processCitizenMessage(request.body, user);
+    response.status(200).json({
+      success: true,
+      message: "Chat response generated successfully.",
+      data: result,
+    });
+  }),
+);
+
+// Protected AI routes below require authentication
 aiRouter.use(authenticate);
 
 aiRouter.get(

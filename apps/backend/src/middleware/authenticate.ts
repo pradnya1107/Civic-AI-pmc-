@@ -16,3 +16,19 @@ const authenticateRequest: RequestHandler = async (request, _response, next) => 
 };
 
 export const authenticate = asyncHandler(authenticateRequest);
+
+const optionalAuthenticateRequest: RequestHandler = async (request, _response, next) => {
+  const authorization = request.header("authorization");
+  const match = authorization?.match(/^Bearer ([^\s]+)$/);
+  if (match) {
+    try {
+      const user = await validateToken(match[1]);
+      request.user = user;
+    } catch {
+      // Ignore token failure for optional authentication
+    }
+  }
+  next();
+};
+
+export const optionalAuthenticate = asyncHandler(optionalAuthenticateRequest);

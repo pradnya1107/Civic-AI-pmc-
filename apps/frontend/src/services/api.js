@@ -313,6 +313,24 @@ export const aiApi = {
     const response = await api.post('/api/v1/ai/verify-resolution', data);
     return response.data;
   },
+
+  /**
+   * Send citizen message to AI Support Chatbot
+   * POST /api/v1/ai/chat
+   */
+  async sendChatMessage(data) {
+    const response = await api.post('/api/v1/ai/chat', data);
+    return response.data;
+  },
+};
+
+export const chatApi = {
+  /**
+   * Send citizen message to AI Support Chatbot
+   */
+  async sendMessage(data) {
+    return aiApi.sendChatMessage(data);
+  },
 };
 
 export const departmentApi = {

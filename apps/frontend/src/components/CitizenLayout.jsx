@@ -4,6 +4,7 @@ import { CitizenTopNav } from './CitizenTopNav';
 import { HelpCenterModal } from './HelpCenterModal';
 import { ProfileModal } from './ProfileModal';
 import { NotificationDrawer } from './NotificationDrawer';
+import { AICitizenChatbot } from './AICitizenChatbot';
 import { notificationApi } from '../services/api';
 
 export const CitizenPortalContext = createContext({
@@ -115,6 +116,9 @@ export const CitizenLayout = ({
           isOpen={profileOpen}
           onClose={() => setProfileOpen(false)}
         />
+
+        {/* 3. Floating AI Citizen Support Chatbot (Ask CivicAI) */}
+        <AICitizenChatbot />
       </div>
     </CitizenPortalContext.Provider>
   );
