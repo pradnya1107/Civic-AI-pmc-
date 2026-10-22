@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -120,13 +120,6 @@ export const CitizenTopNav = ({
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-
-          <Link to="/dashboard" className="mobile-brand-logo hide-desktop">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ color: '#0D9488' }}>
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-            <span className="mobile-brand-title">CivicAI</span>
-          </Link>
         </div>
 
         {/* Center: Global Search Bar */}
@@ -301,11 +294,14 @@ export const CitizenTopNav = ({
               type="button"
               className="user-profile-btn"
               onClick={() => setProfileOpen(!profileOpen)}
-              aria-label={`User menu for ${displayName}`}
+              aria-label={`User profile for ${displayName}`}
               aria-expanded={profileOpen}
             >
               <div className="nav-user-avatar" aria-hidden="true">{initial}</div>
-              <span className="nav-user-name hide-mobile">{displayName}</span>
+              <div className="nav-user-info hide-mobile">
+                <span className="nav-user-name">{displayName}</span>
+                <span className="nav-user-role">{displayRole}</span>
+              </div>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="hide-mobile">
                 <polyline points="6 9 12 15 18 9" />
               </svg>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Navbar } from '../components/Navbar';
+import { CitizenLayout } from '../components/CitizenLayout';
 import { complaintApi, aiApi } from '../services/api';
 
 export const PMC_CATEGORIES = [
@@ -180,14 +180,62 @@ export const ComplaintFormPage = () => {
     }
   };
 
+// Client-side image compression to optimize speed and avoid oversized payloads
+const compressImageFile = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1600;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.85);
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+};
+
   // Handle local file selection
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
       setServerError('Please select an image file (JPG, PNG, or WebP).');
       return;
+    }
+
+    setServerError('');
+    try {
+      const compressedDataUrl = await compressImageFile(file);
+      if (compressedDataUrl) {
+        setImagePreview(compressedDataUrl);
+        setImageBase64(compressedDataUrl);
+        setFormData((prev) => ({ ...prev, imageUrl: compressedDataUrl }));
+        return;
+      }
+    } catch {
+      // Fallback to normal FileReader below
     }
 
     const reader = new FileReader();
@@ -225,9 +273,12 @@ export const ComplaintFormPage = () => {
     try {
       setIsAiScanning(true);
       setServerError('');
+      const isHttp = typeof formData.imageUrl === 'string' && formData.imageUrl.startsWith('http');
+      const isBase64 = (typeof formData.imageUrl === 'string' && formData.imageUrl.startsWith('data:image/')) || Boolean(imageBase64);
+
       const res = await aiApi.analyzeComplaint({
-        imageUrl: formData.imageUrl,
-        imageBase64: imageBase64 || undefined,
+        imageUrl: isHttp ? formData.imageUrl : undefined,
+        imageBase64: isBase64 ? (imageBase64 || formData.imageUrl) : undefined,
         descriptionHint: formData.description || formData.title,
         category: formData.category,
       });
@@ -236,15 +287,22 @@ export const ComplaintFormPage = () => {
         const ai = res.data;
         setAiResult(ai);
 
+        const aiTitle = ai.suggestedTitle || ai.title || 'Reported Civic Issue';
+        const aiDesc = ai.visibleEvidence || ai.description || ai.generatedDescription || ai.reasoning || '';
+        const aiCategory = ai.category || 'Roads & Potholes';
+        const aiPriority = ai.priority || ai.severity || 'HIGH';
+
         setFormData((prev) => ({
           ...prev,
-          title: prev.title || ai.suggestedTitle || 'Reported Civic Issue',
-          description: prev.description ? `${prev.description}\n\n[AI Analysis]: ${ai.description}` : ai.description,
-          category: ai.category || prev.category || 'Roads & Potholes',
-          priority: ai.priority || prev.priority || 'HIGH',
+          title: prev.title.trim() ? prev.title : aiTitle,
+          description: prev.description.trim() ? `${prev.description}\n\n[AI Visible Evidence]: ${aiDesc}` : aiDesc,
+          category: prev.category || aiCategory,
+          priority: aiPriority,
         }));
 
-        setToastMessage(`AI Scan Complete: Severity ${ai.severity} (${ai.severityScore}/100) - Assigned to ${ai.department}`);
+        const deptName = ai.department || ai.suggestedDepartment || 'Municipal Operations';
+        const detectedName = ai.detectedCivicIssue || ai.category || 'Civic Issue';
+        setToastMessage(`AI Scan Complete: ${detectedName} (${ai.severity || 'MEDIUM'} Severity) - Ready for your review & submission.`);
       }
     } catch (err) {
       setServerError(err.message || 'AI analysis failed. You can continue filling the form manually.');
@@ -393,10 +451,8 @@ export const ComplaintFormPage = () => {
   };
 
   return (
-    <div className="app-container">
-      <Navbar />
-
-      <main className="dashboard-main" id="main-content">
+    <CitizenLayout>
+      <div className="citizen-page-inner">
         {/* Breadcrumb Navigation */}
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
           <Link to="/dashboard" className="breadcrumb-link">Dashboard</Link>
@@ -518,7 +574,7 @@ export const ComplaintFormPage = () => {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <div>
-              <strong>Submission Error:</strong> {serverError}
+              <strong>Notice:</strong> {serverError}
             </div>
           </div>
         )}
@@ -689,26 +745,119 @@ export const ComplaintFormPage = () => {
               </div>
             </div>
 
-            {/* AI Result Card */}
+            {/* AI Result Dual-Assessment Panels */}
             {aiResult && (
-              <div className="ai-insights-card">
-                <div className="ai-insights-header">
-                  <div className="ai-badge-group">
-                    <span className="badge badge-primary">Gemini Verified</span>
-                    <span className={`badge badge-${aiResult.severity?.toLowerCase()}`}>
-                      {aiResult.severity} Severity ({aiResult.severityScore}/100)
-                    </span>
+              <div className="ai-dual-panel-wrapper">
+                <div className="ai-dual-panel-container">
+                  {/* Panel A: Civic Issue Recognition */}
+                  <div className="ai-panel ai-panel--civic" id="ai-civic-issue-panel">
+                    <div className="ai-panel-header">
+                      <div className="ai-panel-title">
+                        <span>🔍</span>
+                        <strong>Civic Issue Recognition</strong>
+                      </div>
+                      <span className={`badge badge-${(aiResult.severity || 'medium').toLowerCase()}`}>
+                        {aiResult.severity || 'Medium'} Severity ({aiResult.severityScore ?? aiResult.score ?? 70}/100)
+                      </span>
+                    </div>
+                    <div className="ai-panel-body">
+                      <div>
+                        <strong>Detected Civic Issue:</strong>{' '}
+                        <span>{aiResult.detectedCivicIssue || aiResult.civicIssue?.detectedCivicIssue || 'Civic Grievance'}</span>
+                      </div>
+                      <div>
+                        <strong>Category:</strong> {aiResult.category || 'Roads & Potholes'}
+                      </div>
+                      <div>
+                        <strong>Visible Evidence:</strong>{' '}
+                        <span>{aiResult.visibleEvidence || aiResult.evidenceDescription || aiResult.description || aiResult.reasoning}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <strong>AI Confidence:</strong>
+                        <span className="badge badge-sm badge-primary">
+                          {Math.round(aiResult.confidenceScore ?? aiResult.confidence ?? 85)}% Match
+                        </span>
+                      </div>
+                      <div>
+                        <strong>Assigned Department:</strong>{' '}
+                        {aiResult.department || aiResult.suggestedDepartment || 'Municipal Operations'}
+                        <span className="ai-sla-pill" style={{ marginLeft: '8px' }}>
+                          SLA: {aiResult.estimatedHours || 24}h
+                        </span>
+                      </div>
+                      {((aiResult.safetyHazards && aiResult.safetyHazards.length > 0) || (aiResult.detectedIssues && aiResult.detectedIssues.length > 0)) && (
+                        <div className="ai-hazards">
+                          <strong>Identified Hazards:</strong> {(aiResult.safetyHazards || aiResult.detectedIssues).join(', ')}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <span className="ai-sla-pill">Guaranteed SLA: {aiResult.estimatedHours || 24} Hours</span>
+
+                  {/* Panel B: Image Authenticity Assessment */}
+                  <div
+                    className={`ai-panel ${aiResult.authenticityAssessment?.possibleAiGenerated ? 'ai-panel--auth-warning' : 'ai-panel--auth'}`}
+                    id="ai-authenticity-panel"
+                  >
+                    <div className="ai-panel-header">
+                      <div className="ai-panel-title">
+                        <span>🛡️</span>
+                        <strong>Image Authenticity Assessment</strong>
+                      </div>
+                      <span className={`badge ${aiResult.authenticityAssessment?.possibleAiGenerated ? 'badge-warning' : 'badge-success'}`}>
+                        {aiResult.authenticityAssessment?.possibleAiGenerated
+                          ? (aiResult.authenticityAssessment?.confidence === 'HIGH'
+                              ? '⚠️ AI-Generated / Synthetic Image Detected'
+                              : '⚠️ Possible AI-Generated / Edited')
+                          : 'Camera Capture Indicators'}
+                      </span>
+                    </div>
+                    <div className="ai-panel-body">
+                      <div>
+                        <strong>Assessment Confidence:</strong>{' '}
+                        <span>{aiResult.authenticityAssessment?.confidence || 'MEDIUM'}</span>
+                      </div>
+                      {aiResult.authenticityAssessment?.indicators?.length > 0 && (
+                        <div>
+                          <strong>Visual Indicators:</strong>
+                          <ul style={{ margin: '4px 0 0 18px', padding: 0 }}>
+                            {aiResult.authenticityAssessment.indicators.map((ind, idx) => (
+                              <li key={idx} style={{ fontSize: '0.82rem', marginBottom: '2px' }}>{ind}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <div>
+                        <strong>Municipal Review Disposition:</strong>{' '}
+                        {aiResult.manualReviewNeeded ? (
+                          <span style={{ color: '#d97706', fontWeight: 600 }}>
+                            ⚠️ Flagged for on-site field verification (Complaint will proceed normally)
+                          </span>
+                        ) : (
+                          <span style={{ color: '#059669', fontWeight: 600 }}>
+                            ✅ Standard Municipal Queue
+                          </span>
+                        )}
+                        {aiResult.manualReviewReason && (
+                          <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-dim)' }}>
+                            {aiResult.manualReviewReason}
+                          </p>
+                        )}
+                      </div>
+                      <div className="ai-disclaimer-box">
+                        {aiResult.authenticityAssessment?.disclaimer ||
+                          "Visual appearance alone cannot definitively prove an image's origin; this assessment is an automated heuristic and should be verified independently if questioned."}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="ai-insights-body">
-                  <p><strong>Department Assigned:</strong> {aiResult.department}</p>
-                  <p><strong>AI Assessment:</strong> {aiResult.description}</p>
-                  {aiResult.safetyHazards?.length > 0 && (
-                    <p className="ai-hazards">
-                      <strong>Identified Hazards:</strong> {aiResult.safetyHazards.join(', ')}
-                    </p>
-                  )}
+
+                {/* Citizen Review & Edit Notice Banner */}
+                <div className="ai-review-banner" role="status" aria-live="polite">
+                  <span className="ai-review-banner-icon">✏️</span>
+                  <div className="ai-review-banner-text">
+                    <strong>Citizen Review & Edit:</strong> The AI has analyzed your image and pre-filled the complaint form below.
+                    You can freely review, edit, or customize any of the fields (Title, Category, Description, and Priority) before submitting.
+                  </div>
                 </div>
               </div>
             )}
@@ -842,17 +991,32 @@ export const ComplaintFormPage = () => {
             </div>
 
             {/* Location Section */}
-            <fieldset className="form-fieldset">
-              <legend className="form-legend">
-                <span>Location Details</span>
+            <div className="location-details-box">
+              <div className="location-details-box__header">
+                <div className="location-details-box__title-wrap">
+                  <div className="location-pin-badge" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="location-box-title">Location Details</h3>
+                    <p className="location-box-subtitle">
+                      Specify street address or auto-detect with Pune GPS
+                    </p>
+                  </div>
+                </div>
+
                 <button
                   type="button"
-                  className="btn btn-outline btn-sm geo-btn"
+                  className="btn btn-primary btn-sm geo-gps-btn"
                   onClick={handleGetLocation}
                   disabled={geoLoading || isSubmitting}
                   aria-label="Use device GPS location"
+                  id="gps-autodetect-btn"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="2" x2="12" y2="6" />
                     <line x1="12" y1="18" x2="12" y2="22" />
@@ -861,12 +1025,17 @@ export const ComplaintFormPage = () => {
                   </svg>
                   <span>{geoLoading ? 'Detecting GPS...' : 'Use My Current Location'}</span>
                 </button>
-              </legend>
+              </div>
 
               {geoNotice && (
-                <p className="geo-notice" role="status">
-                  {geoNotice}
-                </p>
+                <div className="geo-notice-alert" role="status">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <span>{geoNotice}</span>
+                </div>
               )}
 
               {/* Address input */}
@@ -874,20 +1043,23 @@ export const ComplaintFormPage = () => {
                 <label htmlFor="complaint-address" className="form-label">
                   Street Address / Landmark <span className="required-star">*</span>
                 </label>
-                <input
-                  type="text"
-                  id="complaint-address"
-                  name="address"
-                  className="form-input"
-                  placeholder="e.g. Near Ganpati Mandir, FC Road, Pune 411004"
-                  value={formData.address}
-                  onChange={handleChange}
-                  maxLength={300}
-                  aria-required="true"
-                  aria-invalid={!!errors.address}
-                  aria-describedby={errors.address ? 'complaint-address-error' : undefined}
-                  disabled={isSubmitting}
-                />
+                <div className="input-with-icon">
+                  <span className="input-icon" aria-hidden="true">📍</span>
+                  <input
+                    type="text"
+                    id="complaint-address"
+                    name="address"
+                    className="form-input input-has-icon"
+                    placeholder="e.g. Near Ganpati Mandir, FC Road, Pune 411004"
+                    value={formData.address}
+                    onChange={handleChange}
+                    maxLength={300}
+                    aria-required="true"
+                    aria-invalid={!!errors.address}
+                    aria-describedby={errors.address ? 'complaint-address-error' : undefined}
+                    disabled={isSubmitting}
+                  />
+                </div>
                 {errors.address && (
                   <div id="complaint-address-error" className="field-error" role="alert">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -905,20 +1077,23 @@ export const ComplaintFormPage = () => {
                 <label htmlFor="complaint-ward" className="form-label">
                   PMC Ward Office (Administrative Zone)
                 </label>
-                <select
-                  id="complaint-ward"
-                  name="ward"
-                  className="form-input form-select"
-                  value={formData.ward}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                >
-                  {PMC_WARDS.map((ward) => (
-                    <option key={ward.value} value={ward.value}>
-                      {ward.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="input-with-icon">
+                  <span className="input-icon" aria-hidden="true">🏢</span>
+                  <select
+                    id="complaint-ward"
+                    name="ward"
+                    className="form-input form-select input-has-icon"
+                    value={formData.ward}
+                    onChange={handleChange}
+                    disabled={isSubmitting}
+                  >
+                    {PMC_WARDS.map((ward) => (
+                      <option key={ward.value} value={ward.value}>
+                        {ward.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Coordinates (optional) */}
@@ -966,7 +1141,7 @@ export const ComplaintFormPage = () => {
                   <span>{errors.location}</span>
                 </div>
               )}
-            </fieldset>
+            </div>
 
             {/* Form Actions */}
             <div className="form-actions">
@@ -998,8 +1173,8 @@ export const ComplaintFormPage = () => {
             </div>
           </form>
         </section>
-      </main>
-    </div>
+      </div>
+    </CitizenLayout>
   );
 };
 

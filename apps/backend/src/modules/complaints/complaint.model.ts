@@ -26,13 +26,26 @@ export interface ComplaintLocation {
   longitude?: number;
 }
 
+export interface AuthenticityAssessmentRecord {
+  possibleAiGenerated?: boolean;
+  confidence?: string;
+  indicators?: string[];
+  disclaimer?: string;
+}
+
 export interface ComplaintAiAnalysis {
   severity?: string;
   score?: number;
+  confidenceScore?: number;
   reasoning?: string;
   suggestedDepartment?: string;
   detectedIssues?: string[];
+  detectedCivicIssue?: string;
+  visibleEvidence?: string;
+  manualReviewNeeded?: boolean;
+  manualReviewReason?: string;
   generatedDescription?: string;
+  authenticityAssessment?: AuthenticityAssessmentRecord;
   resolutionVerdict?: "RESOLVED_VERIFIED" | "POTENTIALLY_UNRESOLVED" | "INCONCLUSIVE";
   resolutionConfidence?: number;
   resolutionAnalysis?: string;
@@ -145,10 +158,21 @@ const complaintSchema = new Schema<ComplaintRecord>(
     aiAnalysis: {
       severity: { type: String, trim: true },
       score: { type: Number, min: 0, max: 100 },
+      confidenceScore: { type: Number, min: 0, max: 100 },
       reasoning: { type: String, trim: true },
       suggestedDepartment: { type: String, trim: true },
       detectedIssues: [{ type: String, trim: true }],
+      detectedCivicIssue: { type: String, trim: true },
+      visibleEvidence: { type: String, trim: true },
+      manualReviewNeeded: { type: Boolean, default: false },
+      manualReviewReason: { type: String, trim: true },
       generatedDescription: { type: String, trim: true },
+      authenticityAssessment: {
+        possibleAiGenerated: { type: Boolean, default: false },
+        confidence: { type: String, trim: true },
+        indicators: [{ type: String, trim: true }],
+        disclaimer: { type: String, trim: true },
+      },
       resolutionVerdict: {
         type: String,
         enum: ["RESOLVED_VERIFIED", "POTENTIALLY_UNRESOLVED", "INCONCLUSIVE"],

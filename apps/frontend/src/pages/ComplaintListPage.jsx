@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Navbar } from '../components/Navbar';
+import { CitizenLayout } from '../components/CitizenLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { complaintApi } from '../services/api';
 
@@ -84,10 +84,8 @@ export const ComplaintListPage = () => {
   });
 
   return (
-    <div className="app-container">
-      <Navbar />
-
-      <main className="dashboard-main" id="main-content">
+    <CitizenLayout>
+      <div className="citizen-page-inner">
         {/* Breadcrumb Navigation */}
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
           <Link to="/dashboard" className="breadcrumb-link">Dashboard</Link>
@@ -379,8 +377,8 @@ export const ComplaintListPage = () => {
             })}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </CitizenLayout>
   );
 };
 

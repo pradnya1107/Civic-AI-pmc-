@@ -4,6 +4,7 @@ import {
   createDepartment,
   updateDepartment,
   getDepartmentById,
+  listAdminCandidates,
 } from "./department.service";
 
 export const list: RequestHandler = async (request, response) => {
@@ -12,6 +13,14 @@ export const list: RequestHandler = async (request, response) => {
   response.status(200).json({
     success: true,
     data: { departments },
+  });
+};
+
+export const getAdminCandidatesHandler: RequestHandler = async (_request, response) => {
+  const candidates = await listAdminCandidates();
+  response.status(200).json({
+    success: true,
+    data: { candidates },
   });
 };
 
@@ -40,4 +49,3 @@ export const update: RequestHandler = async (request, response) => {
     data: { department },
   });
 };
-

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navbar } from '../components/Navbar';
+import { CitizenLayout } from '../components/CitizenLayout';
 import { CivicHeatmap } from '../components/CivicHeatmap';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
@@ -136,12 +137,11 @@ export const HeatmapPage = () => {
   }
 
   return (
-    <div className="portal-page-shell" style={{ minHeight: '100vh', background: 'var(--color-bg-base)' }}>
-      <Navbar />
-      <main className="portal-main-container" id="main-content" style={{ maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1.25rem' }}>
+    <CitizenLayout>
+      <div className="citizen-page-inner">
         {heatmapContent}
-      </main>
-    </div>
+      </div>
+    </CitizenLayout>
   );
 };
 

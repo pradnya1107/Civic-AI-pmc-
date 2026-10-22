@@ -31,11 +31,26 @@ export const createComplaintSchema = z
       .object({
         severity: z.string().optional(),
         score: z.number().optional(),
+        confidenceScore: z.number().optional(),
         reasoning: z.string().optional(),
         suggestedDepartment: z.string().optional(),
         detectedIssues: z.array(z.string()).optional(),
+        detectedCivicIssue: z.string().optional(),
+        visibleEvidence: z.string().optional(),
+        manualReviewNeeded: z.boolean().optional(),
+        manualReviewReason: z.string().optional(),
         generatedDescription: z.string().optional(),
+        authenticityAssessment: z
+          .object({
+            possibleAiGenerated: z.boolean().optional(),
+            confidence: z.string().optional(),
+            indicators: z.array(z.string()).optional(),
+            disclaimer: z.string().optional(),
+          })
+          .passthrough()
+          .optional(),
       })
+      .passthrough()
       .optional(),
   })
   .strict();

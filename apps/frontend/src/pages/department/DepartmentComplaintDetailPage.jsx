@@ -579,39 +579,74 @@ export const DepartmentComplaintDetailPage = () => {
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
                   <div style={{ padding: '10px', background: 'rgba(13, 148, 136, 0.06)', borderRadius: '8px' }}>
-                    <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Predicted Category</span>
+                    <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Predicted Department</span>
                     <strong style={{ fontSize: '14px', color: '#0D9488' }}>
-                      {complaint.aiAnalysis.suggestedDepartment || complaint.category}
+                      {complaint.aiAnalysis.suggestedDepartment || complaint.aiAnalysis.department || complaint.category}
                     </strong>
                   </div>
 
                   <div style={{ padding: '10px', background: 'rgba(13, 148, 136, 0.06)', borderRadius: '8px' }}>
-                    <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Severity Score</span>
+                    <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Severity & Confidence</span>
                     <strong style={{ fontSize: '14px', color: '#D97706' }}>
-                      {complaint.aiAnalysis.score ? `${complaint.aiAnalysis.score}/100 (${complaint.aiAnalysis.severity || 'HIGH'})` : 'Auto-Classified'}
+                      {complaint.aiAnalysis.severity || 'HIGH'} ({complaint.aiAnalysis.severityScore ?? complaint.aiAnalysis.score ?? 70}/100)
+                      {complaint.aiAnalysis.confidenceScore ? ` · ${Math.round(complaint.aiAnalysis.confidenceScore)}% match` : ''}
                     </strong>
                   </div>
                 </div>
 
-                {complaint.aiAnalysis.reasoning && (
+                {complaint.aiAnalysis.detectedCivicIssue && (
+                  <div style={{ marginBottom: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '2px' }}>
+                      Detected Civic Issue:
+                    </span>
+                    <strong style={{ fontSize: '13px', color: 'var(--color-primary, #4F46E5)' }}>
+                      {complaint.aiAnalysis.detectedCivicIssue}
+                    </strong>
+                  </div>
+                )}
+
+                {(complaint.aiAnalysis.visibleEvidence || complaint.aiAnalysis.reasoning) && (
                   <div style={{ marginBottom: '12px' }}>
                     <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
-                      AI Assessment Reasoning:
+                      Visible Evidence Description:
                     </span>
                     <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-primary, #0B1D33)', lineHeight: 1.5 }}>
-                      {complaint.aiAnalysis.reasoning}
+                      {complaint.aiAnalysis.visibleEvidence || complaint.aiAnalysis.reasoning}
                     </p>
                   </div>
                 )}
 
-                {complaint.aiAnalysis.generatedDescription && (
-                  <div>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
-                      AI Generated Diagnostic:
-                    </span>
-                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-primary, #0B1D33)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                      "{complaint.aiAnalysis.generatedDescription}"
-                    </p>
+                {/* Authenticity Assessment */}
+                {complaint.aiAnalysis.authenticityAssessment && (
+                  <div style={{ marginTop: '10px', padding: '10px', background: complaint.aiAnalysis.authenticityAssessment.possibleAiGenerated ? 'rgba(245, 158, 11, 0.08)' : 'rgba(13, 148, 136, 0.06)', borderRadius: '8px', border: complaint.aiAnalysis.authenticityAssessment.possibleAiGenerated ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(13, 148, 136, 0.2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <strong style={{ fontSize: '12px', color: complaint.aiAnalysis.authenticityAssessment.possibleAiGenerated ? '#D97706' : '#0D9488' }}>
+                        Image Authenticity: {complaint.aiAnalysis.authenticityAssessment.possibleAiGenerated
+                          ? (complaint.aiAnalysis.authenticityAssessment.confidence === 'HIGH'
+                              ? '⚠️ AI-Generated / Synthetic Image Detected'
+                              : '⚠️ Possible AI-Generated / Edited')
+                          : '📷 Camera Capture Indicators'}
+                      </strong>
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>
+                        Confidence: {complaint.aiAnalysis.authenticityAssessment.confidence || 'MEDIUM'}
+                      </span>
+                    </div>
+                    {complaint.aiAnalysis.authenticityAssessment.indicators?.length > 0 && (
+                      <ul style={{ margin: '0 0 6px 16px', padding: 0, fontSize: '12px', color: '#475569' }}>
+                        {complaint.aiAnalysis.authenticityAssessment.indicators.map((ind, idx) => (
+                          <li key={idx}>{ind}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {complaint.aiAnalysis.manualReviewNeeded && (
+                      <div style={{ fontSize: '12px', color: '#B45309', fontWeight: 600, marginBottom: '4px' }}>
+                        🔍 Field Officer Action: {complaint.aiAnalysis.manualReviewReason || 'Verify issue physically on-site before closure.'}
+                      </div>
+                    )}
+                    <div className="ai-disclaimer-box" style={{ margin: 0 }}>
+                      {complaint.aiAnalysis.authenticityAssessment.disclaimer ||
+                        "Visual appearance alone cannot definitively prove an image's origin; this assessment is an automated heuristic and should be verified independently if questioned."}
+                    </div>
                   </div>
                 )}
               </div>

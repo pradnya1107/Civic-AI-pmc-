@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { Navbar } from '../components/Navbar';
+import { CitizenLayout } from '../components/CitizenLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { LifecycleStepper } from '../components/LifecycleStepper';
 import { complaintApi } from '../services/api';
@@ -139,10 +139,8 @@ export const ComplaintDetailPage = () => {
   const complaintNo = complaint?.complaintNumber || `CIV-${id?.slice(-6) || 'PMC'}`;
 
   return (
-    <div className="app-container">
-      <Navbar />
-
-      <main className="dashboard-main" id="main-content">
+    <CitizenLayout>
+      <div className="citizen-page-inner">
         {/* Breadcrumb Navigation */}
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
           <Link to="/dashboard" className="breadcrumb-link">Dashboard</Link>
@@ -512,20 +510,55 @@ export const ComplaintDetailPage = () => {
                       </svg>
                       <strong>Gemini AI Diagnostics:</strong>
                     </div>
-                    <p className="ai-detail-assessment">{complaint.aiAnalysis.description}</p>
+                    {complaint.aiAnalysis.detectedCivicIssue && (
+                      <p style={{ margin: '4px 0', fontWeight: 600, color: 'var(--color-primary)' }}>
+                        Visible Defect: {complaint.aiAnalysis.detectedCivicIssue}
+                      </p>
+                    )}
+                    <p className="ai-detail-assessment">
+                      {complaint.aiAnalysis.visibleEvidence || complaint.aiAnalysis.description || complaint.aiAnalysis.reasoning}
+                    </p>
                     <div className="ai-detail-pills">
                       <span className="badge badge-sm badge-primary">
-                        Score: {complaint.aiAnalysis.severityScore}/100
+                        Score: {complaint.aiAnalysis.severityScore ?? complaint.aiAnalysis.score ?? 70}/100
                       </span>
+                      {complaint.aiAnalysis.confidenceScore && (
+                        <span className="badge badge-sm badge-info">
+                          AI Match: {Math.round(complaint.aiAnalysis.confidenceScore)}%
+                        </span>
+                      )}
                       <span className="badge badge-sm badge-info">
-                        Dept: {complaint.aiAnalysis.department}
+                        Dept: {complaint.aiAnalysis.department || complaint.aiAnalysis.suggestedDepartment || 'Operations'}
                       </span>
                       {complaint.aiAnalysis.safetyHazards?.length > 0 && (
                         <span className="badge badge-sm badge-danger">
                           Hazards: {complaint.aiAnalysis.safetyHazards.join(', ')}
                         </span>
                       )}
+                      {complaint.aiAnalysis.manualReviewNeeded && (
+                        <span className="badge badge-sm badge-warning">
+                          Marked for Field Verification
+                        </span>
+                      )}
                     </div>
+                    {complaint.aiAnalysis.authenticityAssessment && (
+                      <div style={{ marginTop: '8px', fontSize: '0.8rem', borderTop: '1px solid rgba(148, 163, 184, 0.2)', paddingTop: '6px' }}>
+                        <div>
+                          <strong>Image Authenticity: </strong>
+                          <span style={{ color: complaint.aiAnalysis.authenticityAssessment.possibleAiGenerated ? '#d97706' : '#059669', fontWeight: 600 }}>
+                            {complaint.aiAnalysis.authenticityAssessment.possibleAiGenerated
+                              ? (complaint.aiAnalysis.authenticityAssessment.confidence === 'HIGH'
+                                  ? '⚠️ AI-Generated / Synthetic Image Detected'
+                                  : '⚠️ Possible AI-Generated / Edited')
+                              : 'Camera Capture Indicators'}
+                          </span>
+                        </div>
+                        <div className="ai-disclaimer-box" style={{ marginTop: '4px' }}>
+                          {complaint.aiAnalysis.authenticityAssessment.disclaimer ||
+                            "Visual appearance alone cannot definitively prove an image's origin; this assessment is an automated heuristic and should be verified independently if questioned."}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </section>
@@ -605,8 +638,8 @@ export const ComplaintDetailPage = () => {
             </div>
           </article>
         )}
-      </main>
-    </div>
+      </div>
+    </CitizenLayout>
   );
 };
 

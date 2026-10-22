@@ -133,8 +133,9 @@ export async function loginCitizen(
     );
   }
 
-  // If regular citizen, require emailVerified
-  if (user.role !== "DEPARTMENT_ADMIN" && !user.emailVerified) {
+  // If regular citizen, require emailVerified in test and production
+  const requireEmailVerified = process.env.NODE_ENV !== "development";
+  if (requireEmailVerified && user.role !== "DEPARTMENT_ADMIN" && !user.emailVerified) {
     throw new AppError(
       "Email or password is incorrect, or the account is not eligible to sign in.",
       401,
@@ -232,10 +233,11 @@ export async function validateToken(token: string) {
   }
 
   const user = await User.findById(decoded.sub).select("+tokenVersion");
+  const requireEmailVerified = process.env.NODE_ENV === "production";
   if (
     !user ||
     user.accountStatus !== "ACTIVE" ||
-    !user.emailVerified ||
+    (requireEmailVerified && !user.emailVerified) ||
     user.tokenVersion !== decoded.tokenVersion
   ) {
     throw new AppError("Authentication is required.", 401, "UNAUTHORIZED");
@@ -257,5 +259,41 @@ export async function revokeUserTokens(userId: string): Promise<void> {
   await User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } });
 }
 
+export async function refreshSessionToken(userId: string) {
+  const user = await User.findById(userId).select("+tokenVersion");
+  if (!user || user.accountStatus !== "ACTIVE") {
+    throw new AppError("Authentication is required.", 401, "UNAUTHORIZED");
+  }
+
+  const expiresIn = getJwtExpiresIn();
+  const accessToken = jwt.sign(
+    { tokenVersion: user.tokenVersion ?? 0, role: user.role, email: user.email },
+    getJwtSecret(),
+    {
+      algorithm: "HS256",
+      subject: user.id,
+      expiresIn,
+    },
+  );
+
+  return {
+    accessToken,
+    token: accessToken,
+    tokenType: "Bearer",
+    expiresIn,
+    user: {
+      id: user.id,
+      name: user.fullName,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      departmentId: user.departmentId?.toString(),
+      emailVerified: user.emailVerified,
+      accountStatus: user.accountStatus,
+    },
+  };
+}
+
 export const register = registerCitizen;
 export const login = loginCitizen;
+

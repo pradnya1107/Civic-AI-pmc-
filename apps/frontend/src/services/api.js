@@ -72,12 +72,18 @@ api.interceptors.response.use(
   (error) => {
     // 401 Unauthorized handling: clear credentials and redirect to login
     if (error.response?.status === 401) {
-      removeStoredToken();
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        try {
-          window.location.href = '/login';
-        } catch {
-          // Graceful fallback for non-browser/jsdom environments
+      const isSilentAuth =
+        error.config?.headers?.['X-Silent-Auth'] === 'true' ||
+        Boolean(error.config?._silentAuth);
+
+      if (!isSilentAuth) {
+        removeStoredToken();
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+          try {
+            window.location.href = '/login';
+          } catch {
+            // Graceful fallback for non-browser/jsdom environments
+          }
         }
       }
     }
@@ -130,6 +136,15 @@ export const authApi = {
    */
   async getCurrentUser() {
     const response = await api.get('/api/v1/auth/me');
+    return response.data;
+  },
+
+  /**
+   * Refresh current active session JWT
+   * POST /api/v1/auth/refresh
+   */
+  async refreshToken() {
+    const response = await api.post('/api/v1/auth/refresh');
     return response.data;
   },
 
@@ -320,6 +335,15 @@ export const departmentApi = {
   },
 
   /**
+   * Fetch eligible administrator candidates
+   * GET /api/v1/departments/admin-candidates
+   */
+  async getAdminCandidates() {
+    const response = await api.get('/api/v1/departments/admin-candidates');
+    return response.data;
+  },
+
+  /**
    * Create a new civic department
    * POST /api/v1/departments
    */
@@ -435,8 +459,9 @@ export const notificationApi = {
    * Fetch user/admin notifications
    * GET /api/v1/notifications
    */
-  async getNotifications(params = {}) {
-    const response = await api.get('/api/v1/notifications', { params });
+  async getNotifications(params = {}, config = {}) {
+    const headers = { 'X-Silent-Auth': 'true', ...(config.headers || {}) };
+    const response = await api.get('/api/v1/notifications', { params, ...config, headers });
     return response.data;
   },
 

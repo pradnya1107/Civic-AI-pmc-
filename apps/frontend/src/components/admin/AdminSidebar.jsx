@@ -1,40 +1,27 @@
-import React, { useState } from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export const AdminSidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCloseMobile }) => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { user } = useAuth();
+  const location = useLocation();
 
   const displayName = user?.name || user?.fullName || 'Super Admin';
   const displayRole = user?.role || 'SUPER_ADMIN';
   const initial = displayName.charAt(0).toUpperCase() || 'A';
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logout();
-      navigate('/login', { replace: true });
-    } catch {
-      navigate('/login', { replace: true });
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   const navItems = [
     {
       to: '/admin',
-      end: true,
-      label: 'Home Dashboard',
-      shortLabel: 'Home',
+      label: 'Home Dashboard & Complaints',
+      shortLabel: 'Dashboard',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
       ),
+      isMatch: (path) => path === '/admin' || path === '/admin/dashboard' || path.startsWith('/admin/complaints'),
     },
     {
       to: '/heatmap',
@@ -45,20 +32,6 @@ export const AdminSidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCl
           <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
           <line x1="8" y1="2" x2="8" y2="18" />
           <line x1="16" y1="6" x2="16" y2="22" />
-        </svg>
-      ),
-    },
-    {
-      to: '/admin/complaints',
-      label: 'Complaint Management',
-      shortLabel: 'Complaints',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-          <line x1="10" y1="9" x2="8" y2="9" />
         </svg>
       ),
     },
@@ -106,17 +79,6 @@ export const AdminSidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCl
           <line x1="18" y1="20" x2="18" y2="10" />
           <line x1="12" y1="20" x2="12" y2="4" />
           <line x1="6" y1="20" x2="6" y2="14" />
-        </svg>
-      ),
-    },
-    {
-      to: '/admin/notifications',
-      label: 'Notifications',
-      shortLabel: 'Alerts',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
       ),
     },
@@ -182,7 +144,6 @@ export const AdminSidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCl
           </button>
         </div>
 
-
         {/* Navigation Links */}
         <nav className="admin-sidebar-nav">
           <ul className="admin-nav-list">
@@ -190,10 +151,10 @@ export const AdminSidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCl
               <li key={item.to} className="admin-nav-item">
                 <NavLink
                   to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    `admin-nav-link ${isActive ? 'active' : ''}`
-                  }
+                  className={({ isActive }) => {
+                    const active = item.isMatch ? item.isMatch(location.pathname) : isActive;
+                    return `admin-nav-link ${active ? 'active' : ''}`;
+                  }}
                   title={isCollapsed ? item.label : undefined}
                   onClick={onCloseMobile}
                 >
@@ -207,7 +168,7 @@ export const AdminSidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCl
           </ul>
         </nav>
 
-        {/* Admin User Profile & Sign Out Footer */}
+        {/* Admin User Profile Footer */}
         <div className="admin-sidebar-footer">
           <div className="admin-footer-profile" title={`Signed in as ${displayName} (${displayRole})`}>
             <div className="admin-avatar-circle" aria-hidden="true">
@@ -220,22 +181,6 @@ export const AdminSidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCl
               </div>
             )}
           </div>
-
-          <button
-            type="button"
-            className="admin-logout-btn"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            aria-label="Sign out of Super Admin Portal"
-            title="Sign Out"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            {!isCollapsed && <span>{isLoggingOut ? 'Signing out...' : 'Sign Out'}</span>}
-          </button>
         </div>
       </aside>
     </>

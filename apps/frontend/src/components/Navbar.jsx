@@ -41,6 +41,7 @@ export const Navbar = () => {
         <nav className={`portal-nav__links ${mobileMenuOpen ? 'portal-nav__links--open' : ''}`} aria-label="Portal Navigation">
           <NavLink
             to="/dashboard"
+            end
             className={({ isActive }) => `nav-link ${isActive ? 'nav-link--active' : ''}`}
             onClick={() => setMobileMenuOpen(false)}
           >

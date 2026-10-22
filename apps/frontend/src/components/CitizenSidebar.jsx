@@ -1,19 +1,13 @@
 import React from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
 export const CitizenSidebar = ({
   isOpen,
   onClose,
-  onOpenHelp,
-  onOpenProfile,
-  onOpenNotifications,
-  unreadCount = 0,
 }) => {
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -91,21 +85,6 @@ export const CitizenSidebar = ({
           </NavLink>
 
           <NavLink
-            to="/complaints/new"
-            className={({ isActive }) => `sidebar-link sidebar-link--highlight ${isActive ? 'sidebar-link--active' : ''}`}
-            onClick={onClose}
-          >
-            <span className="sidebar-link-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-            </span>
-            <span className="sidebar-link-text">{t('navReportIssue', 'Report an Issue')}</span>
-            <span className="sidebar-badge-new">AI</span>
-          </NavLink>
-
-          <NavLink
             to="/complaints"
             end
             className={({ isActive }) => `sidebar-link ${isActive ? 'sidebar-link--active' : ''}`}
@@ -137,80 +116,10 @@ export const CitizenSidebar = ({
             <span className="sidebar-link-text">{t('navExploreMap', 'Explore Map')}</span>
           </NavLink>
 
-          <div className="sidebar-section-label mt-3">CITIZEN TOOLS</div>
-
-          <button
-            type="button"
-            className="sidebar-link sidebar-btn-link"
-            onClick={() => {
-              if (onOpenNotifications) onOpenNotifications();
-              onClose();
-            }}
-          >
-            <span className="sidebar-link-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </span>
-            <span className="sidebar-link-text">{t('navNotifications', 'Notifications')}</span>
-            {unreadCount > 0 && (
-              <span className="sidebar-counter">{unreadCount}</span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            className="sidebar-link sidebar-btn-link"
-            onClick={() => {
-              if (onOpenHelp) onOpenHelp();
-              onClose();
-            }}
-          >
-            <span className="sidebar-link-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </span>
-            <span className="sidebar-link-text">{t('navHelpSupport', 'Help & Support')}</span>
-          </button>
-
-          <button
-            type="button"
-            className="sidebar-link sidebar-btn-link"
-            onClick={() => {
-              if (onOpenProfile) onOpenProfile();
-              onClose();
-            }}
-          >
-            <span className="sidebar-link-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </span>
-            <span className="sidebar-link-text">{t('navProfile', 'Profile')}</span>
-          </button>
         </nav>
 
-        {/* Sidebar Footer: Theme Toggle, User Card, Sign Out */}
+        {/* Sidebar Footer: User Card, Sign Out */}
         <div className="sidebar-footer">
-          {/* Dark / Light Mode Toggle */}
-          <button
-            type="button"
-            className="theme-switch-btn"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-          >
-            <span className="theme-switch-icon" aria-hidden="true">
-              {isDark ? '☀️' : '🌙'}
-            </span>
-            <span className="theme-switch-label">
-              {isDark ? 'Light Mode' : 'Dark Mode'}
-            </span>
-          </button>
 
           {/* User Mini Profile */}
           <div className="sidebar-user-card" aria-label={`Logged in as ${displayName}`}>

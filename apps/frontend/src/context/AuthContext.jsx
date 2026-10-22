@@ -50,10 +50,16 @@ export const AuthProvider = ({ children }) => {
         setToken(null);
       }
     } catch (err) {
-      // Token is expired, invalid, or revoked
-      removeStoredToken();
-      setUser(null);
-      setToken(null);
+      // Only clear credentials if backend explicitly responded with 401 Unauthorized or 403 Forbidden
+      const status = err?.status || err?.response?.status;
+      if (status === 401 || status === 403) {
+        removeStoredToken();
+        setUser(null);
+        setToken(null);
+      } else {
+        // Preserve token on transient offline / server restarting events
+        setToken(existingToken);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -62,6 +68,26 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     restoreUser();
   }, [restoreUser]);
+
+  // Periodic session refresh every 15 minutes when token is present
+  useEffect(() => {
+    if (!token) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await authApi.refreshToken();
+        const refreshedToken = res?.accessToken || res?.data?.accessToken || res?.token;
+        if (refreshedToken) {
+          setStoredToken(refreshedToken);
+          setToken(refreshedToken);
+        }
+      } catch {
+        // Silent background fallback
+      }
+    }, 15 * 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [token]);
 
   /**
    * Login helper

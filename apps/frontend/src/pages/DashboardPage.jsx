@@ -3,13 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { CitizenSidebar } from '../components/CitizenSidebar';
-import { CitizenTopNav } from '../components/CitizenTopNav';
+import { CitizenLayout } from '../components/CitizenLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { NearbyIssuesMap } from '../components/NearbyIssuesMap';
-import { HelpCenterModal } from '../components/HelpCenterModal';
-import { ProfileModal } from '../components/ProfileModal';
-import { NotificationDrawer } from '../components/NotificationDrawer';
 import { VoiceGreeting } from '../components/VoiceGreeting';
 import { complaintApi, notificationApi } from '../services/api';
 import { PMC_CATEGORIES } from './ComplaintFormPage';
@@ -20,10 +16,7 @@ export const DashboardPage = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  // Layout UI state
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  // Notification & unread state
   const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
@@ -222,32 +215,14 @@ export const DashboardPage = () => {
   );
 
   return (
-    <div className="citizen-portal-layout">
-      {/* 1. Left Sidebar Navigation */}
-      <CitizenSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onOpenHelp={() => setHelpOpen(true)}
-        onOpenProfile={() => setProfileOpen(true)}
-        onOpenNotifications={() => setNotifDrawerOpen(true)}
-        unreadCount={unreadNotifCount}
-      />
-
-      {/* 2. Main Portal Workspace */}
-      <div className="citizen-portal-main">
-        {/* Top Navigation */}
-        <CitizenTopNav
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-          onOpenHelp={() => setHelpOpen(true)}
-          onOpenProfile={() => setProfileOpen(true)}
-          onOpenNotifications={() => setNotifDrawerOpen(true)}
-          unreadCount={unreadNotifCount}
-        />
-
-        {/* Main Content Area */}
-        <main className="citizen-content-container" id="main-content">
-          {/* Section 1: Welcome Hero Banner */}
-          <section className="citizen-welcome-hero" aria-labelledby="welcome-heading">
+    <CitizenLayout
+      notifDrawerOpen={notifDrawerOpen}
+      onCloseNotifications={() => setNotifDrawerOpen(false)}
+      onOpenNotifications={() => setNotifDrawerOpen(true)}
+      unreadCount={unreadNotifCount}
+    >
+      {/* Section 1: Welcome Hero Banner */}
+      <section className="citizen-welcome-hero" aria-labelledby="welcome-heading">
             <div className="citizen-welcome-inner">
               <div className="citizen-welcome-text">
                 <div className="d-flex align-center gap-2 mb-2 flex-wrap">
@@ -759,28 +734,7 @@ export const DashboardPage = () => {
               )}
             </div>
           </section>
-        </main>
-      </div>
-
-      {/* Slide-over Notifications Drawer */}
-      <NotificationDrawer
-        isOpen={notifDrawerOpen}
-        onClose={() => setNotifDrawerOpen(false)}
-        onUnreadCountChange={(c) => setUnreadNotifCount(c)}
-      />
-
-      {/* Help Center & Helplines Modal */}
-      <HelpCenterModal
-        isOpen={helpOpen}
-        onClose={() => setHelpOpen(false)}
-      />
-
-      {/* Profile & Settings Modal */}
-      <ProfileModal
-        isOpen={profileOpen}
-        onClose={() => setProfileOpen(false)}
-      />
-    </div>
+    </CitizenLayout>
   );
 };
 

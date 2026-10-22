@@ -65,11 +65,52 @@ export async function createComplaint(
   input: CreateComplaintInput,
 ) {
   const priority = input.priority || "MEDIUM";
+
+  let departmentId: Types.ObjectId | undefined;
+  try {
+    const deptTerm = input.aiAnalysis?.suggestedDepartment || input.category;
+    if (deptTerm) {
+      const firstWord = deptTerm.split(/[ &/-]/)[0];
+      const matchedDept = await Department.findOne({
+        $or: [
+          { name: { $regex: new RegExp(deptTerm, "i") } },
+          { name: { $regex: new RegExp(firstWord, "i") } },
+          { slug: { $regex: new RegExp(firstWord.toLowerCase(), "i") } },
+        ],
+        isActive: true,
+      });
+      if (matchedDept) {
+        departmentId = matchedDept._id;
+      }
+    }
+  } catch (deptErr) {
+    console.warn("Could not auto-assign department:", deptErr);
+  }
+
+  // Requirement 8: Never reject complaints if image appears AI-generated; flag for manual officer review.
+  const isPossibleAi = input.aiAnalysis?.authenticityAssessment?.possibleAiGenerated;
+  const manualReviewNeeded = Boolean(input.aiAnalysis?.manualReviewNeeded || isPossibleAi);
+  const manualReviewReason =
+    input.aiAnalysis?.manualReviewReason ||
+    (isPossibleAi
+      ? "Image exhibits cues of possible AI synthesis or digital modification; marked for on-site municipal field verification."
+      : undefined);
+
+  const aiAnalysisPayload = input.aiAnalysis
+    ? {
+        ...input.aiAnalysis,
+        manualReviewNeeded,
+        ...(manualReviewReason ? { manualReviewReason } : {}),
+      }
+    : undefined;
+
   const sanitizedInput = {
     ...input,
     title: sanitizeText(input.title),
     description: sanitizeText(input.description),
     priority,
+    ...(aiAnalysisPayload ? { aiAnalysis: aiAnalysisPayload } : {}),
+    ...(departmentId ? { departmentId } : {}),
     slaDeadline: calculateSlaDeadline(priority),
     supporters: [],
     supportCount: 0,

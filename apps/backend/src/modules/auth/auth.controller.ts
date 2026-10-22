@@ -5,6 +5,7 @@ import {
 } from "./email-otp.service";
 import {
   loginCitizen,
+  refreshSessionToken,
   registerCitizen,
   revokeUserTokens,
 } from "./auth.service";
@@ -161,6 +162,20 @@ export const getCurrentUser: RequestHandler = async (request, response) => {
     data: {
       user: userProfile,
     },
+  });
+};
+
+export const refreshTokenHandler: RequestHandler = async (request, response) => {
+  if (!request.user) {
+    response.status(401).json({ success: false, message: "Unauthorized" });
+    return;
+  }
+  const result = await refreshSessionToken(request.user.id);
+  response.status(200).json({
+    success: true,
+    message: "Session token refreshed successfully.",
+    data: result,
+    ...result,
   });
 };
 
