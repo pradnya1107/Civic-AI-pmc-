@@ -40,7 +40,7 @@ export const DepartmentsPage = () => {
     category: '',
     officialEmail: '',
     contactNumber: '',
-    adminMode: 'EXISTING', // 'EXISTING' or 'NEW'
+    adminMode: 'NEW', // 'NEW' or 'EXISTING'
     adminId: '',
     newAdminName: '',
     newAdminEmail: '',
@@ -107,7 +107,7 @@ export const DepartmentsPage = () => {
       category: '',
       officialEmail: '',
       contactNumber: '',
-      adminMode: 'EXISTING',
+      adminMode: 'NEW',
       adminId: adminCandidates[0]?.id || '',
       newAdminName: '',
       newAdminEmail: '',
@@ -728,14 +728,6 @@ export const DepartmentsPage = () => {
                   <div className="admin-mode-toggle-group">
                     <button
                       type="button"
-                      className={`admin-mode-pill ${formData.adminMode === 'EXISTING' ? 'active' : ''}`}
-                      onClick={() => setFormData({ ...formData, adminMode: 'EXISTING' })}
-                      disabled={isSubmitting}
-                    >
-                      Select Existing User / Admin
-                    </button>
-                    <button
-                      type="button"
                       className={`admin-mode-pill ${formData.adminMode === 'NEW' ? 'active' : ''}`}
                       onClick={() => {
                         setFormData({ ...formData, adminMode: 'NEW' });
@@ -750,6 +742,14 @@ export const DepartmentsPage = () => {
                       disabled={isSubmitting}
                     >
                       + Create New Administrator
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-mode-pill ${formData.adminMode === 'EXISTING' ? 'active' : ''}`}
+                      onClick={() => setFormData({ ...formData, adminMode: 'EXISTING' })}
+                      disabled={isSubmitting}
+                    >
+                      Select Existing User / Admin
                     </button>
                   </div>
 
