@@ -3,7 +3,7 @@ import { useParams, Link, useLocation } from 'react-router-dom';
 import { CitizenLayout } from '../components/CitizenLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { LifecycleStepper } from '../components/LifecycleStepper';
-import { complaintApi } from '../services/api';
+import { complaintApi, aiApi } from '../services/api';
 
 /**
  * Format timestamp into detailed civic date

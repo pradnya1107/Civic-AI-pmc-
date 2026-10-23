@@ -127,7 +127,7 @@ describe("CivicAI Multimodal Gemini Image Analysis Feature", () => {
   });
 
   describe("2. AI-Generated Civic Issue Image Analysis & Non-Rejection Policy", () => {
-    it("recognizes civic defects in AI-generated images without rejecting complaints, flagging for manual review", async () => {
+    it("recognizes civic defects in AI-generated images and strictly blocks submission if image is AI-generated", async () => {
       const mockGeminiResponse = {
         candidates: [
           {
@@ -194,7 +194,7 @@ describe("CivicAI Multimodal Gemini Image Analysis Feature", () => {
         "Visual appearance alone cannot definitively prove an image's origin",
       );
 
-      // 2. Submit complaint with the AI-generated image & analysis (Requirement 8: NEVER reject!)
+      // 2. Submit complaint with the AI-generated image & analysis (Strict AI detection rule: MUST BE REJECTED!)
       const complaintRes = await request(app)
         .post("/api/v1/complaints")
         .set("Authorization", `Bearer ${token}`)
@@ -208,19 +208,13 @@ describe("CivicAI Multimodal Gemini Image Analysis Feature", () => {
           aiAnalysis: aiData,
         });
 
-      // Must succeed with 201 Created and status SUBMITTED (NOT rejected!)
-      expect(complaintRes.status).toBe(201);
-      expect(complaintRes.body.success).toBe(true);
+      expect(complaintRes.status).toBe(422);
+      expect(complaintRes.body.success).toBe(false);
+      expect(complaintRes.body.error.code).toBe("AI_GENERATED_IMAGE_REJECTED");
+      expect(complaintRes.body.message).toContain("AI-created or synthetic");
 
-      const createdComplaint = complaintRes.body.data.complaint;
-      expect(createdComplaint).toBeDefined();
-
-      const savedComplaint = await Complaint.findById(createdComplaint._id);
-      expect(savedComplaint).not.toBeNull();
-      expect(savedComplaint?.status).toBe("SUBMITTED");
-      expect(savedComplaint?.aiAnalysis?.manualReviewNeeded).toBe(true);
-      expect(savedComplaint?.aiAnalysis?.authenticityAssessment?.possibleAiGenerated).toBe(true);
-      expect(savedComplaint?.aiAnalysis?.authenticityAssessment?.disclaimer).toBeDefined();
+      const savedComplaint = await Complaint.findOne({ title: aiData.suggestedTitle });
+      expect(savedComplaint).toBeNull();
     });
   });
 
@@ -524,6 +518,94 @@ describe("CivicAI Multimodal Gemini Image Analysis Feature", () => {
       expect(result.authenticityAssessment.possibleAiGenerated).toBe(true);
       expect(result.authenticityAssessment.assessment).toBe("POSSIBLE_AI_GENERATED");
       expect(result.authenticityAssessment.explanation).toMatch(/AI vision forensic scan|synthetic|diffusion/i);
+    });
+    it("recognizes a Google Images or web download photo and flags as GOOGLE_WEB_PHOTO", async () => {
+      const result = await verifyResolution({
+        originalImageUrl: "https://images.unsplash.com/original-pothole.jpg",
+        resolutionImageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_sample_google_repair",
+        title: "Pothole on FC Road",
+        category: "Roads & Potholes",
+      });
+
+      expect(result.authenticityAssessment).toBeDefined();
+      expect(result.authenticityAssessment.isGoogleOrWebImage).toBe(true);
+      expect(result.authenticityAssessment.assessment).toBe("GOOGLE_WEB_PHOTO");
+      expect(result.authenticityAssessment.explanation).toMatch(/Google Images|internet/i);
+    });
+  });
+  describe("9. Automatic Complaint Status Transition upon Real Photo Recognition", () => {
+    it("automatically changes complaint status from SUBMITTED to UNDER_REVIEW when AI recognizes real photo", async () => {
+      const citizen = await createVerifiedCitizen("status-change-test@example.com");
+      const token = await signIn(citizen.email);
+
+      const complaint = await Complaint.create({
+        complaintNumber: "CIV-AI-STATUS-01",
+        title: "Pothole on Senapati Bapat Road",
+        description: "Large road cavity causing vehicle hazards.",
+        category: "Roads & Potholes",
+        citizenId: citizen.id,
+        priority: "HIGH",
+        status: "SUBMITTED",
+        imageUrl: PNG_IMAGE_DATA_URL,
+        location: { address: "SB Road, Pune" },
+      });
+
+      expect(complaint.status).toBe("SUBMITTED");
+
+      const res = await request(app)
+        .post("/api/v1/ai/analyze-complaint")
+        .set("Authorization", "Bearer " + token)
+        .send({
+          complaintId: complaint._id.toString(),
+          imageBase64: PNG_IMAGE_DATA_URL,
+          title: complaint.title,
+          description: complaint.description,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.statusUpdated).toBe(true);
+      expect(res.body.data.newStatus).toBe("UNDER_REVIEW");
+
+      const updatedInDb = await Complaint.findById(complaint._id);
+      expect(updatedInDb?.status).toBe("UNDER_REVIEW");
+    });
+
+    it("automatically changes complaint status to RESOLVED when AI recognizes authentic repair photo", async () => {
+      const admin = await createVerifiedCitizen("admin-resolve-status@example.com");
+      const token = await signIn(admin.email);
+
+      const complaint = await Complaint.create({
+        complaintNumber: "CIV-AI-RESOLVE-01",
+        title: "Pothole on JM Road",
+        description: "Active road cavity in progress.",
+        category: "Roads & Potholes",
+        citizenId: admin.id,
+        priority: "HIGH",
+        status: "IN_PROGRESS",
+        imageUrl: "https://images.unsplash.com/original-pothole.jpg",
+        location: { address: "JM Road, Pune" },
+      });
+
+      const res = await request(app)
+        .post("/api/v1/ai/verify-resolution")
+        .set("Authorization", "Bearer " + token)
+        .send({
+          complaintId: complaint._id.toString(),
+          originalImageUrl: "https://images.unsplash.com/original-pothole.jpg",
+          resolutionImageUrl: "https://images.unsplash.com/camera-repair-asphalt.jpg",
+          resolutionNotes: "Repaired using hot bitumen mix.",
+          title: "Pothole on JM Road",
+          category: "Roads & Potholes",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.statusUpdated).toBe(true);
+      expect(res.body.data.newStatus).toBe("RESOLVED");
+
+      const updatedInDb = await Complaint.findById(complaint._id);
+      expect(updatedInDb?.status).toBe("RESOLVED");
     });
   });
 });

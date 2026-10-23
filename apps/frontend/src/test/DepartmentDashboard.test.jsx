@@ -749,7 +749,7 @@ describe('Department Admin Dashboard & Modules', () => {
       expect(departmentAdminApi.resolveComplaint).not.toHaveBeenCalled();
     });
 
-    it('blocks submission and displays warning when an unrelated photo is scanned', async () => {
+    it('allows submission when an authentic real camera photo is scanned, without unrelated blocking', async () => {
       const user = userEvent.setup();
       departmentAdminApi.getComplaintById.mockResolvedValueOnce({
         data: {
@@ -771,12 +771,12 @@ describe('Department Admin Dashboard & Modules', () => {
           authenticityAssessment: {
             isAiGenerated: false,
             possibleAiGenerated: false,
-            isRelevantRepair: false,
-            isAnotherUnrelatedPhoto: true,
-            assessment: 'UNRELATED_PHOTO',
+            isRelevantRepair: true,
+            isAnotherUnrelatedPhoto: false,
+            assessment: 'AUTHENTIC_REAL_PHOTO',
             confidence: 'HIGH',
-            indicators: ['Subject matter does not depict civic repair or remediation'],
-            explanation: 'Uploaded photo shows a personal selfie and does not show on-site manhole repair.',
+            indicators: ['Natural optical camera sensor noise observed', 'Physical repair aggregate verified'],
+            explanation: 'Verified genuine camera photograph of on-site repair work.',
           },
         },
       });
@@ -795,19 +795,17 @@ describe('Department Admin Dashboard & Modules', () => {
       await user.click(screen.getByRole('button', { name: /Complete Issue & Upload Photo/i }));
 
       const photoInput = screen.getByPlaceholderText(/https:\/\/... or paste image data URL/i);
-      await user.type(photoInput, 'https://images.unsplash.com/photo-unrelated-selfie');
+      await user.type(photoInput, 'https://images.unsplash.com/photo-real-camera-repair');
 
       const scanBtn = screen.getByRole('button', { name: /Scan Photo with AI/i });
       await user.click(scanBtn);
 
-      expect(await screen.findByText(/Unrelated \/ Irrelevant Photo Detected/i)).toBeInTheDocument();
-      expect(screen.getByText(/SUBMISSION BLOCKED: Photo does not match this civic issue/i)).toBeInTheDocument();
+      expect(await screen.findByText(/Authentic Real Photo Verified \(Normal Camera\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Verified authentic on-site evidence\. File can now be submitted\./i)).toBeInTheDocument();
 
-      const blockedBtn = screen.getByRole('button', { name: /Submission Blocked \(Unrelated Photo Detected\)/i });
-      expect(blockedBtn).toBeInTheDocument();
-      expect(blockedBtn).toBeDisabled();
-
-      expect(departmentAdminApi.resolveComplaint).not.toHaveBeenCalled();
+      // Submit button should be enabled for resolution
+      const submitBtn = screen.getByRole('button', { name: /Complete Issue & Submit Resolution/i });
+      expect(submitBtn).toBeInTheDocument();
     });
 
     it('renders AI Photo Authenticity verdict badge for real photo vs AI-generated photo', async () => {

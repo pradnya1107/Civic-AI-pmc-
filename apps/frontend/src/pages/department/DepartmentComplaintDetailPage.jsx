@@ -186,6 +186,33 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
     reader.readAsDataURL(file);
   };
 
+  // AI Photo Verification for original complaint image: changes status to UNDER_REVIEW on authentic photo
+  const handleAiVerifyComplaintPhoto = async () => {
+    if (!complaint?.imageUrl || isScanningPhoto) return;
+    setIsScanningPhoto(true);
+    try {
+      const res = await aiApi.analyzeComplaint({
+        complaintId: id,
+        imageUrl: complaint.imageUrl,
+        title: complaint.title,
+        description: complaint.description,
+      });
+      const auth = res?.data?.authenticityAssessment;
+      if (auth?.possibleAiGenerated) {
+        showToast('🛑 AI-Generated image detected! Status not changed.');
+      } else if (auth?.isGoogleOrWebImage) {
+        showToast('🛑 Google/Web photo detected! Status not changed.');
+      } else {
+        showToast('✅ AI recognized authentic real photo! Complaint status changed to UNDER_REVIEW.');
+        loadComplaint();
+      }
+    } catch (err) {
+      showToast('AI photo verification failed: ' + (err.message || 'Please try again.'));
+    } finally {
+      setIsScanningPhoto(false);
+    }
+  };
+
   // Dedicated AI Scan action to recognize authentic real camera photo vs AI-generated or unrelated photo
   const handleScanPhoto = async (targetUrl = null) => {
     const urlToScan = typeof targetUrl === 'string' ? targetUrl : resolutionImageUrl;
@@ -205,8 +232,6 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
       setPhotoScanResult(auth || null);
       if (auth?.isAiGenerated) {
         showToast('🛑 AI-Generated image detected! File submission blocked.');
-      } else if (auth?.isAnotherUnrelatedPhoto || auth?.assessment === 'UNRELATED_PHOTO' || auth?.isRelevantRepair === false) {
-        showToast('🛑 Unrelated photo detected! Photo does not show repair of this issue. Submission blocked.');
       } else {
         showToast('✅ Authentic Real Photo verified! Ready for submission.');
       }
@@ -339,11 +364,7 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
         return;
       }
 
-      // STRICT PROTECTION 2: If image is recognized as unrelated photo, DO NOT SUBMIT FILE!
-      if (currentAuth?.isAnotherUnrelatedPhoto || currentAuth?.assessment === 'UNRELATED_PHOTO' || currentAuth?.isRelevantRepair === false) {
-        showToast('🛑 Submission Blocked: Uploaded image does not show the repair of this complaint. Please upload actual repair photo.');
-        return;
-      }
+
     }
 
     setIsSubmitting(true);
@@ -1664,61 +1685,6 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
                   );
                 }
 
-                if (isUnrelated) {
-                  return (
-                    <div
-                      style={{
-                        background: '#FFFBEB',
-                        border: '2px solid #F59E0B',
-                        borderRadius: '10px',
-                        padding: '14px 16px',
-                        marginBottom: '16px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '20px' }}>🛑</span>
-                          <strong style={{ fontSize: '14px', color: '#92400E' }}>
-                            Unrelated / Irrelevant Photo Detected
-                          </strong>
-                        </div>
-                        <span
-                          style={{
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            fontSize: '11px',
-                            fontWeight: 800,
-                            background: '#FEF3C7',
-                            color: '#92400E',
-                            border: '1px solid #FCD34D',
-                          }}
-                        >
-                          Confidence: {photoScanResult.confidence || 'HIGH'}
-                        </span>
-                      </div>
-                      <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#B45309', lineHeight: 1.5 }}>
-                        {photoScanResult.explanation || `The uploaded image does not show the repair or remediation of this complaint ("${complaint?.title || 'Civic defect'}").`}
-                      </p>
-                      <div
-                        style={{
-                          background: '#D97706',
-                          color: '#FFFFFF',
-                          borderRadius: '6px',
-                          padding: '8px 12px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        <span>🚫</span>
-                        <span>SUBMISSION BLOCKED: Photo does not match this civic issue. Upload actual repair evidence.</span>
-                      </div>
-                    </div>
-                  );
-                }
-
                 return (
                   <div
                     style={{
@@ -1856,26 +1822,6 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
                     title="Submission blocked because uploaded photo was detected as AI-generated."
                   >
                     <span>🚫 Submission Blocked (AI Photo Detected)</span>
-                  </button>
-                ) : (photoScanResult?.isAnotherUnrelatedPhoto || photoScanResult?.assessment === 'UNRELATED_PHOTO' || photoScanResult?.isRelevantRepair === false) ? (
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={true}
-                    style={{
-                      background: '#D97706',
-                      borderColor: '#B45309',
-                      color: '#FFFFFF',
-                      cursor: 'not-allowed',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      opacity: 0.85,
-                      fontWeight: 700,
-                    }}
-                    title="Submission blocked because uploaded photo does not match this civic issue."
-                  >
-                    <span>🚫 Submission Blocked (Unrelated Photo Detected)</span>
                   </button>
                 ) : (
                   <button

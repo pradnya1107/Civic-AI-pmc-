@@ -534,13 +534,7 @@ export async function updateDepartmentComplaintStatus(
             "AI_GENERATED_IMAGE_REJECTED",
           );
         }
-        if (verification.authenticityAssessment?.isAnotherUnrelatedPhoto || verification.authenticityAssessment?.isRelevantRepair === false) {
-          throw new AppError(
-            "Resolution rejected: The uploaded photo does not show the repair or remediation of this civic complaint. Officers must upload authentic photo evidence of the actual repair work.",
-            422,
-            "UNRELATED_PHOTO_REJECTED",
-          );
-        }
+
       }
     } catch (verErr: any) {
       if (

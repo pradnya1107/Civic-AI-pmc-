@@ -82,6 +82,32 @@ export const AdminComplaintDetailPage = () => {
     }
   };
 
+  const handleAiVerifyComplaintPhoto = async () => {
+    if (!complaint?.imageUrl || isVerifying) return;
+    setIsVerifying(true);
+    try {
+      const res = await aiApi.analyzeComplaint({
+        complaintId: id,
+        imageUrl: complaint.imageUrl,
+        title: complaint.title,
+        description: complaint.description,
+      });
+      const auth = res?.data?.authenticityAssessment;
+      if (auth?.possibleAiGenerated) {
+        showToast('🛑 AI-Generated image detected! Status not changed.');
+      } else if (auth?.isGoogleOrWebImage) {
+        showToast('🛑 Google/Web photo detected! Status not changed.');
+      } else {
+        showToast('✅ AI recognized authentic real photo! Complaint status changed to UNDER_REVIEW.');
+        loadData();
+      }
+    } catch (err) {
+      showToast('AI photo verification failed: ' + (err.message || 'Please try again.'));
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const handleScanPhoto = async (targetUrl = null) => {
     const urlToScan = typeof targetUrl === 'string' ? targetUrl : resolutionImageUrl;
     if (!urlToScan || !urlToScan.trim()) {
@@ -192,10 +218,7 @@ export const AdminComplaintDetailPage = () => {
         return;
       }
 
-      if (currentAuth?.isAnotherUnrelatedPhoto || currentAuth?.assessment === 'UNRELATED_PHOTO' || currentAuth?.isRelevantRepair === false) {
-        showToast('🛑 Submission Blocked: Uploaded image does not show the repair of this complaint. Please upload actual repair photo.');
-        return;
-      }
+
     }
 
     setIsResolving(true);
@@ -922,35 +945,6 @@ export const AdminComplaintDetailPage = () => {
                     );
                   }
 
-                  if (isUnrelated) {
-                    return (
-                      <div
-                        style={{
-                          background: '#FFFBEB',
-                          border: '1.5px solid #F59E0B',
-                          borderRadius: '8px',
-                          padding: '10px 12px',
-                          marginBottom: '14px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                          <strong style={{ fontSize: '12px', color: '#92400E' }}>
-                            🛑 Unrelated / Irrelevant Photo Detected
-                          </strong>
-                          <span style={{ fontSize: '10px', fontWeight: 800, color: '#92400E' }}>
-                            AUDIT BLOCKED
-                          </span>
-                        </div>
-                        <p style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#B45309' }}>
-                          {photoScanResult.explanation || 'Uploaded photo does not depict the on-site repair or remediation of this civic complaint.'}
-                        </p>
-                        <div style={{ background: '#D97706', color: '#FFFFFF', padding: '6px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>
-                          🚫 SUBMISSION BLOCKED: Uploaded photo must show actual repair of this complaint.
-                        </div>
-                      </div>
-                    );
-                  }
-
                   return (
                     <div
                       style={{
@@ -1007,10 +1001,6 @@ export const AdminComplaintDetailPage = () => {
                 {photoScanResult?.isAiGenerated ? (
                   <button type="button" className="btn btn-danger" disabled style={{ opacity: 0.8, cursor: 'not-allowed' }}>
                     🚫 Submission Blocked (AI Photo Detected)
-                  </button>
-                ) : (photoScanResult?.isAnotherUnrelatedPhoto || photoScanResult?.assessment === 'UNRELATED_PHOTO' || photoScanResult?.isRelevantRepair === false) ? (
-                  <button type="button" className="btn btn-danger" disabled style={{ opacity: 0.8, cursor: 'not-allowed', background: '#D97706', borderColor: '#D97706' }}>
-                    🚫 Submission Blocked (Unrelated Photo Detected)
                   </button>
                 ) : (
                   <button type="submit" className="btn btn-success" disabled={isResolving || isScanningPhoto}>

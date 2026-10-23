@@ -83,6 +83,7 @@ const DEMO_PRESETS = [
 export const ComplaintFormPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   // Controlled form state
   const [formData, setFormData] = useState({
@@ -300,9 +301,14 @@ const compressImageFile = (file) => {
           priority: aiPriority,
         }));
 
+        const isAiGen = Boolean(ai.authenticityAssessment?.possibleAiGenerated);
         const deptName = ai.department || ai.suggestedDepartment || 'Municipal Operations';
         const detectedName = ai.detectedCivicIssue || ai.category || 'Civic Issue';
-        setToastMessage(`AI Scan Complete: ${detectedName} (${ai.severity || 'MEDIUM'} Severity) - Ready for your review & submission.`);
+        if (isAiGen) {
+          setToastMessage('🛑 AI-Created Image Detected! Complaint submission blocked. Authentic camera photo required.');
+        } else {
+          setToastMessage(`AI Scan Complete: Authentic Real Photo Verified! Status will automatically advance to UNDER_REVIEW on submission.`);
+        }
       }
     } catch (err) {
       setServerError(err.message || 'AI analysis failed. You can continue filling the form manually.');
@@ -400,6 +406,13 @@ const compressImageFile = (file) => {
       const firstErrorField = Object.keys(validationErrors)[0];
       const el = document.getElementById(`complaint-${firstErrorField}`);
       if (el) el.focus();
+      return;
+    }
+
+    if (aiResult?.authenticityAssessment?.possibleAiGenerated) {
+      setServerError('Complaint submission blocked: Uploaded photo is detected as AI-created / synthetic. CivicAI strictly requires authentic physical camera photographs.');
+      const panel = document.getElementById('ai-authenticity-panel');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
@@ -668,6 +681,16 @@ const compressImageFile = (file) => {
             {/* Upload & Preview */}
             <div className="scanner-body-grid">
               <div className="scanner-upload-box">
+                {/* Dedicated camera-only input */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  ref={cameraInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                />
+                {/* Standard file/gallery input */}
                 <input
                   type="file"
                   accept="image/*"
@@ -675,19 +698,39 @@ const compressImageFile = (file) => {
                   style={{ display: 'none' }}
                   onChange={handleFileSelect}
                 />
-                <button
-                  type="button"
-                  className="btn btn-outline scanner-pick-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isAiScanning}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                  Choose Image File
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary scanner-pick-btn"
+                    onClick={() => cameraInputRef.current?.click()}
+                    disabled={isAiScanning}
+                    style={{ background: '#0284C7', borderColor: '#0369A1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    <span>📷 Take Photo with Camera</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-outline scanner-pick-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isAiScanning}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <span>🖼️ Choose from Gallery / Files</span>
+                  </button>
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '6px', textAlign: 'center' }}>
+                  * Camera capture required on-site. AI-generated images &amp; Google downloads are blocked.
+                </div>
 
                 <div className="form-group mt-2">
                   <label htmlFor="complaint-image-url" className="form-label text-xs">Or paste image URL:</label>
@@ -794,61 +837,121 @@ const compressImageFile = (file) => {
                   </div>
 
                   {/* Panel B: Image Authenticity Assessment */}
-                  <div
-                    className={`ai-panel ${aiResult.authenticityAssessment?.possibleAiGenerated ? 'ai-panel--auth-warning' : 'ai-panel--auth'}`}
-                    id="ai-authenticity-panel"
-                  >
-                    <div className="ai-panel-header">
-                      <div className="ai-panel-title">
-                        <span>🛡️</span>
-                        <strong>Image Authenticity Assessment</strong>
+                  {aiResult.authenticityAssessment?.possibleAiGenerated ? (
+                    <div
+                      className="ai-panel ai-panel--auth-danger"
+                      id="ai-authenticity-panel"
+                      style={{
+                        border: '2px solid #EF4444',
+                        background: '#FEF2F2',
+                        borderRadius: '8px',
+                        padding: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '22px' }}>🛑</span>
+                          <strong style={{ fontSize: '15px', color: '#991B1B' }}>
+                            AI-Created / Synthetic Image Detected
+                          </strong>
+                        </div>
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            background: '#FEE2E2',
+                            color: '#991B1B',
+                            border: '1px solid #FCA5A5',
+                          }}
+                        >
+                          Confidence: {aiResult.authenticityAssessment?.confidence || 'HIGH'}
+                        </span>
                       </div>
-                      <span className={`badge ${aiResult.authenticityAssessment?.possibleAiGenerated ? 'badge-warning' : 'badge-success'}`}>
-                        {aiResult.authenticityAssessment?.possibleAiGenerated
-                          ? (aiResult.authenticityAssessment?.confidence === 'HIGH'
-                              ? '⚠️ AI-Generated / Synthetic Image Detected'
-                              : '⚠️ Possible AI-Generated / Edited')
-                          : 'Camera Capture Indicators'}
-                      </span>
-                    </div>
-                    <div className="ai-panel-body">
-                      <div>
-                        <strong>Assessment Confidence:</strong>{' '}
-                        <span>{aiResult.authenticityAssessment?.confidence || 'MEDIUM'}</span>
-                      </div>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#B91C1C', lineHeight: 1.5 }}>
+                        CivicAI forensic inspection determined that this photograph exhibits generative AI synthesis characteristics (Midjourney, DALL-E, Stable Diffusion, or digital modification).
+                      </p>
                       {aiResult.authenticityAssessment?.indicators?.length > 0 && (
-                        <div>
-                          <strong>Visual Indicators:</strong>
-                          <ul style={{ margin: '4px 0 0 18px', padding: 0 }}>
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong style={{ fontSize: '12px', color: '#7F1D1D' }}>Observable AI Indicators:</strong>
+                          <ul style={{ margin: '4px 0 0 18px', padding: 0, color: '#991B1B', fontSize: '12px' }}>
                             {aiResult.authenticityAssessment.indicators.map((ind, idx) => (
-                              <li key={idx} style={{ fontSize: '0.82rem', marginBottom: '2px' }}>{ind}</li>
+                              <li key={idx} style={{ marginBottom: '2px' }}>{ind}</li>
                             ))}
                           </ul>
                         </div>
                       )}
-                      <div>
-                        <strong>Municipal Review Disposition:</strong>{' '}
-                        {aiResult.manualReviewNeeded ? (
-                          <span style={{ color: '#d97706', fontWeight: 600 }}>
-                            ⚠️ Flagged for on-site field verification (Complaint will proceed normally)
-                          </span>
-                        ) : (
-                          <span style={{ color: '#059669', fontWeight: 600 }}>
-                            ✅ Standard Municipal Queue
-                          </span>
-                        )}
-                        {aiResult.manualReviewReason && (
-                          <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-dim)' }}>
-                            {aiResult.manualReviewReason}
-                          </p>
-                        )}
-                      </div>
-                      <div className="ai-disclaimer-box">
-                        {aiResult.authenticityAssessment?.disclaimer ||
-                          "Visual appearance alone cannot definitively prove an image's origin; this assessment is an automated heuristic and should be verified independently if questioned."}
+                      <div
+                        style={{
+                          background: '#DC2626',
+                          color: '#FFFFFF',
+                          borderRadius: '6px',
+                          padding: '10px 14px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <span>🚫</span>
+                        <span>COMPLAINT SUBMISSION BLOCKED: AI-created images are strictly prohibited. You must upload an authentic physical camera photograph.</span>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div
+                      className="ai-panel ai-panel--auth"
+                      id="ai-authenticity-panel"
+                      style={{
+                        border: '2px solid #22C55E',
+                        background: '#F0FDF4',
+                        borderRadius: '8px',
+                        padding: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '20px' }}>✅</span>
+                          <strong style={{ fontSize: '15px', color: '#166534' }}>
+                            Authentic Real Camera Photo Verified
+                          </strong>
+                        </div>
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            background: '#DCFCE7',
+                            color: '#166534',
+                            border: '1px solid #86EFAC',
+                          }}
+                        >
+                          Confidence: {aiResult.authenticityAssessment?.confidence || 'HIGH'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#15803D', lineHeight: 1.5 }}>
+                        AI forensic audit confirms authentic physical camera capture with natural optical sensor noise, organic wear, and real-world lighting.
+                      </p>
+                      <div
+                        style={{
+                          background: '#16A34A',
+                          color: '#FFFFFF',
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span>✓</span>
+                        <span>Verified authentic physical camera evidence. Status will automatically be set to UNDER_REVIEW upon submission!</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Citizen Review & Edit Notice Banner */}
@@ -1149,27 +1252,51 @@ const compressImageFile = (file) => {
                 Cancel
               </Link>
 
-              <button
-                type="submit"
-                className="btn btn-primary btn-submit"
-                id="submit-complaint-button"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="spinner" style={{ width: '1rem', height: '1rem' }} aria-hidden="true" />
-                    <span>Submitting Grievance...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                    <span>Submit Grievance</span>
-                  </>
-                )}
-              </button>
+              {aiResult?.authenticityAssessment?.possibleAiGenerated ? (
+                <button
+                  type="button"
+                  className="btn btn-submit"
+                  id="submit-complaint-button"
+                  disabled={true}
+                  style={{
+                    background: '#DC2626',
+                    borderColor: '#B91C1C',
+                    color: '#FFFFFF',
+                    cursor: 'not-allowed',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                  }}
+                  title="Submission is blocked because the attached photo is an AI-created image."
+                >
+                  <span>🚫</span>
+                  <span>Submission Blocked (AI Photo Detected)</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-submit"
+                  id="submit-complaint-button"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="spinner" style={{ width: '1rem', height: '1rem' }} aria-hidden="true" />
+                      <span>Submitting Grievance...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                      </svg>
+                      <span>Submit Grievance</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </form>
         </section>

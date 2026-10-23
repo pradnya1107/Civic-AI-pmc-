@@ -3,7 +3,7 @@ import type { UserRole } from "../users/user.model";
 import { Department } from "../departments/department.model";
 import { AppError } from "../../utils/app-error";
 import { Complaint, calculateSlaDeadline } from "./complaint.model";
-import { verifyResolution } from "../ai/gemini-ai.service";
+import { verifyResolution, isGoogleOrWebSearchUrl } from "../ai/gemini-ai.service";
 import type {
   ComplaintListQuery,
   CreateComplaintInput,
@@ -87,14 +87,42 @@ export async function createComplaint(
     console.warn("Could not auto-assign department:", deptErr);
   }
 
-  // Requirement 8: Never reject complaints if image appears AI-generated; flag for manual officer review.
-  const isPossibleAi = input.aiAnalysis?.authenticityAssessment?.possibleAiGenerated;
-  const manualReviewNeeded = Boolean(input.aiAnalysis?.manualReviewNeeded || isPossibleAi);
-  const manualReviewReason =
-    input.aiAnalysis?.manualReviewReason ||
-    (isPossibleAi
-      ? "Image exhibits cues of possible AI synthesis or digital modification; marked for on-site municipal field verification."
-      : undefined);
+  // Requirement: Strictly reject complaints if image is AI-created OR taken from Google / web
+  const isPossibleAi = Boolean(input.aiAnalysis?.authenticityAssessment?.possibleAiGenerated);
+  let isSyntheticUrl = false;
+  let isGoogleWebUrl = false;
+  if (input.imageUrl && (input.imageUrl.startsWith("http://") || input.imageUrl.startsWith("https://"))) {
+    try {
+      const lower = input.imageUrl.toLowerCase();
+      const urlPath = new URL(input.imageUrl).pathname.toLowerCase();
+      isSyntheticUrl = /ai[-_]?gen|synthetic[-_]?sample|test[-_]?ai|midjourney|dall[-_]?e|stablediffusion|flux|generated/i.test(urlPath);
+      isGoogleWebUrl = isGoogleOrWebSearchUrl(input.imageUrl);
+    } catch {
+      isSyntheticUrl = false;
+      isGoogleWebUrl = false;
+    }
+  }
+
+  const isGoogleWeb = Boolean(input.aiAnalysis?.authenticityAssessment?.isGoogleOrWebImage || isGoogleWebUrl);
+
+  if (isPossibleAi || isSyntheticUrl) {
+    throw new AppError(
+      "Complaint submission rejected: The uploaded photo is an AI-created or synthetic image. Pune Municipal Corporation requires authentic real-world camera photographs.",
+      422,
+      "AI_GENERATED_IMAGE_REJECTED",
+    );
+  }
+
+  if (isGoogleWeb) {
+    throw new AppError(
+      "Complaint submission rejected: The uploaded photo was taken from Google Images or the internet. Complaints must be clicked directly by camera on-site.",
+      422,
+      "GOOGLE_WEB_IMAGE_REJECTED",
+    );
+  }
+
+  const manualReviewNeeded = Boolean(input.aiAnalysis?.manualReviewNeeded);
+  const manualReviewReason = input.aiAnalysis?.manualReviewReason;
 
   const aiAnalysisPayload = input.aiAnalysis
     ? {
@@ -450,13 +478,7 @@ export async function resolveComplaintWithVerification(
           "AI_GENERATED_IMAGE_REJECTED",
         );
       }
-      if (verification.authenticityAssessment?.isAnotherUnrelatedPhoto || verification.authenticityAssessment?.isRelevantRepair === false) {
-        throw new AppError(
-          "Resolution rejected: The uploaded photo does not show the repair or remediation of this civic complaint. Officers must upload authentic photo evidence of the actual repair work.",
-          422,
-          "UNRELATED_PHOTO_REJECTED",
-        );
-      }
+
     } catch (e: any) {
       if (
         e instanceof AppError ||

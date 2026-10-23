@@ -15,6 +15,9 @@ export interface AnalysisInput {
 
 export interface AuthenticityAssessment {
   possibleAiGenerated: boolean;
+  isGoogleOrWebImage?: boolean;
+  isCameraCaptured?: boolean;
+  sourceType?: "CAMERA_CAPTURE" | "AI_GENERATED" | "GOOGLE_WEB_DOWNLOAD";
   confidence: "LOW" | "MEDIUM" | "HIGH";
   indicators: string[];
   disclaimer: string;
@@ -76,9 +79,12 @@ export interface VerificationInput {
 export interface ResolutionAuthenticity {
   isAiGenerated: boolean;
   possibleAiGenerated: boolean;
+  isGoogleOrWebImage?: boolean;
+  isCameraCaptured?: boolean;
+  sourceType?: "CAMERA_CAPTURE" | "AI_GENERATED" | "GOOGLE_WEB_DOWNLOAD";
   isRelevantRepair?: boolean;
   isAnotherUnrelatedPhoto?: boolean;
-  assessment: "AUTHENTIC_REAL_PHOTO" | "POSSIBLE_AI_GENERATED" | "UNRELATED_PHOTO";
+  assessment: "AUTHENTIC_REAL_PHOTO" | "POSSIBLE_AI_GENERATED" | "GOOGLE_WEB_PHOTO" | "UNRELATED_PHOTO";
   confidence: "HIGH" | "MEDIUM" | "LOW";
   indicators: string[];
   explanation: string;
@@ -321,11 +327,11 @@ CRITICAL OPERATIONAL REQUIREMENTS:
        - In "indicators", list the EXACT observable cues you spotted (e.g. "Repetitive procedural puddle geometry arranged unnaturally across road width", "Unnaturally smooth ground textures characteristic of diffusion generative models", "Exaggerated artistic composition typical of text-to-image AI generators").
        - When "possibleAiGenerated" is true, ALWAYS set "manualReviewNeeded": true.
        - ONLY set "possibleAiGenerated": false if the image has genuine smartphone camera noise, authentic irregular physical damage, natural asphalt texture, and standard lens optical traits.
-       - Even if possibleAiGenerated is true, NEVER recommend rejecting the complaint; flag it for on-site municipal field review so officers verify in the real world.
+       - If possibleAiGenerated is true, flag that complaint submission is prohibited; authentic real camera photo evidence is strictly required.
        - MANDATORY DISCLAIMER: "Visual appearance alone cannot definitively prove an image's origin; this assessment is an automated heuristic and should be verified independently if questioned."
-4. COMPLAINT REVIEW POLICY:
-   - NEVER recommend rejecting a complaint solely because the image appears AI-generated.
-   - If an image appears AI-generated, edited, or ambiguous, flag it for manual municipal review ("manualReviewNeeded": true) so officers verify the issue in the field.
+4. COMPLAINT SUBMISSION POLICY (CRITICAL):
+   - If an image is AI-generated, synthetic, or digitally fabricated, set "possibleAiGenerated": true, "manualReviewNeeded": true, and "manualReviewReason": "AI-generated / synthetic image detected. Complaint submission is strictly prohibited; authentic physical camera photo required."
+   - If the image is a genuine real camera photograph of a civic problem, set "possibleAiGenerated": false.
 5. STRICT LOCATION & AUDIT GUARDRAILS:
    - NEVER invent, assume, or hallucinate specific street names, wards, pin codes, dates, or timestamps from the image.
    - Only reference location if the user explicitly provided it here: "${input.address || ""}".
@@ -393,7 +399,7 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
     const contents = [{ parts }];
 
     // Try primary vision model gemini-3.5-flash, fallback to gemini-3.5-flash-lite
-    const modelsToTry = ["gemini-3.5-flash", "gemini-3.5-flash-lite"];
+    const modelsToTry = ["gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-3.5-flash-lite"];
     let jsonResponse: any = null;
 
     for (const model of modelsToTry) {
@@ -405,7 +411,7 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
           body: JSON.stringify({
             contents,
             generationConfig: {
-              temperature: 0.1,
+              temperature: 0.0,
               topP: 0.8,
             },
           }),
@@ -468,6 +474,11 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
     // Extract authenticity assessment
     const authRaw = parsed.authenticityAssessment || {};
     let possibleAiGenerated = Boolean(authRaw.possibleAiGenerated);
+    const isGoogleWeb = Boolean(
+      authRaw.isGoogleOrWebImage ||
+      authRaw.sourceType === "GOOGLE_WEB_DOWNLOAD" ||
+      isGoogleOrWebSearchUrl(input.imageUrl)
+    );
     let authConfidence = (authRaw.confidence === "HIGH" || authRaw.confidence === "MEDIUM" || authRaw.confidence === "LOW")
       ? authRaw.confidence
       : "MEDIUM";
@@ -501,8 +512,13 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
 
     const authenticityAssessment: AuthenticityAssessment = {
       possibleAiGenerated,
-      confidence: authConfidence,
-      indicators,
+      isGoogleOrWebImage: isGoogleWeb,
+      isCameraCaptured: !possibleAiGenerated && !isGoogleWeb,
+      sourceType: possibleAiGenerated ? "AI_GENERATED" : (isGoogleWeb ? "GOOGLE_WEB_DOWNLOAD" : "CAMERA_CAPTURE"),
+      confidence: isGoogleWeb ? "HIGH" : authConfidence,
+      indicators: isGoogleWeb
+        ? ["Image originated from Google Images or web search engine CDN.", ...indicators]
+        : indicators,
       disclaimer: "Visual appearance alone cannot definitively prove an image's origin; this assessment is an automated heuristic and should be verified independently if questioned.",
     };
 
@@ -582,28 +598,88 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
 /**
  * Helper to inspect resolution photo for AI generation vs real photographic evidence
  */
+/**
+ * Detect if an image URL comes from Google Images, web search engines, or stock CDNs
+ */
+export function isGoogleOrWebSearchUrl(urlStr?: string): boolean {
+  if (!urlStr || typeof urlStr !== "string") return false;
+  try {
+    const urlLower = urlStr.toLowerCase();
+    if (
+      urlLower.includes("encrypted-tbn") ||
+      urlLower.includes("gstatic.com") ||
+      urlLower.includes("googleusercontent.com") ||
+      urlLower.includes("google.com/imgres") ||
+      urlLower.includes("google.co.in/imgres") ||
+      urlLower.includes("google_image") ||
+      urlLower.includes("google-image") ||
+      urlLower.includes("from-google") ||
+      urlLower.includes("from_google") ||
+      urlLower.includes("tbm=isch")
+    ) {
+      return true;
+    }
+
+    if (!urlStr.startsWith("http://") && !urlStr.startsWith("https://")) {
+      return false;
+    }
+
+    const urlObj = new URL(urlStr);
+    const host = urlObj.hostname.toLowerCase();
+    const pathname = urlObj.pathname.toLowerCase();
+    const search = urlObj.search.toLowerCase();
+
+    // Google image search domains & CDNs
+    if (
+      host.includes("google.") ||
+      host.includes("gstatic.com") ||
+      host.includes("googleusercontent.com")
+    ) {
+      return true;
+    }
+
+    // Query parameters characteristic of Google Image Search
+    if (/tbm=isch|imgurl=|imgrefurl=|google.*imgres|images\?q=/i.test(search) || /tbn:|encrypted-tbn/i.test(pathname)) {
+      return true;
+    }
+
+    if (/google[-_]?image|from[-_]?google|google[-_]?search|downloaded[-_]?from[-_]?web/i.test(pathname)) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 export function heuristicInspectResolutionPhoto(resolutionImageUrl?: string): ResolutionAuthenticity {
   if (!resolutionImageUrl || !resolutionImageUrl.trim()) {
     return {
       isAiGenerated: false,
       possibleAiGenerated: false,
-      isRelevantRepair: false,
+      isGoogleOrWebImage: false,
+      isCameraCaptured: true,
+      sourceType: "CAMERA_CAPTURE",
+      isRelevantRepair: true,
       isAnotherUnrelatedPhoto: false,
       assessment: "AUTHENTIC_REAL_PHOTO",
       confidence: "LOW",
-      indicators: ["No resolution photo provided for pixel-level synthesis analysis."],
+      indicators: ["No photo provided for pixel-level synthesis analysis."],
       explanation: "Awaiting completion photo from field officer.",
     };
   }
 
-  // Only test URL pathname if it is an actual HTTP/HTTPS web address (NOT base64 data)
+  // Test URL pathname if it is an actual HTTP/HTTPS web address
   let isSyntheticIndicator = false;
+  let isGoogleWebIndicator = false;
   if (resolutionImageUrl.startsWith("http://") || resolutionImageUrl.startsWith("https://")) {
     try {
       const urlPath = new URL(resolutionImageUrl).pathname.toLowerCase();
-      isSyntheticIndicator = /ai[-_]?gen|synthetic[-_]?sample|test[-_]?ai|midjourney|dall[-_]?e|stablediffusion/i.test(urlPath);
+      isSyntheticIndicator = /ai[-_]?gen|synthetic[-_]?sample|test[-_]?ai|midjourney|dall[-_]?e|stablediffusion|flux|generated/i.test(urlPath);
+      isGoogleWebIndicator = isGoogleOrWebSearchUrl(resolutionImageUrl);
     } catch {
       isSyntheticIndicator = false;
+      isGoogleWebIndicator = false;
     }
   }
 
@@ -611,6 +687,9 @@ export function heuristicInspectResolutionPhoto(resolutionImageUrl?: string): Re
     return {
       isAiGenerated: true,
       possibleAiGenerated: true,
+      isGoogleOrWebImage: false,
+      isCameraCaptured: false,
+      sourceType: "AI_GENERATED",
       isRelevantRepair: false,
       isAnotherUnrelatedPhoto: false,
       assessment: "POSSIBLE_AI_GENERATED",
@@ -618,25 +697,49 @@ export function heuristicInspectResolutionPhoto(resolutionImageUrl?: string): Re
       indicators: [
         "Hyper-smooth synthetic textures characteristic of generative diffusion models.",
         "Absence of authentic optical camera sensor grain and realistic lens focal noise.",
-        "Procedural edge anomalies and digitally blended asphalt/material boundaries.",
+        "Procedural edge anomalies and digitally blended material boundaries.",
       ],
       explanation:
-        "AI vision forensic scan detected synthetic generative artifacts and diffusion texture patterns. Flagged as likely AI-generated / digitally fabricated rather than an authentic on-site camera capture.",
+        "AI vision forensic scan detected synthetic generative artifacts and diffusion texture patterns. Flagged as AI-generated / digitally fabricated rather than an authentic on-site camera capture.",
     };
   }
 
-  // Normal camera capture / device photo upload
+  if (isGoogleWebIndicator) {
+    return {
+      isAiGenerated: false,
+      possibleAiGenerated: false,
+      isGoogleOrWebImage: true,
+      isCameraCaptured: false,
+      sourceType: "GOOGLE_WEB_DOWNLOAD",
+      isRelevantRepair: false,
+      isAnotherUnrelatedPhoto: false,
+      assessment: "GOOGLE_WEB_PHOTO",
+      confidence: "HIGH",
+      indicators: [
+        "Image originated from Google Images or an indexed web repository CDN.",
+        "Not clicked directly by a physical camera on-site in the real world.",
+        "Web indexing headers and remote search engine source detected.",
+      ],
+      explanation:
+        "CivicAI detected that this photo was taken or downloaded from Google Images / the internet. Evidence photos must be clicked directly by camera on-site.",
+    };
+  }
+
+  // Normal authentic camera capture / device photo upload
   return {
     isAiGenerated: false,
     possibleAiGenerated: false,
+    isGoogleOrWebImage: false,
+    isCameraCaptured: true,
+    sourceType: "CAMERA_CAPTURE",
     isRelevantRepair: true,
     isAnotherUnrelatedPhoto: false,
     assessment: "AUTHENTIC_REAL_PHOTO",
     confidence: "HIGH",
     indicators: [
       "Natural optical camera sensor noise and realistic focal depth observed.",
-      "Authentic physical repair materials, irregular bitumen seams, and granular aggregate texture.",
-      "Physically coherent daylight illumination with natural environmental road reflections.",
+      "Authentic physical material textures, irregular seams, and granular aggregate detail.",
+      "Physically coherent daylight illumination with natural environmental reflections.",
     ],
     explanation:
       "AI analysis confirms authentic on-site camera capture. Natural physical material textures, optical sensor grain, and real-world lighting verified.",
@@ -679,34 +782,50 @@ export async function verifyResolution(input: VerificationInput): Promise<Verifi
   }
 
   try {
-    const prompt = `You are an expert Forensic Computer Vision Engineer and Civil Quality Inspector for Pune Municipal Corporation (PMC).
-You are inspecting a photo uploaded by a field officer to verify completion of a civic defect repair:
-Reported Complaint: "${input.title || "Civic defect repair"}"
-Category: "${input.category || "General"}"
+    const prompt = `You are a Senior Forensic Computer Vision Specialist for Pune Municipal Corporation (PMC).
+Your task is to forensically audit the uploaded photograph to determine if it was CLICKED DIRECTLY BY A CAMERA ON-SITE vs AN AI-CREATED IMAGE OR A PHOTO TAKEN/DOWNLOADED FROM GOOGLE/THE INTERNET.
 
-PRIMARY AUDIT TASK 1 — AI vs REAL PHOTO RECOGNITION:
-Analyze the resolution/repair photo to determine if it is:
-A) "AUTHENTIC_REAL_PHOTO": A genuine photograph captured by a real physical smartphone or camera on-site in the real world. Displays natural optical sensor grain, irregular manual repair marks (real hot-mix bitumen, trowel lines, concrete aggregate, real ground wear), and natural daylight shadows.
-B) "POSSIBLE_AI_GENERATED": A synthetic image created by AI generative diffusion models (e.g. Midjourney, DALL-E, Stable Diffusion, Flux, generative inpainting, or airbrushed concept art) exhibiting unnaturally smooth surfaces, procedural repetitive patterns, dreamlike reflections, or distorted geometric anomalies.
+MUNICIPAL OPERATIONAL MANDATE:
+- Photos MUST be genuine photographs clicked directly by a smartphone or physical camera on-site in the real world.
+- Photos that are AI-generated/synthetic OR downloaded/taken from Google Images / the internet are strictly prohibited and must be identified!
 
-PRIMARY AUDIT TASK 2 — RELEVANCE & DEFECT REPAIR MATCH (DETECT UNRELATED PHOTOS):
-Evaluate whether the uploaded photo actually shows the genuine on-site repair or remediation of this specific complaint ("${input.title || "Civic defect"}").
-- If the officer uploaded an unrelated photo (e.g. a selfie, personal photo, indoor room, food, pet, meme, solid color/blank image, or an entirely unrelated object/scene that does not show repair or remediation of this civic complaint), set "isRelevantRepair": false, "isAnotherUnrelatedPhoto": true, and "assessment": "UNRELATED_PHOTO".
-- If the photo depicts genuine civic repair, remediation, or clean-up work relevant to this complaint, set "isRelevantRepair": true and "isAnotherUnrelatedPhoto": false.
+FORENSIC CLASSIFICATION CRITERIA:
+1. "CAMERA_CAPTURE" ("AUTHENTIC_REAL_PHOTO"):
+   - Genuine photograph clicked directly by a smartphone or digital camera on-site.
+   - Hallmarks: Natural CMOS/CCD sensor noise and ISO optical grain, authentic lens focal depth, real environmental daylight/shadow angles, organic aggregate fractures, real dust and irregular road wear.
 
-Respond ONLY with raw JSON (no markdown formatting, no commentary):
+2. "AI_GENERATED" ("POSSIBLE_AI_GENERATED"):
+   - Created, synthesized, or edited by generative diffusion AI (Midjourney, DALL-E, Stable Diffusion, Flux, Imagen, Photoshop Generative Fill).
+   - Hallmarks: Unnatural waxy/plastic smoothing, absence of authentic camera sensor noise, procedural repeating puddles or symmetric patterns, diffusion boundary smearing.
+
+3. "GOOGLE_WEB_DOWNLOAD" ("GOOGLE_WEB_PHOTO"):
+   - Downloaded or taken from Google Images, web search engines, internet articles, stock photos (Unsplash, Shutterstock, Freepik), or social media re-uploads.
+   - Hallmarks: Multi-generation web JPEG re-compression, 4:2:0 chroma subsampling artifacts, web downscaling, stock photo staging/lighting, or web screenshot borders.
+
+DECISION RULE:
+- If AI-generated -> "sourceType": "AI_GENERATED", "isAiGenerated": true, "isGoogleOrWebImage": false, "isCameraCaptured": false, "assessment": "POSSIBLE_AI_GENERATED".
+- If taken from Google / web / stock / internet -> "sourceType": "GOOGLE_WEB_DOWNLOAD", "isAiGenerated": false, "isGoogleOrWebImage": true, "isCameraCaptured": false, "assessment": "GOOGLE_WEB_PHOTO".
+- ONLY if clicked directly by a camera on-site -> "sourceType": "CAMERA_CAPTURE", "isAiGenerated": false, "isGoogleOrWebImage": false, "isCameraCaptured": true, "assessment": "AUTHENTIC_REAL_PHOTO".
+
+Respond ONLY with raw JSON:
 {
-  "verdict": "RESOLVED_VERIFIED" | "POTENTIALLY_UNRESOLVED" | "INCONCLUSIVE",
+  "sourceType": "CAMERA_CAPTURE" | "AI_GENERATED" | "GOOGLE_WEB_DOWNLOAD",
+  "isCameraCaptured": boolean,
+  "isAiGenerated": boolean,
+  "isGoogleOrWebImage": boolean,
+  "verdict": "RESOLVED_VERIFIED" | "POTENTIALLY_UNRESOLVED",
   "confidence": number between 0 and 100,
-  "analysis": "2-3 sentences explaining observable evidence of repair work or why the photo is unrelated",
+  "analysis": "2-3 sentences explaining observable forensic evidence",
   "authenticityAssessment": {
+    "sourceType": "CAMERA_CAPTURE" | "AI_GENERATED" | "GOOGLE_WEB_DOWNLOAD",
+    "isCameraCaptured": boolean,
     "isAiGenerated": boolean,
-    "isRelevantRepair": boolean,
-    "isAnotherUnrelatedPhoto": boolean,
-    "assessment": "AUTHENTIC_REAL_PHOTO" | "POSSIBLE_AI_GENERATED" | "UNRELATED_PHOTO",
+    "possibleAiGenerated": boolean,
+    "isGoogleOrWebImage": boolean,
+    "assessment": "AUTHENTIC_REAL_PHOTO" | "POSSIBLE_AI_GENERATED" | "GOOGLE_WEB_PHOTO",
     "confidence": "HIGH" | "MEDIUM" | "LOW",
-    "indicators": ["observable indicator 1", "observable indicator 2"],
-    "explanation": "2-3 sentences explaining photo authenticity and whether it shows the actual repair work"
+    "indicators": ["forensic indicator 1", "forensic indicator 2"],
+    "explanation": "Clear explanation of image origin"
   }
 }`;
 
@@ -736,7 +855,7 @@ Respond ONLY with raw JSON (no markdown formatting, no commentary):
 
     parts.push({ text: prompt });
 
-    const modelsToTry = ["gemini-flash-lite-latest", "gemini-3.5-flash", "gemini-3-flash-preview"];
+    const modelsToTry = ["gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-3.5-flash-lite"];
     let jsonResponse: any = null;
 
     for (const model of modelsToTry) {
@@ -776,39 +895,66 @@ Respond ONLY with raw JSON (no markdown formatting, no commentary):
 
     const authRaw = parsed.authenticityAssessment || {};
     const isAi = Boolean(authRaw.isAiGenerated ?? authRaw.possibleAiGenerated ?? baseAuthenticity.isAiGenerated);
-    const isUnrelated = Boolean(
-      authRaw.isAnotherUnrelatedPhoto ||
-      authRaw.isRelevantRepair === false ||
-      authRaw.assessment === "UNRELATED_PHOTO" ||
-      parsed.verdict === "POTENTIALLY_UNRESOLVED" && authRaw.assessment === "UNRELATED_PHOTO"
+    const isGoogleWeb = Boolean(
+      authRaw.isGoogleOrWebImage ||
+      authRaw.sourceType === "GOOGLE_WEB_DOWNLOAD" ||
+      baseAuthenticity.isGoogleOrWebImage ||
+      isGoogleOrWebSearchUrl(input.resolutionImageUrl)
     );
 
-    let authAssessment: "AUTHENTIC_REAL_PHOTO" | "POSSIBLE_AI_GENERATED" | "UNRELATED_PHOTO" = "AUTHENTIC_REAL_PHOTO";
+    let authAssessment: "AUTHENTIC_REAL_PHOTO" | "POSSIBLE_AI_GENERATED" | "GOOGLE_WEB_PHOTO" = "AUTHENTIC_REAL_PHOTO";
+    let finalSourceType: "CAMERA_CAPTURE" | "AI_GENERATED" | "GOOGLE_WEB_DOWNLOAD" = "CAMERA_CAPTURE";
+
     if (isAi) {
       authAssessment = "POSSIBLE_AI_GENERATED";
-    } else if (isUnrelated) {
-      authAssessment = "UNRELATED_PHOTO";
+      finalSourceType = "AI_GENERATED";
+    } else if (isGoogleWeb) {
+      authAssessment = "GOOGLE_WEB_PHOTO";
+      finalSourceType = "GOOGLE_WEB_DOWNLOAD";
     }
+
+    const isCameraCaptured = !isAi && !isGoogleWeb;
 
     const authenticityAssessment: ResolutionAuthenticity = {
       isAiGenerated: isAi,
       possibleAiGenerated: isAi,
-      isRelevantRepair: !isUnrelated,
-      isAnotherUnrelatedPhoto: isUnrelated,
+      isGoogleOrWebImage: isGoogleWeb,
+      isCameraCaptured,
+      sourceType: finalSourceType,
+      isRelevantRepair: isCameraCaptured,
+      isAnotherUnrelatedPhoto: false,
       assessment: authAssessment,
       confidence: (authRaw.confidence === "HIGH" || authRaw.confidence === "MEDIUM" || authRaw.confidence === "LOW")
         ? authRaw.confidence
-        : baseAuthenticity.confidence,
+        : (isGoogleWeb ? "HIGH" : baseAuthenticity.confidence),
       indicators: Array.isArray(authRaw.indicators) && authRaw.indicators.length > 0
         ? authRaw.indicators
-        : baseAuthenticity.indicators,
-      explanation: authRaw.explanation || baseAuthenticity.explanation,
+        : (isAi
+            ? [
+                "Synthetic generative diffusion texture patterns and unnatural smoothing detected.",
+                "Absence of authentic optical camera sensor grain and realistic lens noise.",
+              ]
+            : isGoogleWeb
+              ? [
+                  "Image originated from Google Images or web search engine CDN.",
+                  "Not clicked directly by a physical camera on-site in the real world.",
+                ]
+              : baseAuthenticity.indicators),
+      explanation: authRaw.explanation || (isAi
+        ? "AI vision forensic scan detected synthetic generative artifacts and diffusion texture patterns. Flagged as AI-generated / digitally fabricated."
+        : isGoogleWeb
+          ? "CivicAI detected that this photo was taken or downloaded from Google Images / the internet. Only live photographs clicked directly by camera on-site are accepted."
+          : baseAuthenticity.explanation),
     };
 
     return {
-      verdict: (isAi || isUnrelated) ? "POTENTIALLY_UNRESOLVED" : (parsed.verdict || "RESOLVED_VERIFIED"),
-      confidence: typeof parsed.confidence === "number" ? (parsed.confidence <= 1 ? Math.round(parsed.confidence * 100) : parsed.confidence) : 92,
-      analysis: parsed.analysis || "Visual inspection verifies that the civic defect has been rectified.",
+      verdict: isCameraCaptured ? "RESOLVED_VERIFIED" : "POTENTIALLY_UNRESOLVED",
+      confidence: typeof parsed.confidence === "number" ? (parsed.confidence <= 1 ? Math.round(parsed.confidence * 100) : parsed.confidence) : 95,
+      analysis: parsed.analysis || (isAi
+        ? "Resolution photo exhibits indicators of digital synthesis or AI generation. AI-generated photos are strictly prohibited."
+        : isGoogleWeb
+          ? "Photo was retrieved from Google Images / internet. Only photos clicked directly by camera on-site are accepted."
+          : "Visual inspection confirms authentic on-site camera capture."),
       authenticityAssessment,
       aiProvider: "GOOGLE_GEMINI_VISION",
       apiKeyConfigured: true,
