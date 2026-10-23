@@ -15,6 +15,7 @@ import {
   sendOtp,
   verifyOtp,
   resendDepartmentAdminOtpHandler,
+  changePasswordHandler,
 } from "./auth.controller";
 import {
   emailSchema,
@@ -125,5 +126,6 @@ authRouter.post(
 authRouter.get("/me", authenticate, asyncHandler(getCurrentUser));
 authRouter.post("/refresh", authenticate, asyncHandler(refreshTokenHandler));
 authRouter.post("/logout", authenticate, asyncHandler(logout));
+authRouter.post("/change-password", authenticate, asyncHandler(changePasswordHandler));
 
 export default authRouter;

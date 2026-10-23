@@ -11,12 +11,14 @@ import {
 import { Department } from "../departments/department.model";
 
 export const createAdminHandler: RequestHandler = async (request, response) => {
-  const { departmentId, fullName, email } = request.body;
+  const { departmentId, fullName, email, password, confirmPassword } = request.body;
 
   const result = await createDepartmentAdmin({
     departmentId,
     fullName,
     email,
+    password,
+    confirmPassword,
   });
 
   response.status(201).json({

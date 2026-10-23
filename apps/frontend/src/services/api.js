@@ -156,6 +156,15 @@ export const authApi = {
     const response = await api.post('/api/v1/auth/logout');
     return response.data;
   },
+
+  /**
+   * Change password for authenticated account
+   * POST /api/v1/auth/change-password
+   */
+  async changePassword(data) {
+    const response = await api.post('/api/v1/auth/change-password', data);
+    return response.data;
+  },
 };
 
 export const complaintApi = {
@@ -610,6 +619,15 @@ export const departmentAdminApi = {
     const response = await api.get('/api/v1/department-admin/complaints/export', {
       responseType: 'blob',
     });
+    return response.data;
+  },
+
+  /**
+   * Change password for logged-in department admin
+   * POST /api/v1/department-admin/change-password
+   */
+  async changePassword(data) {
+    const response = await api.post('/api/v1/department-admin/change-password', data);
     return response.data;
   },
 };

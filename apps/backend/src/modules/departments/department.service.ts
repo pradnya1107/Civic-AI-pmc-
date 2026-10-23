@@ -15,6 +15,8 @@ export interface CreateDepartmentInput {
   newAdmin?: {
     fullName: string;
     email: string;
+    password?: string;
+    confirmPassword?: string;
   };
   description?: string;
   slug?: string;
@@ -224,6 +226,8 @@ export async function createDepartment(input: CreateDepartmentInput) {
       departmentId: dept._id.toString(),
       fullName: input.newAdmin.fullName.trim(),
       email: input.newAdmin.email.trim().toLowerCase(),
+      password: input.newAdmin.password,
+      confirmPassword: input.newAdmin.confirmPassword,
     });
 
     createdAdminNotice = adminResult;

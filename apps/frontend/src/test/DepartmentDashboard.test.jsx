@@ -34,6 +34,7 @@ vi.mock('../services/api', async () => {
       getOfficers: vi.fn(),
       createOfficer: vi.fn(),
       exportComplaintsCsv: vi.fn(),
+      changePassword: vi.fn(),
     },
     aiApi: {
       verifyResolution: vi.fn(),
@@ -928,6 +929,75 @@ describe('Department Admin Dashboard & Modules', () => {
       expect(await screen.findByText('Asphalt Patch Repair Audit')).toBeInTheDocument();
       expect(screen.getByText(/⚠️ AI-Generated Photo Detected/i)).toBeInTheDocument();
       expect(screen.getByText(/Photo Origin: Possible AI-Generated Image/i)).toBeInTheDocument();
+    });
+
+    it('DepartmentSettingsPage validates previous password, new password complexity, matching, and successfully changes password', async () => {
+      const user = userEvent.setup();
+      departmentAdminApi.changePassword.mockResolvedValueOnce({
+        success: true,
+        message: 'Password updated successfully.',
+      });
+
+      render(
+        <AuthContext.Provider value={{ isAuthenticated: true, isLoading: false, user: mockDeptAdminUser }}>
+          <MemoryRouter initialEntries={['/department/settings']}>
+            <DepartmentSettingsPage />
+          </MemoryRouter>
+        </AuthContext.Provider>
+      );
+
+      // Verify the change password section is present
+      expect(screen.getByText(/Security & Change Password/i)).toBeInTheDocument();
+      const prevInput = screen.getByPlaceholderText(/current \/ previous password/i);
+      const newPwdInput = screen.getByPlaceholderText(/8\+ chars, 1 uppercase, 1 symbol/i);
+      const confirmPwdInput = screen.getByPlaceholderText(/Re-enter your new password/i);
+      const submitBtn = screen.getByRole('button', { name: /Update Password/i });
+
+      // 1. Submit empty form triggers validation
+      await user.click(submitBtn);
+      expect(await screen.findByText(/Previous password is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/New password is required/i)).toBeInTheDocument();
+
+      // 2. Weak new password (missing uppercase and symbol)
+      await user.type(prevInput, 'OldPassword@123');
+      await user.type(newPwdInput, 'weakpass1');
+      await user.type(confirmPwdInput, 'weakpass1');
+      await user.click(submitBtn);
+      expect(await screen.findByText(/Password must contain at least 1 uppercase letter/i)).toBeInTheDocument();
+
+      // 3. New password missing symbol
+      await user.clear(newPwdInput);
+      await user.clear(confirmPwdInput);
+      await user.type(newPwdInput, 'WeakPass1');
+      await user.type(confirmPwdInput, 'WeakPass1');
+      await user.click(submitBtn);
+      expect(await screen.findByText(/Password must contain at least 1 specific symbol/i)).toBeInTheDocument();
+
+      // 4. Mismatched confirm password
+      await user.clear(newPwdInput);
+      await user.clear(confirmPwdInput);
+      await user.type(newPwdInput, 'StrongPassword@2026');
+      await user.type(confirmPwdInput, 'DifferentPassword@2026');
+      await user.click(submitBtn);
+      expect(await screen.findByText(/New password and confirm password do not match/i)).toBeInTheDocument();
+
+      // 5. Valid change password submission
+      await user.clear(confirmPwdInput);
+      await user.type(confirmPwdInput, 'StrongPassword@2026');
+      await user.click(submitBtn);
+
+      await waitFor(() => {
+        expect(departmentAdminApi.changePassword).toHaveBeenCalledWith({
+          previousPassword: 'OldPassword@123',
+          newPassword: 'StrongPassword@2026',
+          confirmPassword: 'StrongPassword@2026',
+        });
+      });
+
+      expect(await screen.findByText(/Please use your new password for future sign-ins/i)).toBeInTheDocument();
+      expect(prevInput.value).toBe('');
+      expect(newPwdInput.value).toBe('');
+      expect(confirmPwdInput.value).toBe('');
     });
   });
 });

@@ -11,6 +11,8 @@ export interface CreateDepartmentAdminInput {
   departmentId: string;
   fullName: string;
   email: string;
+  password?: string;
+  confirmPassword?: string;
 }
 
 export function isDemoModeEnabled(): boolean {
@@ -69,8 +71,26 @@ export async function createDepartmentAdmin(input: CreateDepartmentAdminInput) {
     );
   }
 
-  const temporaryPassword = generateTemporaryPassword();
-  const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+  let finalPassword = "";
+  if (input.password) {
+    if (input.confirmPassword !== undefined && input.password !== input.confirmPassword) {
+      throw new AppError("Password and confirm password do not match.", 400, "PASSWORD_MISMATCH");
+    }
+    if (input.password.length < 8) {
+      throw new AppError("Password must be at least 8 characters long.", 400, "INVALID_PASSWORD_LENGTH");
+    }
+    if (!/[A-Z]/.test(input.password)) {
+      throw new AppError("Password must contain at least 1 uppercase letter.", 400, "INVALID_PASSWORD_UPPERCASE");
+    }
+    if (!/[^A-Za-z0-9]/.test(input.password)) {
+      throw new AppError("Password must contain at least 1 specific symbol.", 400, "INVALID_PASSWORD_SYMBOL");
+    }
+    finalPassword = input.password;
+  } else {
+    finalPassword = generateTemporaryPassword();
+  }
+
+  const passwordHash = await bcrypt.hash(finalPassword, 12);
 
   const admin = await User.create({
     fullName,
@@ -98,7 +118,7 @@ export async function createDepartmentAdmin(input: CreateDepartmentAdminInput) {
     console.log(`Name:               ${admin.fullName}`);
     console.log(`Department:         ${department.name}`);
     console.log(`Demo Email:         ${admin.email}`);
-    console.log(`Temporary Password: ${temporaryPassword}`);
+    console.log(`Password:           ${finalPassword}`);
     console.log(`Confirmation OTP:   ${confirmationOtp} (Dispatched to Terminal)`);
     console.log(`Account Status:     Active / OTP Ready`);
     console.log(`Login Page:         ${frontendUrl}`);
@@ -119,7 +139,7 @@ export async function createDepartmentAdmin(input: CreateDepartmentAdminInput) {
       accountStatus: admin.accountStatus,
       createdAt: admin.createdAt,
     },
-    ...(demoMode ? { temporaryPassword, confirmationOtp } : {}),
+    ...(demoMode ? { temporaryPassword: finalPassword, confirmationOtp } : {}),
   };
 }
 

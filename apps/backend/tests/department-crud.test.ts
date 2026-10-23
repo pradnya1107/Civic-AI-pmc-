@@ -213,5 +213,206 @@ describe("Department Management with Compulsory Fields & Admin Assignment", () =
     expect(typeof res.body.data.accessToken).toBe("string");
     expect(res.body.data.user.email).toBe("superadmin.deptcrud@civicai.local");
   });
+
+  it("8. Rejects department creation when new admin password violates complexity or mismatches confirmPassword", async () => {
+    // Length < 8
+    const shortRes = await request(app)
+      .post("/api/v1/departments")
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({
+        name: "Test Dept Short Pwd",
+        code: "SHORTP",
+        category: "Test",
+        officialEmail: "short@pmc.gov.in",
+        contactNumber: "+91 20 2550 1111",
+        newAdmin: {
+          fullName: "Admin Short",
+          email: "admin.short@civicai.local",
+          password: "Short@1",
+          confirmPassword: "Short@1",
+        },
+      });
+    expect(shortRes.status).toBe(400);
+
+    // Missing uppercase
+    const noUpperRes = await request(app)
+      .post("/api/v1/departments")
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({
+        name: "Test Dept No Upper",
+        code: "NOUPPER",
+        category: "Test",
+        officialEmail: "noupper@pmc.gov.in",
+        contactNumber: "+91 20 2550 1112",
+        newAdmin: {
+          fullName: "Admin NoUpper",
+          email: "admin.noupper@civicai.local",
+          password: "password@123",
+          confirmPassword: "password@123",
+        },
+      });
+    expect(noUpperRes.status).toBe(400);
+
+    // Missing symbol
+    const noSymbolRes = await request(app)
+      .post("/api/v1/departments")
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({
+        name: "Test Dept No Symbol",
+        code: "NOSYMBOL",
+        category: "Test",
+        officialEmail: "nosymbol@pmc.gov.in",
+        contactNumber: "+91 20 2550 1113",
+        newAdmin: {
+          fullName: "Admin NoSymbol",
+          email: "admin.nosymbol@civicai.local",
+          password: "Password123",
+          confirmPassword: "Password123",
+        },
+      });
+    expect(noSymbolRes.status).toBe(400);
+
+    // Mismatched confirmPassword
+    const mismatchRes = await request(app)
+      .post("/api/v1/departments")
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({
+        name: "Test Dept Mismatch",
+        code: "MISMATCH",
+        category: "Test",
+        officialEmail: "mismatch@pmc.gov.in",
+        contactNumber: "+91 20 2550 1114",
+        newAdmin: {
+          fullName: "Admin Mismatch",
+          email: "admin.mismatch@civicai.local",
+          password: "Password@123",
+          confirmPassword: "Password@999",
+        },
+      });
+    expect(mismatchRes.status).toBe(400);
+  });
+
+  it("9. Creates department with admin using password & confirmPassword, allowing direct sign-in", async () => {
+    const customPassword = "SecureDept@2026";
+    const res = await request(app)
+      .post("/api/v1/departments")
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({
+        name: "Electrical & Street Lighting",
+        code: "ELEC",
+        category: "Street Lighting",
+        officialEmail: "electrical@pmc.gov.in",
+        contactNumber: "+91 20 2550 4003",
+        newAdmin: {
+          fullName: "Sanjay Jadhav",
+          email: "sanjay.jadhav@civicai.local",
+          password: customPassword,
+          confirmPassword: customPassword,
+        },
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+
+    // Department admin can sign in with the configured password
+    const loginRes = await request(app)
+      .post("/api/v1/auth/login")
+      .send({
+        email: "sanjay.jadhav@civicai.local",
+        password: customPassword,
+      });
+
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.role).toBe("DEPARTMENT_ADMIN");
+  });
+
+  it("10. Changes department admin password requiring previous password, 2x new password, and rules", async () => {
+    const initialPassword = "InitialDept@2026";
+    await request(app)
+      .post("/api/v1/departments")
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({
+        name: "Gardens & Tree Authority",
+        code: "GARDEN",
+        category: "Tree Trimming",
+        officialEmail: "gardens@pmc.gov.in",
+        contactNumber: "+91 20 2550 4004",
+        newAdmin: {
+          fullName: "Pooja Patil",
+          email: "pooja.patil@civicai.local",
+          password: initialPassword,
+          confirmPassword: initialPassword,
+        },
+      });
+
+    const deptAdminToken = await loginUser("pooja.patil@civicai.local", initialPassword);
+
+    // Wrong previous password
+    const wrongPrevRes = await request(app)
+      .post("/api/v1/department-admin/change-password")
+      .set("Authorization", `Bearer ${deptAdminToken}`)
+      .send({
+        previousPassword: "WrongPassword@123",
+        newPassword: "NewSecret@2026",
+        confirmPassword: "NewSecret@2026",
+      });
+    expect(wrongPrevRes.status).toBe(400);
+
+    // New password missing symbol
+    const noSymbolRes = await request(app)
+      .post("/api/v1/department-admin/change-password")
+      .set("Authorization", `Bearer ${deptAdminToken}`)
+      .send({
+        previousPassword: initialPassword,
+        newPassword: "NewSecret2026",
+        confirmPassword: "NewSecret2026",
+      });
+    expect(noSymbolRes.status).toBe(400);
+
+    // Confirm password mismatch
+    const mismatchRes = await request(app)
+      .post("/api/v1/department-admin/change-password")
+      .set("Authorization", `Bearer ${deptAdminToken}`)
+      .send({
+        previousPassword: initialPassword,
+        newPassword: "NewSecret@2026",
+        confirmPassword: "DifferentSecret@2026",
+      });
+    expect(mismatchRes.status).toBe(400);
+
+    // Successful password change
+    const newPassword = "UpdatedSecure#2026";
+    const successRes = await request(app)
+      .post("/api/v1/department-admin/change-password")
+      .set("Authorization", `Bearer ${deptAdminToken}`)
+      .send({
+        previousPassword: initialPassword,
+        newPassword: newPassword,
+        confirmPassword: newPassword,
+      });
+
+    expect(successRes.status).toBe(200);
+    expect(successRes.body.success).toBe(true);
+
+    // Login with initial password now fails
+    const failedOldLogin = await request(app)
+      .post("/api/v1/auth/login")
+      .send({
+        email: "pooja.patil@civicai.local",
+        password: initialPassword,
+      });
+    expect(failedOldLogin.status).toBe(401);
+
+    // Login with new password succeeds
+    const successfulNewLogin = await request(app)
+      .post("/api/v1/auth/login")
+      .send({
+        email: "pooja.patil@civicai.local",
+        password: newPassword,
+      });
+    expect(successfulNewLogin.status).toBe(200);
+    expect(successfulNewLogin.body.role).toBe("DEPARTMENT_ADMIN");
+  });
 });
+
 

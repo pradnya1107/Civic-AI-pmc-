@@ -297,3 +297,53 @@ export async function refreshSessionToken(userId: string) {
 export const register = registerCitizen;
 export const login = loginCitizen;
 
+export async function changeUserPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword?: string
+) {
+  if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+    throw new AppError("New password and confirm password do not match.", 400, "PASSWORD_MISMATCH");
+  }
+
+  const user = await User.findById(userId).select("+passwordHash");
+  if (!user) {
+    throw new AppError("User not found.", 404, "USER_NOT_FOUND");
+  }
+
+  if (!user.passwordHash) {
+    throw new AppError("No password has been set for this account.", 400, "NO_PASSWORD_SET");
+  }
+
+  const isCurrentValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!isCurrentValid) {
+    throw new AppError("Previous password is incorrect.", 400, "INVALID_PREVIOUS_PASSWORD");
+  }
+
+  if (newPassword.length < 8) {
+    throw new AppError("New password must be at least 8 characters long.", 400, "INVALID_PASSWORD_LENGTH");
+  }
+
+  if (!/[A-Z]/.test(newPassword)) {
+    throw new AppError("New password must contain at least 1 uppercase letter.", 400, "INVALID_PASSWORD_UPPERCASE");
+  }
+
+  if (!/[^A-Za-z0-9]/.test(newPassword)) {
+    throw new AppError("New password must contain at least 1 specific symbol.", 400, "INVALID_PASSWORD_SYMBOL");
+  }
+
+  if (currentPassword === newPassword) {
+    throw new AppError("New password cannot be the same as your previous password.", 400, "SAME_PASSWORD");
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  await user.save();
+
+  return {
+    success: true,
+    message: "Password updated successfully.",
+  };
+}
+
