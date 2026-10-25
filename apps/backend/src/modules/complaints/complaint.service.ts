@@ -202,7 +202,9 @@ export async function listComplaints(
 
 export async function getComplaint(actor: RequestActor, id: string) {
   const objectId = requireObjectId(id);
-  const complaint = await Complaint.findById(objectId).lean();
+  const complaint = await Complaint.findById(objectId)
+    .populate("departmentId", "name code category officialEmail contactNumber slug description")
+    .lean();
   if (!complaint) {
     throw notFound();
   }
@@ -211,13 +213,21 @@ export async function getComplaint(actor: RequestActor, id: string) {
     if (complaint.citizenId.toString() !== actor.id) {
       throw notFound();
     }
+    // Omit sensitive internal staff notes from citizen view
+    if (complaint.internalNotes) {
+      delete (complaint as any).internalNotes;
+    }
   } else if (
     (actor.role === "ADMIN" || actor.role === "DEPARTMENT_ADMIN") &&
     actor.departmentId
   ) {
+    const complaintDeptId =
+      complaint.departmentId && typeof complaint.departmentId === "object" && "_id" in complaint.departmentId
+        ? (complaint.departmentId as any)._id.toString()
+        : complaint.departmentId?.toString();
     if (
-      !complaint.departmentId ||
-      complaint.departmentId.toString() !== actor.departmentId
+      !complaintDeptId ||
+      complaintDeptId !== actor.departmentId
     ) {
       throw new AppError(
         "You do not have permission to access complaints belonging to another department.",
@@ -430,7 +440,7 @@ export async function getHeatmapData(filterQuery: {
 
   const points = await Complaint.find(filter)
     .select(
-      "_id complaintNumber title category priority status location imageUrl resolutionImageUrl supportCount createdAt updatedAt slaDeadline aiAnalysis",
+      "_id complaintNumber title category priority status location imageUrl resolutionImageUrl supportCount createdAt updatedAt slaDeadline aiAnalysis citizenId",
     )
     .populate("departmentId", "name slug")
     .sort({ createdAt: -1 })

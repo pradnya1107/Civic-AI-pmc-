@@ -237,7 +237,7 @@ export const AdminDashboardPage = () => {
       {/* Header with Title and Overview */}
       <div className="admin-page-header">
         <div>
-          <h1 className="admin-page-title">Admin Complaint Dashboard</h1>
+          <h1 className="admin-page-title">Overview</h1>
           <p className="admin-page-subtitle">
             Central grievance management console. Review, assign departments, and track resolution lifecycles.
           </p>

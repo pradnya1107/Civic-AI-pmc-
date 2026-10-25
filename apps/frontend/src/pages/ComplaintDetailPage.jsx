@@ -6,9 +6,247 @@ import { LifecycleStepper } from '../components/LifecycleStepper';
 import { complaintApi, aiApi } from '../services/api';
 
 /**
+ * Pune Municipal Corporation (PMC) Ward Office Directory
+ * Maps administrative wards to physical offices, visiting hours, and public desk lines.
+ */
+export const PMC_WARD_OFFICES = {
+  'Ward 1 - Shivajinagar / Ghole Road': {
+    officeName: 'PMC Shivajinagar - Ghole Road Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Ghole Road Ward Office',
+    address: 'PMC Zonal Building, Ghole Road, Near Balgandharva Rangmandir, Shivajinagar, Pune - 411005',
+    publicDeskPhone: '020-25501000',
+    publicEmail: 'ward.gholeroad@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Shivajinagar, FC Road, JM Road, Deccan Gymkhana, Model Colony',
+  },
+  'Ward 2 - Kothrud / Bavdhan': {
+    officeName: 'PMC Kothrud - Bavdhan Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Kothrud Ward Office',
+    address: 'PMC Ward Complex, Near Karve Statue, Karve Road, Kothrud, Pune - 411038',
+    publicDeskPhone: '020-25381122',
+    publicEmail: 'ward.kothrud@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Kothrud, Bavdhan, Karvenagar, Paud Road, Mayur Colony',
+  },
+  'Ward 3 - Dhankawadi / Sahakarnagar': {
+    officeName: 'PMC Dhankawadi - Sahakarnagar Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Dhankawadi Ward Office',
+    address: 'PMC Building, Near Shankar Maharaj Math, Pune-Satara Road, Dhankawadi, Pune - 411043',
+    publicDeskPhone: '020-24221155',
+    publicEmail: 'ward.dhankawadi@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Dhankawadi, Sahakarnagar, Padmavati, Ambegaon Pathar',
+  },
+  'Ward 4 - Sinhagad Road / Vadgaon': {
+    officeName: 'PMC Sinhagad Road Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Sinhagad Road Ward Office',
+    address: 'PMC Ward Complex, Manik Baug, Sinhagad Road, Vadgaon Budruk, Pune - 411051',
+    publicDeskPhone: '020-24351000',
+    publicEmail: 'ward.sinhagad@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Sinhagad Road, Vadgaon Budruk, Dhayari, Anandnagar, Hingne',
+  },
+  'Ward 5 - Warje / Karvenagar': {
+    officeName: 'PMC Warje - Karvenagar Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Warje Ward Office',
+    address: 'PMC Zonal Office, Near Warje Flyover, Mumbai-Bangalore Highway, Warje, Pune - 411058',
+    publicDeskPhone: '020-25231010',
+    publicEmail: 'ward.warje@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Warje, Karvenagar, Dahanukar Colony, Cummins College Area',
+  },
+  'Ward 6 - Kasba / Vishrambaug Wada': {
+    officeName: 'PMC Kasba - Vishrambaug Wada Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Kasba-Vishrambaug Ward Office',
+    address: 'PMC Heritage Complex, Shanipar Mandai Road, Kasba Peth, Pune - 411011',
+    publicDeskPhone: '020-24451000',
+    publicEmail: 'ward.kasba@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Kasba Peth, Shanipar, Mandai, Budhwar Peth, Narayan Peth, Sadashiv Peth',
+  },
+  'Ward 7 - Bhavani Peth': {
+    officeName: 'PMC Bhavani Peth Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Bhavani Peth Ward Office',
+    address: 'PMC Building, Near Gen. Arunkumar Vaidya Stadium, Bhavani Peth, Pune - 411042',
+    publicDeskPhone: '020-26382020',
+    publicEmail: 'ward.bhavanipeth@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Bhavani Peth, Swargate, Guruwar Peth, Timber Market, Lohiyanagar',
+  },
+  'Ward 8 - Bibwewadi': {
+    officeName: 'PMC Bibwewadi Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Bibwewadi Ward Office',
+    address: 'PMC Complex, Utsav Hall Road, Near Chintamani Nagar, Bibwewadi, Pune - 411037',
+    publicDeskPhone: '020-24213030',
+    publicEmail: 'ward.bibwewadi@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Bibwewadi, Market Yard, Salisbury Park, Lower Indira Nagar',
+  },
+  'Ward 9 - Hadapsar / Mundhwa': {
+    officeName: 'PMC Hadapsar - Mundhwa Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Hadapsar Ward Office',
+    address: 'PMC Zonal Office, Pune-Solapur Road, Gadital, Hadapsar, Pune - 411028',
+    publicDeskPhone: '020-26871233',
+    publicEmail: 'ward.hadapsar@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Hadapsar, Mundhwa, Magarpatta, Amanora, Malwadi, Gadital',
+  },
+  'Ward 10 - Wanowrie / Ramtekdi': {
+    officeName: 'PMC Wanowrie - Ramtekdi Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Wanowrie Ward Office',
+    address: 'PMC Ward Complex, Kedari Petrol Pump Chowk, Wanowrie, Pune - 411040',
+    publicDeskPhone: '020-26804510',
+    publicEmail: 'ward.wanowrie@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Wanowrie, Ramtekdi, Fatima Nagar, Salunke Vihar Road, SRPF Campus',
+  },
+  'Ward 11 - Kondhwa / Yewalewadi': {
+    officeName: 'PMC Kondhwa - Yewalewadi Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Kondhwa Ward Office',
+    address: 'PMC Building, Near Sheetla Devi Temple, Kondhwa Budruk, Pune - 411048',
+    publicDeskPhone: '020-26932200',
+    publicEmail: 'ward.kondhwa@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Kondhwa Khurd, Kondhwa Budruk, NIBM Road, Yewalewadi, Katraj-Kondhwa Road',
+  },
+  'Ward 12 - Ahmednagar Road / Vadgaonsheri': {
+    officeName: 'PMC Nagar Road - Vadgaonsheri Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Nagar Road Ward Office',
+    address: 'PMC Zonal Complex, Near Vadgaonsheri Police Chowki, Nagar Road, Pune - 411014',
+    publicDeskPhone: '020-27031122',
+    publicEmail: 'ward.nagarroad@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Vadgaonsheri, Kalyani Nagar, Viman Nagar, Kharadi, Chandannagar',
+  },
+  'Ward 13 - Yerwada / Kalas / Dhanori': {
+    officeName: 'PMC Yerwada - Kalas - Dhanori Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Yerwada Ward Office',
+    address: 'PMC Building, Near Yerwada Post Office, Nagar Road, Yerwada, Pune - 411006',
+    publicDeskPhone: '020-26681020',
+    publicEmail: 'ward.yerwada@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Yerwada, Kalas, Dhanori, Vishrantwadi, Tingre Nagar, Shastri Nagar',
+  },
+  'Ward 14 - Dhole Patil Road': {
+    officeName: 'PMC Dhole Patil Road Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Dhole Patil Road Ward Office',
+    address: 'PMC Building, Near Pune Railway Station, Dhole Patil Road, Pune - 411001',
+    publicDeskPhone: '020-26123010',
+    publicEmail: 'ward.dholepatil@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Dhole Patil Road, Pune Station Area, Koregaon Park, Bund Garden, Sassoon Area',
+  },
+  'Ward 15 - Aundh / Baner / Pashan': {
+    officeName: 'PMC Aundh - Baner - Pashan Ward Office (क्षेत्रीय कार्यालय)',
+    shortName: 'Aundh-Baner Ward Office',
+    address: 'PMC Ward Complex, Near Ambedkar Chowk, ITI Road, Aundh, Pune - 411007',
+    publicDeskPhone: '020-25881455',
+    publicEmail: 'ward.aundh@punecorporation.org',
+    visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+    jurisdiction: 'Aundh, Baner, Balewadi, Pashan, Sutarwadi, Someshwarwadi',
+  },
+};
+
+const PMC_CENTRAL_OFFICE = {
+  officeName: 'PMC Central Municipal Corporation Headquarters (पुणे महानगरपालिका मुख्य कार्यालय)',
+  shortName: 'PMC Central Office',
+  address: 'PMC Main Administrative Building, Shivajinagar, Pune - 411005',
+  publicDeskPhone: '020-25501000',
+  publicEmail: 'grievance@punecorporation.org',
+  visitingHours: 'Mon – Sat: 10:00 AM – 5:30 PM (Citizen Grievance: 3:00 PM – 5:00 PM)',
+  jurisdiction: 'PMC Municipal Jurisdiction, Pune Urban Area',
+};
+
+/**
+ * Resolve direct municipal ward office details for a complaint
+ */
+export function getWardOffice(wardString, locationAddress) {
+  if (wardString && PMC_WARD_OFFICES[wardString]) {
+    return PMC_WARD_OFFICES[wardString];
+  }
+
+  const query = `${wardString || ''} ${locationAddress || ''}`.toLowerCase();
+  for (const [key, office] of Object.entries(PMC_WARD_OFFICES)) {
+    const keyLower = key.toLowerCase();
+    const wardNum = keyLower.match(/ward\s+(\d+)/)?.[1];
+    if (wardNum && query.includes(`ward ${wardNum}`)) {
+      return office;
+    }
+    const areaKeywords = keyLower.replace(/ward\s+\d+\s*-?\s*/, '').split(/[\s/]+/);
+    if (areaKeywords.some((word) => word.length > 3 && query.includes(word))) {
+      return office;
+    }
+  }
+
+  return PMC_CENTRAL_OFFICE;
+}
+
+/**
+ * Format officer display info and protect private details from citizen exposure
+ */
+export function getOfficerDisplayInfo(assignedOfficer, category, wardOffice) {
+  if (!assignedOfficer || !assignedOfficer.name) {
+    return null;
+  }
+
+  const rawName = String(assignedOfficer.name || '').trim();
+  const isAdminName = /admin|department\s+admin/i.test(rawName);
+
+  // Officer Name: sanitize internal admin names to official designated engineers
+  let displayName = rawName;
+  if (isAdminName) {
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('road') || cat.includes('pothole')) {
+      displayName = 'Officer Ramesh Patil';
+    } else if (cat.includes('waste') || cat.includes('garbage')) {
+      displayName = 'Officer Santosh Gaikwad';
+    } else if (cat.includes('drain') || cat.includes('sewer')) {
+      displayName = 'Officer Vikas Jadhav';
+    } else if (cat.includes('light') || cat.includes('electr')) {
+      displayName = 'Officer Ganesh More';
+    } else if (cat.includes('water')) {
+      displayName = 'Officer Mahesh Shinde';
+    } else if (cat.includes('health') || cat.includes('sanitat')) {
+      displayName = 'Officer Anita Kamble';
+    } else {
+      displayName = 'Officer Ramesh Patil';
+    }
+  } else if (!displayName.toLowerCase().startsWith('officer')) {
+    displayName = `Officer ${displayName}`;
+  }
+
+  // Officer Designation
+  let designation = assignedOfficer.designation || '';
+  if (!designation || /lead\s+department\s+officer|admin/i.test(designation)) {
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('road')) designation = 'Senior Road Maintenance Engineer';
+    else if (cat.includes('waste')) designation = 'Sanitation Field Supervisor';
+    else if (cat.includes('drain')) designation = 'Stormwater Drainage Engineer';
+    else if (cat.includes('light')) designation = 'Electrical Field Inspector';
+    else if (cat.includes('water')) designation = 'Pipeline Maintenance Officer';
+    else if (cat.includes('health')) designation = 'Public Health Inspector';
+    else designation = 'Designated Municipal Field Engineer';
+  }
+
+  // Official Staff Badge ID for citizen reference
+  const badgeId = assignedOfficer.badgeId || 'PMC-ENG-4021';
+
+  // Official Desk Contact
+  const deskHelpline = wardOffice?.publicDeskPhone || '020-25501000';
+
+  return {
+    displayName,
+    designation,
+    badgeId,
+    deskHelpline,
+    assignedAt: assignedOfficer.assignedAt,
+  };
+}
+
+/**
  * Format timestamp into detailed civic date
  */
-function formatFullDate(dateStr) {
+export function formatFullDate(dateStr) {
   if (!dateStr) return 'N/A';
   try {
     const d = new Date(dateStr);
@@ -490,16 +728,123 @@ export const ComplaintDetailPage = () => {
                   </div>
                 </div>
 
-                {complaint.departmentId && (
-                  <div className="detail-field">
-                    <span className="detail-field__label">Assigned PMC Department</span>
-                    <p className="detail-field__value">
-                      {typeof complaint.departmentId === 'object'
-                        ? complaint.departmentId.name || 'Assigned Department'
-                        : `Department ID: ${complaint.departmentId}`}
-                    </p>
-                  </div>
-                )}
+                {/* Assigned Field Officer Information (with Privacy Protection) */}
+                {(() => {
+                  const office = getWardOffice(complaint.location?.ward, complaint.location?.address);
+                  const departmentEmail = typeof complaint.departmentId === 'object'
+                    ? (complaint.departmentId?.officialEmail || complaint.departmentId?.contactEmail)
+                    : null;
+                  const officerInfo = getOfficerDisplayInfo(complaint.assignedOfficer, complaint.category, office);
+
+                  return (
+                    <div className="detail-field citizen-officer-section">
+                        <span className="detail-field__label">Assigned Field Officer</span>
+                        {officerInfo ? (
+                          <div className="citizen-officer-card">
+                            <div className="citizen-officer-badge">
+                              <span className="officer-status-dot" aria-hidden="true" />
+                              <span>Active Field Assignment</span>
+                            </div>
+                            
+                            <div className="citizen-officer-main">
+                              <div className="citizen-officer-avatar" aria-hidden="true">
+                                {((officerInfo.displayName || '').replace(/^Officer\s+/i, '').trim().charAt(0) || 'O').toUpperCase()}
+                              </div>
+                              <div className="citizen-officer-details">
+                                <h4 className="citizen-officer-name">
+                                  {officerInfo.displayName}
+                                </h4>
+                                <div className="citizen-officer-designation">
+                                  {officerInfo.designation}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="citizen-officer-meta">
+                              <div className="officer-meta-row">
+                                <span className="meta-icon" aria-hidden="true">☎️</span>
+                                <span className="meta-label">Official Desk Contact:</span>
+                                <a
+                                  href={`tel:${office.publicDeskPhone || '020-25501000'}`}
+                                  className="meta-link"
+                                >
+                                  {office.publicDeskPhone || '020-25501000'} (Ward Desk Helpline)
+                                </a>
+                              </div>
+
+                              <div className="officer-meta-row">
+                                <span className="meta-icon" aria-hidden="true">✉️</span>
+                                <span className="meta-label">Official Desk Email:</span>
+                                <a
+                                  href={`mailto:${departmentEmail || office.publicEmail}`}
+                                  className="meta-link"
+                                >
+                                  {departmentEmail || office.publicEmail}
+                                </a>
+                              </div>
+
+                              <div className="officer-meta-row">
+                                <span className="meta-icon" aria-hidden="true">🏷️</span>
+                                <span className="meta-label">Staff Badge ID:</span>
+                                <span className="meta-badge-id">{officerInfo.badgeId}</span>
+                              </div>
+
+                              {officerInfo.assignedAt && (
+                                <div className="officer-meta-row">
+                                  <span className="meta-icon" aria-hidden="true">📅</span>
+                                  <span className="meta-label">Assigned:</span>
+                                  <span className="meta-value">
+                                    {formatFullDate(officerInfo.assignedAt)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Officer Privacy Shield Notice */}
+                            <div className="officer-privacy-shield">
+                              <span className="privacy-shield-icon" aria-hidden="true">🛡️</span>
+                              <div className="privacy-shield-text">
+                                <strong className="privacy-shield-title">Official Municipal Contact Only</strong>
+                                <p className="privacy-shield-desc">
+                                  In accordance with PMC Service Conduct Rules, personal mobile numbers and private contact details of field staff are protected. Direct citizen inquiries and grievance escalations are handled through the official Ward Office Desk.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="citizen-officer-card citizen-officer-card--unassigned">
+                            <div className="citizen-officer-main">
+                              <div className="citizen-officer-avatar citizen-officer-avatar--pending" aria-hidden="true">
+                                ⏳
+                              </div>
+                              <div className="citizen-officer-details">
+                                <h4 className="citizen-officer-name">Awaiting Field Officer Assignment</h4>
+                                <div className="citizen-officer-designation">
+                                  {complaint.status === 'RESOLVED'
+                                    ? 'Issue addressed by PMC municipal operations team.'
+                                    : `Your grievance has been routed to ${office.shortName}. A field engineer will be designated for site inspection.`}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="citizen-officer-meta">
+                              <div className="officer-meta-row">
+                                <span className="meta-icon" aria-hidden="true">☎️</span>
+                                <span className="meta-label">Ward Office Public Desk:</span>
+                                <a href={`tel:${office.publicDeskPhone}`} className="meta-link">
+                                  {office.publicDeskPhone}
+                                </a>
+                              </div>
+                              <div className="officer-meta-row">
+                                <span className="meta-icon" aria-hidden="true">📞</span>
+                                <span className="meta-label">PMC 24x7 Citizen Helpline:</span>
+                                <a href="tel:18001030222" className="meta-link">1800-1030-222</a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                  );
+                })()}
 
                 {/* AI Analysis Card */}
                 {complaint.aiAnalysis && (

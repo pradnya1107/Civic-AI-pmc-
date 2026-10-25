@@ -104,8 +104,6 @@ export const AdminCitizensPage = () => {
             <thead>
               <tr>
                 <th scope="col">Citizen Name</th>
-                <th scope="col">Registered Email</th>
-                <th scope="col">Phone Number</th>
                 <th scope="col">Email Verified</th>
                 <th scope="col">Account Status</th>
                 <th scope="col">Joined Date</th>
@@ -132,8 +130,6 @@ export const AdminCitizensPage = () => {
                         <span className="font-semibold">{c.fullName}</span>
                       </div>
                     </td>
-                    <td className="font-mono text-sm text-muted">{c.email}</td>
-                    <td className="font-mono text-sm">{c.phoneNumber || 'N/A'}</td>
                     <td>
                       <span className={`dept-status-badge ${c.emailVerified ? 'active' : 'inactive'}`}>
                         {c.emailVerified ? 'Verified' : 'Pending OTP'}

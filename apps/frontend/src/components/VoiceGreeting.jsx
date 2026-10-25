@@ -7,23 +7,6 @@ export const VoiceGreeting = () => {
   const [hasVoiceSupport, setHasVoiceSupport] = useState(false);
   const hasAutoPlayedRef = useRef(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      setHasVoiceSupport(true);
-
-      // Check if already auto-played in this session
-      const alreadyPlayed = sessionStorage.getItem('civicai_welcome_voice_played');
-      if (!alreadyPlayed && !hasAutoPlayedRef.current) {
-        hasAutoPlayedRef.current = true;
-        // Small delay to allow page render
-        const timer = setTimeout(() => {
-          playGreeting(false);
-        }, 800);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, []);
-
   const getGreetingText = () => {
     if (language === 'mr') {
       return 'सिव्हिक एआय मध्ये आपले स्वागत आहे. आपले शहर, आपला आवाज.';
@@ -35,13 +18,25 @@ export const VoiceGreeting = () => {
   };
 
   const playGreeting = (manual = true) => {
-    if (!('speechSynthesis' in window)) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
     try {
       window.speechSynthesis.cancel();
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+
+      const UtteranceClass =
+        (typeof window !== 'undefined' && window.SpeechSynthesisUtterance) ||
+        (typeof SpeechSynthesisUtterance !== 'undefined' ? SpeechSynthesisUtterance : null) ||
+        class FallbackUtterance {
+          constructor(t) {
+            this.text = t;
+          }
+        };
 
       const text = getGreetingText();
-      const utterance = new SpeechSynthesisUtterance(text);
+      const utterance = new UtteranceClass(text);
 
       utterance.rate = 0.95;
       utterance.pitch = 1.0;
@@ -56,9 +51,21 @@ export const VoiceGreeting = () => {
         utterance.lang = 'en-US';
       }
 
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        const prefix = utterance.lang.split('-')[0];
+        const matchVoice =
+          voices.find((v) => v.lang === utterance.lang) ||
+          voices.find((v) => v.lang.startsWith(prefix));
+        if (matchVoice) {
+          utterance.voice = matchVoice;
+        }
+      }
+
       utterance.onstart = () => {
         setIsPlaying(true);
         sessionStorage.setItem('civicai_welcome_voice_played', 'true');
+        sessionStorage.removeItem('civicai_welcome_voice_auto');
       };
 
       utterance.onend = () => {
@@ -70,14 +77,52 @@ export const VoiceGreeting = () => {
       };
 
       window.speechSynthesis.speak(utterance);
-    } catch (e) {
+
+      // Guard against Chromium paused state
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    } catch {
       setIsPlaying(false);
     }
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    setHasVoiceSupport(true);
+
+    const isAutoPending = sessionStorage.getItem('civicai_welcome_voice_auto') === 'true';
+    const alreadyPlayed = sessionStorage.getItem('civicai_welcome_voice_played') === 'true';
+
+    // Auto-play when citizen logs in or on first visit to dashboard
+    if ((isAutoPending || !alreadyPlayed) && !hasAutoPlayedRef.current) {
+      hasAutoPlayedRef.current = true;
+      sessionStorage.removeItem('civicai_welcome_voice_auto');
+
+      playGreeting(false);
+
+      // Handle browser autoplay policy: if browser prevented initial autoplay,
+      // trigger seamlessly on first user interaction on the dashboard
+      const handleFirstInteraction = () => {
+        const played = sessionStorage.getItem('civicai_welcome_voice_played') === 'true';
+        if (!played) {
+          playGreeting(false);
+        }
+      };
+
+      window.addEventListener('click', handleFirstInteraction, { once: true });
+      window.addEventListener('keydown', handleFirstInteraction, { once: true });
+
+      return () => {
+        window.removeEventListener('click', handleFirstInteraction);
+        window.removeEventListener('keydown', handleFirstInteraction);
+      };
+    }
+  }, [language]);
+
   const handleToggle = () => {
     if (isPlaying) {
-      if ('speechSynthesis' in window) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
       setIsPlaying(false);

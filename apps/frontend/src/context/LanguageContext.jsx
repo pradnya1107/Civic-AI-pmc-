@@ -20,6 +20,9 @@ const translations = {
     navNotifications: 'Notifications',
     navHelpSupport: 'Help & Support',
     navProfile: 'Profile',
+    navSettings: 'Settings',
+    portalSettings: 'Account Settings & Security',
+    resetPassword: 'Reset Password',
     navSignOut: 'Sign Out',
     signOutLabel: 'Sign out of Citizen Portal',
 
@@ -112,6 +115,9 @@ const translations = {
     navNotifications: 'सूचना',
     navHelpSupport: 'मदत व सहाय्य',
     navProfile: 'माझी माहिती',
+    navSettings: 'सेटिंग्ज',
+    portalSettings: 'खाते सेटिंग्ज आणि सुरक्षा',
+    resetPassword: 'पासवर्ड रीसेट करा',
     navSignOut: 'बाहेर पडा',
     signOutLabel: 'नागरिक पोर्टलवरून बाहेर पडा',
 

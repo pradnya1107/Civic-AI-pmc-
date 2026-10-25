@@ -244,4 +244,74 @@ describe('DepartmentsPage', () => {
       );
     });
   });
+
+  it('allows setting and validating password when assigning an existing administrator', async () => {
+    const user = userEvent.setup();
+    departmentApi.getDepartments.mockResolvedValue({
+      success: true,
+      data: { departments: [] },
+    });
+    departmentApi.getAdminCandidates.mockResolvedValue({
+      success: true,
+      data: {
+        candidates: [
+          { id: 'adm-5', fullName: 'Anil Deshmukh', email: 'anil@pmc.gov.in', role: 'DEPARTMENT_ADMIN' },
+        ],
+      },
+    });
+    departmentApi.createDepartment.mockResolvedValueOnce({
+      success: true,
+      data: { id: 'dept-5', name: 'Roads & Bridges', code: 'ROADS', isActive: true },
+    });
+
+    render(
+      <BrowserRouter>
+        <DepartmentsPage />
+      </BrowserRouter>,
+    );
+
+    const createBtn = document.getElementById('btn-create-department');
+    await user.click(createBtn);
+
+    // Basic department details
+    await user.type(screen.getByLabelText(/Department Name/i), 'Roads & Bridges');
+    const codeInput = screen.getByLabelText(/Department Code/i);
+    await user.clear(codeInput);
+    await user.type(codeInput, 'ROADS');
+    await user.selectOptions(screen.getByLabelText(/Department Category/i), 'Roads & Potholes');
+    await user.type(screen.getByLabelText(/Official Email/i), 'roads@pmc.gov.in');
+    await user.type(screen.getByLabelText(/Official Contact Number/i), '+91 20 2550 4444');
+
+    // Switch to Existing User mode
+    const selectExistingBtn = screen.getByRole('button', { name: /Select Existing User/i });
+    await user.click(selectExistingBtn);
+    const adminSelect = document.getElementById('dept-create-admin-id');
+    await user.selectOptions(adminSelect, 'adm-5');
+
+    // Check that existing admin password options are rendered
+    const existingPwdInput = document.getElementById('existing-admin-password');
+    const existingConfirmPwdInput = document.getElementById('existing-admin-confirm-password');
+    expect(existingPwdInput).toBeInTheDocument();
+    expect(existingConfirmPwdInput).toBeInTheDocument();
+
+    // Fill valid password and confirm password
+    await user.type(existingPwdInput, 'ExistingAdmin@2026');
+    await user.type(existingConfirmPwdInput, 'ExistingAdmin@2026');
+
+    const submitBtn = document.getElementById('submit-create-department');
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(departmentApi.createDepartment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Roads & Bridges',
+          code: 'ROADS',
+          adminId: 'adm-5',
+          adminPassword: 'ExistingAdmin@2026',
+          adminConfirmPassword: 'ExistingAdmin@2026',
+        }),
+      );
+    });
+  });
 });
+

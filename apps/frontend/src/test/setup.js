@@ -40,10 +40,25 @@ if (typeof window !== 'undefined') {
   });
 }
 
+const sessionStorageMock = new LocalStorageMock();
+Object.defineProperty(globalThis, 'sessionStorage', {
+  value: sessionStorageMock,
+  writable: true,
+  configurable: true,
+});
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'sessionStorage', {
+    value: sessionStorageMock,
+    writable: true,
+    configurable: true,
+  });
+}
+
 // Automatically clean up after each test
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  sessionStorage.clear();
 });
 
 // Polyfill window.matchMedia if not available in jsdom

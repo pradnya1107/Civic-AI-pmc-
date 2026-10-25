@@ -17,6 +17,7 @@ import { ComplaintFormPage } from './pages/ComplaintFormPage';
 import { ComplaintListPage } from './pages/ComplaintListPage';
 import { ComplaintDetailPage } from './pages/ComplaintDetailPage';
 import { HeatmapPage } from './pages/HeatmapPage';
+import { CitizenSettingsPage } from './pages/CitizenSettingsPage';
 
 // Super Admin Components & Pages
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -159,6 +160,14 @@ export const App = () => {
                     <ErrorBoundary>
                       <HeatmapPage />
                     </ErrorBoundary>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <CitizenSettingsPage />
                   </ProtectedRoute>
                 }
               />

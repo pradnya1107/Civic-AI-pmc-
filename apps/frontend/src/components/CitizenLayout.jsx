@@ -26,6 +26,7 @@ export const CitizenLayout = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [profileInitialTab, setProfileInitialTab] = useState('profile');
   const [internalNotifOpen, setInternalNotifOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
@@ -63,10 +64,16 @@ export const CitizenLayout = ({
     if (externalCloseNotif) externalCloseNotif();
   };
 
+  const handleOpenProfile = (tab = 'profile') => {
+    setProfileInitialTab(tab);
+    setProfileOpen(true);
+  };
+
   const contextValue = {
     openNotifications: handleOpenNotifications,
     openHelp: () => setHelpOpen(true),
-    openProfile: () => setProfileOpen(true),
+    openProfile: handleOpenProfile,
+    openSettings: handleOpenProfile,
     openSidebar: () => setSidebarOpen(true),
     unreadCount: effectiveUnread,
   };
@@ -86,7 +93,7 @@ export const CitizenLayout = ({
           <CitizenTopNav
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             onOpenHelp={() => setHelpOpen(true)}
-            onOpenProfile={() => setProfileOpen(true)}
+            onOpenProfile={handleOpenProfile}
             onOpenNotifications={handleOpenNotifications}
             unreadCount={effectiveUnread}
           />
@@ -114,6 +121,7 @@ export const CitizenLayout = ({
         <ProfileModal
           isOpen={profileOpen}
           onClose={() => setProfileOpen(false)}
+          initialTab={profileInitialTab}
         />
       </div>
     </CitizenPortalContext.Provider>

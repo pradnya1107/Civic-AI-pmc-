@@ -55,7 +55,7 @@ export const AdminTopNav = ({ onOpenMobile }) => {
   const getBreadcrumbs = () => {
     const path = location.pathname;
     if (path === '/admin' || path === '/dashboard') {
-      return [{ label: 'Municipal Administration', to: '/admin' }, { label: 'Control Center' }];
+      return [{ label: 'Municipal Administration', to: '/admin' }, { label: 'Overview' }];
     }
     if (path.startsWith('/admin/complaints')) {
       return [{ label: 'Administration', to: '/admin' }, { label: 'Complaints Directory' }];

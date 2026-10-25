@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 import { Types } from "mongoose";
 import { Department } from "./department.model";
 import { Complaint } from "../complaints/complaint.model";
@@ -12,6 +13,8 @@ export interface CreateDepartmentInput {
   officialEmail?: string;
   contactNumber?: string;
   adminId?: string;
+  adminPassword?: string;
+  adminConfirmPassword?: string;
   newAdmin?: {
     fullName: string;
     email: string;
@@ -216,6 +219,32 @@ export async function createDepartment(input: CreateDepartmentInput) {
     adminUser.departmentId = dept._id;
     adminUser.role = "DEPARTMENT_ADMIN";
     adminUser.accountStatus = "ACTIVE";
+
+    if (input.adminPassword) {
+      if (input.adminConfirmPassword !== undefined && input.adminPassword !== input.adminConfirmPassword) {
+        throw new AppError("Password and confirm password do not match.", 400, "PASSWORD_MISMATCH");
+      }
+      if (input.adminPassword.length < 8) {
+        throw new AppError("Password must be at least 8 characters long.", 400, "INVALID_PASSWORD_LENGTH");
+      }
+      if (!/[A-Z]/.test(input.adminPassword)) {
+        throw new AppError("Password must contain at least 1 uppercase letter.", 400, "INVALID_PASSWORD_UPPERCASE");
+      }
+      if (!/[^A-Za-z0-9]/.test(input.adminPassword)) {
+        throw new AppError("Password must contain at least 1 specific symbol.", 400, "INVALID_PASSWORD_SYMBOL");
+      }
+      adminUser.passwordHash = await bcrypt.hash(input.adminPassword, 12);
+
+      createdAdminNotice = {
+        admin: {
+          id: adminUser._id.toString(),
+          fullName: adminUser.fullName,
+          email: adminUser.email,
+        },
+        temporaryPassword: input.adminPassword,
+      };
+    }
+
     await adminUser.save();
 
     dept.adminId = adminUser._id;

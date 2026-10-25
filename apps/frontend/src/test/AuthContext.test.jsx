@@ -109,7 +109,9 @@ describe('AuthContext and Dashboard Integration', () => {
     expect(await screen.findByRole('heading', { name: /Welcome, Anita Sharma!/i })).toBeInTheDocument();
     expect(screen.getByText('anita@example.com')).toBeInTheDocument();
 
-    // Click Sign Out button
+    // Open user profile dropdown and click Sign Out button
+    const profileTrigger = screen.getByRole('button', { name: /User profile/i });
+    await user.click(profileTrigger);
     const logoutBtn = screen.getByRole('button', { name: /Sign out of Citizen Portal/i });
     await user.click(logoutBtn);
 

@@ -2,39 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CitizenLayout } from '../components/CitizenLayout';
 import { complaintApi, aiApi } from '../services/api';
-
-export const PMC_CATEGORIES = [
-  { value: '', label: 'Select a Category *', disabled: true },
-  { value: 'Roads & Potholes', label: 'Roads & Potholes (खड्डे आणि रस्ते)' },
-  { value: 'Water Supply', label: 'Water Supply (पाणी पुरवठा)' },
-  { value: 'Drainage & Sewerage', label: 'Drainage & Sewerage (ड्रेनेज आणि सांडपाणी)' },
-  { value: 'Solid Waste & Garbage', label: 'Solid Waste & Garbage (कचरा व्यवस्थापन)' },
-  { value: 'Street Lighting & Electrical', label: 'Street Lighting & Electrical (पथदिवे)' },
-  { value: 'Health & Sanitation', label: 'Health & Sanitation (आरोग्य आणि स्वच्छता)' },
-  { value: 'Garden & Tree Trimming', label: 'Garden & Tree Trimming (उद्यान आणि झाडे)' },
-  { value: 'Encroachment', label: 'Encroachment (अतिक्रमण)' },
-  { value: 'Traffic & Signage', label: 'Traffic & Signage (वाहतूक आणि फलक)' },
-  { value: 'Other Civic Grievance', label: 'Other Civic Grievance (इतर नागरी तक्रार)' },
-];
-
-export const PMC_WARDS = [
-  { value: '', label: 'Select PMC Ward (Optional)' },
-  { value: 'Ward 1 - Shivajinagar / Ghole Road', label: 'Ward 1 - Shivajinagar / Ghole Road' },
-  { value: 'Ward 2 - Kothrud / Bavdhan', label: 'Ward 2 - Kothrud / Bavdhan' },
-  { value: 'Ward 3 - Dhankawadi / Sahakarnagar', label: 'Ward 3 - Dhankawadi / Sahakarnagar' },
-  { value: 'Ward 4 - Sinhagad Road / Vadgaon', label: 'Ward 4 - Sinhagad Road / Vadgaon' },
-  { value: 'Ward 5 - Warje / Karvenagar', label: 'Ward 5 - Warje / Karvenagar' },
-  { value: 'Ward 6 - Kasba / Vishrambaug Wada', label: 'Ward 6 - Kasba / Vishrambaug Wada' },
-  { value: 'Ward 7 - Bhavani Peth', label: 'Ward 7 - Bhavani Peth' },
-  { value: 'Ward 8 - Bibwewadi', label: 'Ward 8 - Bibwewadi' },
-  { value: 'Ward 9 - Hadapsar / Mundhwa', label: 'Ward 9 - Hadapsar / Mundhwa' },
-  { value: 'Ward 10 - Wanowrie / Ramtekdi', label: 'Ward 10 - Wanowrie / Ramtekdi' },
-  { value: 'Ward 11 - Kondhwa / Yewalewadi', label: 'Ward 11 - Kondhwa / Yewalewadi' },
-  { value: 'Ward 12 - Ahmednagar Road / Vadgaonsheri', label: 'Ward 12 - Ahmednagar Road / Vadgaonsheri' },
-  { value: 'Ward 13 - Yerwada / Kalas / Dhanori', label: 'Ward 13 - Yerwada / Kalas / Dhanori' },
-  { value: 'Ward 14 - Dhole Patil Road', label: 'Ward 14 - Dhole Patil Road' },
-  { value: 'Ward 15 - Aundh / Baner / Pashan', label: 'Ward 15 - Aundh / Baner / Pashan' },
-];
+import { PMC_CATEGORIES, PMC_WARDS } from '../constants/pmcData';
+export { PMC_CATEGORIES, PMC_WARDS };
 
 // Sample civic images for quick demo selection
 const DEMO_PRESETS = [

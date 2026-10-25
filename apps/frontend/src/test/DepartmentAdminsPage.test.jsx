@@ -85,7 +85,7 @@ describe('DepartmentAdminsPage', () => {
       </BrowserRouter>,
     );
 
-    const addBtn = screen.getByRole('button', { name: /\+ Add Department Admin/i });
+    const addBtn = screen.getByRole('button', { name: /Add Department Admin/i });
     await user.click(addBtn);
 
     expect(screen.getByRole('heading', { name: /Add Department Administrator/i })).toBeInTheDocument();

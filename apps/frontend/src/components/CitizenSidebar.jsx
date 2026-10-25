@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -7,18 +7,8 @@ export const CitizenSidebar = ({
   isOpen,
   onClose,
 }) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login', { replace: true });
-    } catch {
-      navigate('/login', { replace: true });
-    }
-  };
 
   const displayName = user?.name || user?.fullName || 'Citizen';
   const displayEmail = user?.email || 'N/A';
@@ -116,35 +106,38 @@ export const CitizenSidebar = ({
             <span className="sidebar-link-text">{t('navExploreMap', 'Explore Map')}</span>
           </NavLink>
 
+          <NavLink
+            to="/settings"
+            className={({ isActive }) => `sidebar-link ${isActive ? 'sidebar-link--active' : ''}`}
+            onClick={onClose}
+          >
+            <span className="sidebar-link-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </span>
+            <span className="sidebar-link-text">{t('navSettings', 'Settings')}</span>
+          </NavLink>
+
         </nav>
 
-        {/* Sidebar Footer: User Card, Sign Out */}
+        {/* Sidebar Footer: User Card */}
         <div className="sidebar-footer">
-
           {/* User Mini Profile */}
-          <div className="sidebar-user-card" aria-label={`Logged in as ${displayName}`}>
+          <Link
+            to="/settings"
+            className="sidebar-user-card"
+            aria-label={`Logged in as ${displayName}. Open Settings & Security`}
+            onClick={onClose}
+            style={{ textDecoration: 'none' }}
+          >
             <div className="sidebar-user-avatar" aria-hidden="true">{initial}</div>
             <div className="sidebar-user-info">
               <div className="sidebar-user-name">{displayName}</div>
               <div className="sidebar-user-email">{displayEmail}</div>
             </div>
-          </div>
-
-          {/* Sign Out Button */}
-          <button
-            type="button"
-            className="btn btn-outline btn-sm sidebar-logout-btn"
-            onClick={handleLogout}
-            aria-label="Sign out of Citizen Portal"
-            id="logout-button"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>{t('navSignOut', 'Sign Out')}</span>
-          </button>
+          </Link>
         </div>
       </aside>
     </>

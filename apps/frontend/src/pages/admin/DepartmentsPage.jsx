@@ -42,6 +42,8 @@ export const DepartmentsPage = () => {
     contactNumber: '',
     adminMode: 'NEW', // 'NEW' or 'EXISTING'
     adminId: '',
+    existingAdminPassword: '',
+    existingAdminConfirmPassword: '',
     newAdminName: '',
     newAdminEmail: '',
     newAdminPassword: '',
@@ -50,6 +52,8 @@ export const DepartmentsPage = () => {
   });
   const [showNewAdminPassword, setShowNewAdminPassword] = useState(false);
   const [showNewAdminConfirmPassword, setShowNewAdminConfirmPassword] = useState(false);
+  const [showExistingAdminPassword, setShowExistingAdminPassword] = useState(false);
+  const [showExistingAdminConfirmPassword, setShowExistingAdminConfirmPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -109,6 +113,8 @@ export const DepartmentsPage = () => {
       contactNumber: '',
       adminMode: 'NEW',
       adminId: adminCandidates[0]?.id || '',
+      existingAdminPassword: '',
+      existingAdminConfirmPassword: '',
       newAdminName: '',
       newAdminEmail: '',
       newAdminPassword: '',
@@ -117,6 +123,8 @@ export const DepartmentsPage = () => {
     });
     setShowNewAdminPassword(false);
     setShowNewAdminConfirmPassword(false);
+    setShowExistingAdminPassword(false);
+    setShowExistingAdminConfirmPassword(false);
     setFormErrors({});
     setIsCreateOpen(true);
     fetchAdminCandidates();
@@ -202,6 +210,23 @@ export const DepartmentsPage = () => {
       if (!formData.adminId) {
         errors.adminId = 'Please select an administrator for this department.';
       }
+      if (formData.existingAdminPassword) {
+        if (formData.existingAdminPassword.length < 8) {
+          errors.existingAdminPassword = 'Password must be at least 8 characters long.';
+        } else if (!/[A-Z]/.test(formData.existingAdminPassword)) {
+          errors.existingAdminPassword = 'Password must contain at least 1 uppercase letter.';
+        } else if (!/[^A-Za-z0-9]/.test(formData.existingAdminPassword)) {
+          errors.existingAdminPassword = 'Password must contain at least 1 specific symbol (e.g. !@#$%^&*).';
+        }
+
+        if (!formData.existingAdminConfirmPassword) {
+          errors.existingAdminConfirmPassword = 'Confirm password is required.';
+        } else if (formData.existingAdminPassword !== formData.existingAdminConfirmPassword) {
+          errors.existingAdminConfirmPassword = 'Passwords do not match.';
+        }
+      } else if (formData.existingAdminConfirmPassword) {
+        errors.existingAdminPassword = 'Password is required when confirming password.';
+      }
     } else {
       if (!formData.newAdminName?.trim()) {
         errors.newAdminName = 'Administrator name is required.';
@@ -277,6 +302,10 @@ export const DepartmentsPage = () => {
 
       if (formData.adminMode === 'EXISTING') {
         payload.adminId = formData.adminId;
+        if (formData.existingAdminPassword) {
+          payload.adminPassword = formData.existingAdminPassword;
+          payload.adminConfirmPassword = formData.existingAdminConfirmPassword;
+        }
       } else {
         payload.newAdmin = {
           fullName: formData.newAdminName.trim(),
@@ -291,11 +320,12 @@ export const DepartmentsPage = () => {
       setIsCreateOpen(false);
 
       if (resData?.createdAdminNotice) {
+        const candidateObj = adminCandidates.find((c) => (c.id || c._id) === formData.adminId);
         setCreatedAdminNotice({
-          fullName: resData.createdAdminNotice.admin?.fullName || formData.newAdminName,
-          email: resData.createdAdminNotice.admin?.email || formData.newAdminEmail,
+          fullName: resData.createdAdminNotice.admin?.fullName || (formData.adminMode === 'EXISTING' ? candidateObj?.fullName : formData.newAdminName),
+          email: resData.createdAdminNotice.admin?.email || (formData.adminMode === 'EXISTING' ? candidateObj?.email : formData.newAdminEmail),
           departmentName: formData.name.trim(),
-          temporaryPassword: resData.createdAdminNotice.temporaryPassword || formData.newAdminPassword,
+          temporaryPassword: resData.createdAdminNotice.temporaryPassword || formData.existingAdminPassword || formData.newAdminPassword,
           confirmationOtp: resData.createdAdminNotice.confirmationOtp,
         });
       } else {
@@ -754,27 +784,171 @@ export const DepartmentsPage = () => {
                   </div>
 
                   {formData.adminMode === 'EXISTING' ? (
-                    <div className="mt-2">
-                      <select
-                        id="dept-create-admin-id"
-                        className={`form-select ${formErrors.adminId ? 'input-error' : ''}`}
-                        value={formData.adminId}
-                        onChange={(e) => setFormData({ ...formData, adminId: e.target.value })}
-                        disabled={isSubmitting}
-                      >
-                        <option value="">-- Choose an existing administrator / user --</option>
-                        {adminCandidates.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.fullName} ({c.email}) — [{c.role === 'DEPARTMENT_ADMIN' ? 'Dept Admin' : c.role}] {c.department ? `(Assigned: ${c.department.code || c.department.name})` : '(Unassigned)'}
-                          </option>
-                        ))}
-                      </select>
-                      {formErrors.adminId && <span className="field-error-text">{formErrors.adminId}</span>}
-                      {adminCandidates.length === 0 && (
-                        <p className="text-xs text-muted mt-1">
-                          No existing admins found. Switch to "Create New Administrator" to provision one immediately.
-                        </p>
-                      )}
+                    <div className="new-admin-inputs-box mt-2">
+                      <div className="form-group mb-0">
+                        <label htmlFor="dept-create-admin-id" className="form-sublabel">
+                          Select Registered User / Admin <span className="required-star">*</span>
+                        </label>
+                        <select
+                          id="dept-create-admin-id"
+                          className={`form-select ${formErrors.adminId ? 'input-error' : ''}`}
+                          value={formData.adminId}
+                          onChange={(e) => setFormData({ ...formData, adminId: e.target.value })}
+                          disabled={isSubmitting}
+                        >
+                          <option value="">-- Choose an existing administrator / user --</option>
+                          {adminCandidates.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.fullName} ({c.email}) — [{c.role === 'DEPARTMENT_ADMIN' ? 'Dept Admin' : c.role}] {c.department ? `(Assigned: ${c.department.code || c.department.name})` : '(Unassigned)'}
+                            </option>
+                          ))}
+                        </select>
+                        {formErrors.adminId && <span className="field-error-text">{formErrors.adminId}</span>}
+                        {adminCandidates.length === 0 && (
+                          <p className="text-xs text-muted mt-1">
+                            No existing admins found. Switch to "Create New Administrator" to provision one immediately.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Password & Confirm Password Inputs for Existing User */}
+                      <div className="form-grid-2 mt-2">
+                        <div className="form-group mb-0">
+                          <label htmlFor="existing-admin-password" className="form-sublabel">
+                            Admin Password
+                          </label>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              id="existing-admin-password"
+                              type={showExistingAdminPassword ? 'text' : 'password'}
+                              className={`form-input ${formErrors.existingAdminPassword ? 'input-error' : ''}`}
+                              placeholder="e.g. PuneAdmin@2026"
+                              value={formData.existingAdminPassword}
+                              onChange={(e) => setFormData({ ...formData, existingAdminPassword: e.target.value })}
+                              disabled={isSubmitting}
+                              style={{ paddingRight: '40px' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowExistingAdminPassword(!showExistingAdminPassword)}
+                              tabIndex={-1}
+                              style={{
+                                position: 'absolute',
+                                right: '8px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                color: '#64748B',
+                                fontSize: '14px',
+                              }}
+                              aria-label={showExistingAdminPassword ? 'Hide password' : 'Show password'}
+                            >
+                              {showExistingAdminPassword ? '🙈' : '👁️'}
+                            </button>
+                          </div>
+                          {formErrors.existingAdminPassword && <span className="field-error-text">{formErrors.existingAdminPassword}</span>}
+                        </div>
+
+                        <div className="form-group mb-0">
+                          <label htmlFor="existing-admin-confirm-password" className="form-sublabel">
+                            Confirm Password
+                          </label>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              id="existing-admin-confirm-password"
+                              type={showExistingAdminConfirmPassword ? 'text' : 'password'}
+                              className={`form-input ${formErrors.existingAdminConfirmPassword ? 'input-error' : ''}`}
+                              placeholder="Re-enter password"
+                              value={formData.existingAdminConfirmPassword}
+                              onChange={(e) => setFormData({ ...formData, existingAdminConfirmPassword: e.target.value })}
+                              disabled={isSubmitting}
+                              style={{ paddingRight: '40px' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowExistingAdminConfirmPassword(!showExistingAdminConfirmPassword)}
+                              tabIndex={-1}
+                              style={{
+                                position: 'absolute',
+                                right: '8px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                color: '#64748B',
+                                fontSize: '14px',
+                              }}
+                              aria-label={showExistingAdminConfirmPassword ? 'Hide password' : 'Show password'}
+                            >
+                              {showExistingAdminConfirmPassword ? '🙈' : '👁️'}
+                            </button>
+                          </div>
+                          {formErrors.existingAdminConfirmPassword && <span className="field-error-text">{formErrors.existingAdminConfirmPassword}</span>}
+                        </div>
+                      </div>
+
+                      {/* Password Requirements Indicator */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            background: formData.existingAdminPassword?.length >= 8 ? '#DEF7EC' : '#F3F4F6',
+                            color: formData.existingAdminPassword?.length >= 8 ? '#03543F' : '#6B7280',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {formData.existingAdminPassword?.length >= 8 ? '✓' : '•'} 8+ Characters
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            background: /[A-Z]/.test(formData.existingAdminPassword || '') ? '#DEF7EC' : '#F3F4F6',
+                            color: /[A-Z]/.test(formData.existingAdminPassword || '') ? '#03543F' : '#6B7280',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {/[A-Z]/.test(formData.existingAdminPassword || '') ? '✓' : '•'} 1 Uppercase Letter
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            background: /[^A-Za-z0-9]/.test(formData.existingAdminPassword || '') ? '#DEF7EC' : '#F3F4F6',
+                            color: /[^A-Za-z0-9]/.test(formData.existingAdminPassword || '') ? '#03543F' : '#6B7280',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {/[^A-Za-z0-9]/.test(formData.existingAdminPassword || '') ? '✓' : '•'} 1 Specific Symbol
+                        </span>
+                        {formData.existingAdminConfirmPassword && (
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              background: formData.existingAdminPassword === formData.existingAdminConfirmPassword ? '#DEF7EC' : '#FDE8E8',
+                              color: formData.existingAdminPassword === formData.existingAdminConfirmPassword ? '#03543F' : '#9B1C1C',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {formData.existingAdminPassword === formData.existingAdminConfirmPassword ? '✓ Passwords Match' : '✕ Passwords Mismatch'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="demo-notice-chip mt-2">
+                        <span>ℹ️ Department administrator will be provisioned/updated with this password & assigned the <code>DEPARTMENT_ADMIN</code> role.</span>
+                      </div>
                     </div>
                   ) : (
                     <div className="new-admin-inputs-box mt-2">

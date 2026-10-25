@@ -1814,6 +1814,394 @@ a:hover {
   color: var(--color-text-muted);
 }
 
+/* Citizen Assigned Officer Card */
+.citizen-officer-section {
+  margin-top: 1.25rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.citizen-officer-card {
+  background: rgba(13, 148, 136, 0.08);
+  border: 1px solid rgba(13, 148, 136, 0.3);
+  border-radius: var(--radius-md, 8px);
+  padding: 1rem 1.15rem;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.citizen-officer-card--unassigned {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.citizen-officer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(13, 148, 136, 0.2);
+  color: #2dd4bf;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.officer-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2dd4bf;
+  box-shadow: 0 0 6px #2dd4bf;
+}
+
+.citizen-officer-main {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.citizen-officer-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d9488, #0284c7);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+  flex-shrink: 0;
+}
+
+.citizen-officer-avatar--pending {
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+  box-shadow: none;
+}
+
+.citizen-officer-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.citizen-officer-name {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-main, #f8fafc);
+}
+
+.citizen-officer-designation {
+  font-size: 0.8rem;
+  color: #38bdf8;
+  margin-top: 0.15rem;
+  font-weight: 500;
+}
+
+.citizen-officer-meta {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.officer-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #94a3b8);
+  flex-wrap: wrap;
+}
+
+.officer-meta-row .meta-icon {
+  font-size: 0.85rem;
+}
+
+.officer-meta-row .meta-label {
+  font-weight: 500;
+  color: #cbd5e1;
+}
+
+.officer-meta-row .meta-link {
+  color: #38bdf8;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.officer-meta-row .meta-link:hover {
+  text-decoration: underline;
+  color: #7dd3fc;
+}
+
+.citizen-office-section {
+  margin-bottom: 0.5rem;
+}
+
+/* Responsible Municipal Office Card */
+.citizen-office-card {
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  border-radius: var(--radius-md, 8px);
+  padding: 1.1rem 1.25rem;
+  margin-top: 0.35rem;
+  transition: all 0.2s ease;
+}
+
+.office-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.office-header-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 220px;
+}
+
+.office-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 0.4rem;
+  background: rgba(14, 165, 233, 0.15);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.office-name {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--color-text-main, #f8fafc);
+  line-height: 1.35;
+}
+
+.office-jurisdiction {
+  display: block;
+  font-size: 0.78rem;
+  color: #38bdf8;
+  margin-top: 0.2rem;
+  font-weight: 500;
+}
+
+.office-division-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.office-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.85rem;
+}
+
+.office-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+}
+
+.office-info-icon {
+  font-size: 0.95rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.office-info-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted, #94a3b8);
+  margin-bottom: 0.15rem;
+}
+
+.office-info-value {
+  display: block;
+  color: var(--color-text-main, #e2e8f0);
+  line-height: 1.35;
+}
+
+.officer-meta-row .meta-value {
+  color: #e2e8f0;
+}
+
+.meta-badge-id {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Officer Privacy Shield Notice */
+.officer-privacy-shield {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.85rem;
+}
+
+.privacy-shield-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.privacy-shield-text {
+  flex: 1;
+}
+
+.privacy-shield-title {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #34d399;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.privacy-shield-desc {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+/* Light Mode Overrides for Office and Officer Cards */
+[data-theme="light"] .citizen-office-card,
+html.light .citizen-office-card {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}
+
+[data-theme="light"] .office-card-header,
+html.light .office-card-header {
+  border-bottom-color: #e2e8f0;
+}
+
+[data-theme="light"] .office-name,
+html.light .office-name {
+  color: #0c4a6e;
+}
+
+[data-theme="light"] .office-jurisdiction,
+html.light .office-jurisdiction {
+  color: #0284c7;
+}
+
+[data-theme="light"] .office-division-pill,
+html.light .office-division-pill {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+[data-theme="light"] .office-info-label,
+html.light .office-info-label {
+  color: #64748b;
+}
+
+[data-theme="light"] .office-info-value,
+html.light .office-info-value {
+  color: #1e293b;
+}
+
+[data-theme="light"] .citizen-officer-card,
+html.light .citizen-officer-card {
+  background: #f0fdfa;
+  border-color: #99f6e4;
+}
+
+[data-theme="light"] .citizen-officer-badge,
+html.light .citizen-officer-badge {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+[data-theme="light"] .citizen-officer-name,
+html.light .citizen-officer-name {
+  color: #0f172a;
+}
+
+[data-theme="light"] .citizen-officer-designation,
+html.light .citizen-officer-designation {
+  color: #0284c7;
+}
+
+[data-theme="light"] .citizen-officer-meta,
+html.light .citizen-officer-meta {
+  border-top-color: #e2e8f0;
+}
+
+[data-theme="light"] .officer-meta-row .meta-label,
+html.light .officer-meta-row .meta-label {
+  color: #475569;
+}
+
+[data-theme="light"] .officer-meta-row .meta-value,
+html.light .officer-meta-row .meta-value {
+  color: #1e293b;
+}
+
+[data-theme="light"] .officer-privacy-shield,
+html.light .officer-privacy-shield {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+[data-theme="light"] .privacy-shield-title,
+html.light .privacy-shield-title {
+  color: #047857;
+}
+
+[data-theme="light"] .privacy-shield-desc,
+html.light .privacy-shield-desc {
+  color: #334155;
+}
+
+[data-theme="light"] .meta-badge-id,
+html.light .meta-badge-id {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
 /* Toast Notification */
 .toast-notification {
   display: flex;
@@ -5017,6 +5405,252 @@ a:hover {
 }
 
 /* =========================================================
+   Heatmap Compact Map Legend (Bottom-Right)
+   Dark & Light Mode Support
+   ========================================================= */
+
+/* Reposition Leaflet attribution to bottom-left to avoid collision */
+.heatmap-map-container .leaflet-bottom.leaflet-right {
+  right: auto;
+  left: 10px;
+  bottom: 8px;
+}
+
+.heatmap-compact-legend {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 500;
+  width: 240px;
+  max-width: calc(100% - 28px);
+  background: rgba(17, 28, 51, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+  font-family: var(--font-family);
+  overflow: hidden;
+  user-select: none;
+  transition: all 0.2s ease-in-out;
+}
+
+[data-theme="light"] .heatmap-compact-legend,
+html.light .heatmap-compact-legend {
+  background: rgba(255, 255, 255, 0.97);
+  border: 1.5px solid #94a3b8;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16), 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.compact-legend-header {
+  padding: 0.45rem 0.75rem;
+  background: rgba(30, 41, 59, 0.7);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="light"] .compact-legend-header,
+html.light .compact-legend-header {
+  background: #f1f5f9;
+  border-bottom: 1.5px solid #cbd5e1;
+}
+
+.compact-legend-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f472b6; /* Magenta accent matching user reference image */
+  display: block;
+}
+
+[data-theme="light"] .compact-legend-title,
+html.light .compact-legend-title {
+  color: #db2777; /* Deep magenta in light mode */
+}
+
+.compact-legend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.compact-legend-table th {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.compact-legend-table .th-issue {
+  text-align: left;
+}
+
+.compact-legend-table .th-symbol {
+  text-align: right;
+  width: 70px;
+}
+
+[data-theme="light"] .compact-legend-table th,
+html.light .compact-legend-table th {
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.compact-legend-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.12s ease;
+}
+
+.compact-legend-row:last-child {
+  border-bottom: none;
+}
+
+.compact-legend-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="light"] .compact-legend-row,
+html.light .compact-legend-row {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .compact-legend-row:hover,
+html.light .compact-legend-row:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.compact-legend-table td {
+  padding: 0.32rem 0.75rem;
+  vertical-align: middle;
+}
+
+.td-issue {
+  text-align: left;
+}
+
+.issue-text {
+  font-weight: 600;
+  color: #f1f5f9;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+[data-theme="light"] .issue-text,
+html.light .issue-text {
+  color: #0f172a;
+}
+
+.td-symbol {
+  text-align: right;
+}
+
+.symbol-cell-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+/* Teardrop map pin matching the Leaflet markers */
+.legend-mini-pin {
+  width: 18px;
+  height: 18px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+.legend-pin-svg {
+  transform: rotate(45deg);
+}
+
+.legend-emoji {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* Severity Pin Color Sub-legend */
+.compact-legend-footer {
+  padding: 0.4rem 0.75rem;
+  background: rgba(11, 17, 32, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.68rem;
+}
+
+[data-theme="light"] .compact-legend-footer,
+html.light .compact-legend-footer {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.legend-footer-title {
+  font-weight: 700;
+  color: #94a3b8;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.64rem;
+}
+
+[data-theme="light"] .legend-footer-title,
+html.light .legend-footer-title {
+  color: #64748b;
+}
+
+.legend-footer-dots {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.legend-dot-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: #cbd5e1;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+[data-theme="light"] .legend-dot-pill,
+html.light .legend-dot-pill {
+  color: #334155;
+}
+
+.legend-dot-pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-crit { background: #ef4444; }
+.dot-high { background: #f97316; }
+.dot-med  { background: #eab308; }
+.dot-low  { background: #10b981; }
+
+@media (max-width: 640px) {
+  .heatmap-compact-legend {
+    bottom: 8px;
+    right: 8px;
+    width: 210px;
+  }
+  .compact-legend-table th,
+  .compact-legend-table td {
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* =========================================================
    AI Photo & Severity Scanner Panel
    ========================================================= */
 
@@ -8096,8 +8730,106 @@ a:hover {
   font-weight: 700;
 }
 
+/* =========================================================
+   Citizen Settings & Reset Password Modal / Page Styles
+   ========================================================= */
 
+.profile-modal-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+}
 
+.profile-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
 
+.profile-tab-btn:hover {
+  color: var(--color-text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
 
+.profile-tab-btn--active {
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.3);
+}
 
+.profile-security-callout {
+  padding: 0.85rem 1rem;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.alert-banner--danger {
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: var(--color-error);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+/* Citizen Dedicated Settings Page */
+.citizen-settings-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1rem 0 3rem;
+}
+
+.citizen-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 820px) {
+  .citizen-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.citizen-settings-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.citizen-settings-card__header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.citizen-settings-card__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.citizen-settings-card__subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0.25rem 0 0;
+}

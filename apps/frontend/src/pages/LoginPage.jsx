@@ -89,6 +89,8 @@ export const LoginPage = () => {
     } else if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
       navigate('/admin', { replace: true });
     } else {
+      sessionStorage.setItem('civicai_welcome_voice_auto', 'true');
+      sessionStorage.removeItem('civicai_welcome_voice_played');
       navigate('/dashboard', { replace: true });
     }
   };

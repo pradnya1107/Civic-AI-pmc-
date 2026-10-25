@@ -115,6 +115,12 @@ export const AuthProvider = ({ children }) => {
     setToken(sessionData.accessToken);
     setUser(sessionData.user);
 
+    // Trigger automatic welcome voice for citizen
+    if (sessionData.user?.role === 'CITIZEN' || !sessionData.user?.role) {
+      sessionStorage.setItem('civicai_welcome_voice_auto', 'true');
+      sessionStorage.removeItem('civicai_welcome_voice_played');
+    }
+
     return {
       success: true,
       user: sessionData.user,
@@ -163,6 +169,8 @@ export const AuthProvider = ({ children }) => {
       removeStoredToken();
       setUser(null);
       setToken(null);
+      sessionStorage.removeItem('civicai_welcome_voice_auto');
+      sessionStorage.removeItem('civicai_welcome_voice_played');
     }
   };
 
