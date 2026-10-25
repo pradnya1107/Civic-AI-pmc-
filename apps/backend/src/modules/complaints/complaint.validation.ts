@@ -4,6 +4,22 @@ import {
   COMPLAINT_STATUSES,
 } from "./complaint.model";
 
+export const PMC_BOUNDARY = {
+  MIN_LATITUDE: 18.30,
+  MAX_LATITUDE: 18.70,
+  MIN_LONGITUDE: 73.65,
+  MAX_LONGITUDE: 74.05,
+} as const;
+
+export function isWithinPmcBoundary(lat: number, lng: number): boolean {
+  return (
+    lat >= PMC_BOUNDARY.MIN_LATITUDE &&
+    lat <= PMC_BOUNDARY.MAX_LATITUDE &&
+    lng >= PMC_BOUNDARY.MIN_LONGITUDE &&
+    lng <= PMC_BOUNDARY.MAX_LONGITUDE
+  );
+}
+
 const locationSchema = z
   .object({
     address: z.string().trim().min(1).max(300),
@@ -17,6 +33,13 @@ const locationSchema = z
       (location.latitude === undefined) ===
       (location.longitude === undefined),
     "Latitude and longitude must be provided together.",
+  )
+  .refine(
+    (location) => {
+      if (location.latitude === undefined || location.longitude === undefined) return true;
+      return isWithinPmcBoundary(location.latitude, location.longitude);
+    },
+    `Coordinates must fall within the Pune Municipal Corporation (PMC) boundary (Lat ${PMC_BOUNDARY.MIN_LATITUDE}-${PMC_BOUNDARY.MAX_LATITUDE}, Lng ${PMC_BOUNDARY.MIN_LONGITUDE}-${PMC_BOUNDARY.MAX_LONGITUDE}).`,
   );
 
 export const createComplaintSchema = z
@@ -123,6 +146,8 @@ export const resolveComplaintSchema = z
   .object({
     resolutionImageUrl: z.string().trim().optional(),
     resolutionNotes: z.string().trim().max(2000).optional(),
+    humanReviewed: z.boolean().optional(),
+    forceResolve: z.boolean().optional(),
   })
   .strict();
 

@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import { User } from "../users/user.model";
 import { Department } from "../departments/department.model";
 import { Complaint } from "../complaints/complaint.model";
+import { AuditLog } from "../audit/auditLog.model";
 import { AppError } from "../../utils/app-error";
 import { generateAndDispatchAdminOtp } from "../auth/department-admin-otp.service";
 
@@ -236,6 +237,7 @@ export async function updateDepartmentAdmin(
     departmentId?: string | null;
     accountStatus?: "ACTIVE" | "DISABLED";
   },
+  actorId?: string,
 ) {
   if (!Types.ObjectId.isValid(id)) {
     throw new AppError("Invalid admin ID provided.", 400, "INVALID_INPUT");
@@ -269,14 +271,37 @@ export async function updateDepartmentAdmin(
     }
   }
 
+  const prevStatus = admin.accountStatus;
+  let statusChanged = false;
   if (input.accountStatus !== undefined) {
     if (!["ACTIVE", "DISABLED"].includes(input.accountStatus)) {
       throw new AppError("Invalid account status. Must be ACTIVE or DISABLED.", 400, "INVALID_INPUT");
     }
-    admin.accountStatus = input.accountStatus;
+    if (admin.accountStatus !== input.accountStatus) {
+      admin.accountStatus = input.accountStatus;
+      statusChanged = true;
+      if (input.accountStatus === "DISABLED") {
+        // Immediate token invalidation for disabled administrator accounts
+        admin.tokenVersion = (admin.tokenVersion || 0) + 1;
+      }
+    }
   }
 
   await admin.save();
+
+  if (statusChanged && actorId && Types.ObjectId.isValid(actorId)) {
+    await AuditLog.create({
+      actorRef: new Types.ObjectId(actorId),
+      action: "ADMIN_ACCOUNT_STATUS_UPDATED",
+      targetRef: admin._id,
+      targetModel: "User",
+      metadata: {
+        previousStatus: prevStatus,
+        newStatus: admin.accountStatus,
+        tokensRevoked: admin.accountStatus === "DISABLED",
+      },
+    });
+  }
 
   const populated = await User.findById(admin._id).populate("departmentId", "name slug");
   const dept = populated?.departmentId as any;
@@ -291,6 +316,56 @@ export async function updateDepartmentAdmin(
       : null,
     accountStatus: admin.accountStatus,
     updatedAt: admin.updatedAt,
+  };
+}
+
+export async function updateCitizenAccountStatus(
+  citizenId: string,
+  accountStatus: "ACTIVE" | "DISABLED",
+  actorId?: string,
+) {
+  if (!Types.ObjectId.isValid(citizenId)) {
+    throw new AppError("Invalid citizen ID provided.", 400, "INVALID_INPUT");
+  }
+
+  if (!["ACTIVE", "DISABLED"].includes(accountStatus)) {
+    throw new AppError("Invalid account status. Must be ACTIVE or DISABLED.", 400, "INVALID_INPUT");
+  }
+
+  const citizen = await User.findOne({ _id: citizenId, role: "CITIZEN" });
+  if (!citizen) {
+    throw new AppError("Citizen account not found.", 404, "NOT_FOUND");
+  }
+
+  const previousStatus = citizen.accountStatus;
+  citizen.accountStatus = accountStatus;
+  if (accountStatus === "DISABLED") {
+    // Immediate token invalidation so disabled citizen cannot use existing session
+    citizen.tokenVersion = (citizen.tokenVersion || 0) + 1;
+  }
+
+  await citizen.save();
+
+  if (actorId && Types.ObjectId.isValid(actorId)) {
+    await AuditLog.create({
+      actorRef: new Types.ObjectId(actorId),
+      action: "CITIZEN_ACCOUNT_STATUS_UPDATED",
+      targetRef: citizen._id,
+      targetModel: "User",
+      metadata: {
+        previousStatus,
+        newStatus: accountStatus,
+        tokensRevoked: accountStatus === "DISABLED",
+      },
+    });
+  }
+
+  return {
+    id: citizen.id,
+    fullName: citizen.fullName,
+    email: citizen.email,
+    accountStatus: citizen.accountStatus,
+    updatedAt: citizen.updatedAt,
   };
 }
 

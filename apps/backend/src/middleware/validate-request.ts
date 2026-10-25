@@ -12,9 +12,10 @@ export function validateRequest(
     const result = schema.safeParse(request[part]);
 
     if (!result.success) {
+      const issueDetails = result.error.issues.map((i) => i.message).join("; ");
       next(
         new AppError(
-          "Request validation failed.",
+          issueDetails ? `Request validation failed: ${issueDetails}` : "Request validation failed.",
           400,
           "VALIDATION_ERROR",
         ),

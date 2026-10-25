@@ -8,6 +8,7 @@ import {
   updateComplaintStatusSchema,
   assignComplaintDepartmentSchema,
   verifyComplaintSchema,
+  rejectResolutionSchema,
   adminComplaintIdParamSchema,
 } from "./admin-complaint.validation";
 import {
@@ -16,6 +17,7 @@ import {
   updateComplaintStatusHandler,
   assignComplaintDepartmentHandler,
   verifyComplaintHandler,
+  rejectComplaintResolutionHandler,
 } from "./admin-complaint.controller";
 
 export const adminComplaintRouter = Router();
@@ -62,6 +64,15 @@ adminComplaintRouter.patch(
   validateRequest(adminComplaintIdParamSchema, "params"),
   validateRequest(verifyComplaintSchema),
   asyncHandler(verifyComplaintHandler),
+);
+
+// POST /api/v1/admin/complaints/:id/reject-resolution - Super Admin & Admin rejects resolution evidence
+adminComplaintRouter.post(
+  "/:id/reject-resolution",
+  authorize("ADMIN", "SUPER_ADMIN"),
+  validateRequest(adminComplaintIdParamSchema, "params"),
+  validateRequest(rejectResolutionSchema),
+  asyncHandler(rejectComplaintResolutionHandler),
 );
 
 export default adminComplaintRouter;

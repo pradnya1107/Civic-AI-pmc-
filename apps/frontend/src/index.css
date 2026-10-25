@@ -8731,6 +8731,7 @@ html.light .legend-dot-pill {
 }
 
 /* =========================================================
+<<<<<<< HEAD
    Citizen Settings & Reset Password Modal / Page Styles
    ========================================================= */
 
@@ -8832,4 +8833,332 @@ html.light .legend-dot-pill {
   font-size: 0.8rem;
   color: var(--color-text-muted);
   margin: 0.25rem 0 0;
+}
+
+/* =========================================================
+   REQUIREMENT 10: UI IMPROVEMENTS & MODERN CIVIC AESTHETICS
+   ========================================================= */
+
+/* Tactile button micro-interactions */
+.btn {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.15s ease,
+              border-color 0.15s ease,
+              color 0.15s ease;
+  user-select: none;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary, #6366f1);
+  outline-offset: 2px;
+}
+
+/* Polished Card Hover & Elevation */
+.admin-card,
+.citizen-card,
+.complaint-card,
+.stat-card,
+.neat-dept-card {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s ease;
+}
+
+.admin-card:hover,
+.citizen-card:hover,
+.complaint-card:hover,
+.stat-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+/* Shimmer Loading State for Asynchronous Panels */
+@keyframes civicai-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-loading {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-surface, #111c33) 25%,
+    var(--color-bg-surface-hover, #1e293b) 50%,
+    var(--color-bg-surface, #111c33) 75%
+  );
+  background-size: 200% 100%;
+  animation: civicai-shimmer 1.8s infinite;
+  border-radius: var(--radius-sm, 6px);
+}
+
+/* Sleek custom scrollbars for data tables and dialogs */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-base, #0b1120);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-hover, #334155);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary, #6366f1);
+}
+
+/* Accessible focus ring for form inputs */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Refined Badge Styling */
+.dept-status-badge,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  font-size: 0.725rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  line-height: 1;
+}
+
+.dept-status-badge.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.dept-status-badge.inactive {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* =========================================================
+   REQUIREMENT 11: MOBILE RESPONSIVENESS (Down to 375px)
+   ========================================================= */
+
+/* Ensure full box-sizing and prevent accidental body x-overflow */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Responsive Table Wrappers */
+.admin-table-container,
+.table-container,
+.data-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-md, 10px);
+}
+
+.admin-data-table,
+.complaints-table {
+  width: 100%;
+  min-width: 620px; /* Enforces horizontal scroll instead of squished text */
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Tablet & Mobile Screens (<= 1024px) */
+@media screen and (max-width: 1024px) {
+  .admin-page-container {
+    padding: 1.25rem;
+  }
+
+  .admin-dept-grid,
+  .dashboard-grid,
+  .analytics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Mobile Screens (<= 768px) */
+@media screen and (max-width: 768px) {
+  .admin-page-container,
+  .citizen-page-container,
+  .page-container {
+    padding: 1rem 0.75rem !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* Header & Filter Flex Stacking */
+  .admin-page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.875rem !important;
+  }
+
+  .admin-page-header-actions {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .admin-table-filters {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  .admin-table-filters .admin-search-box {
+    width: 100% !important;
+  }
+
+  .admin-table-filters .btn {
+    width: 100%;
+  }
+
+  /* Grids Stack to Single Column on Mobile */
+  .admin-dept-grid,
+  .dashboard-grid,
+  .stats-grid,
+  .kpi-grid,
+  .analytics-grid,
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  .neat-card-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Responsive Modals on Mobile */
+  .modal-content,
+  .help-modal-content,
+  .admin-modal-content,
+  .rejection-modal-content,
+  .evidence-modal-content {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    margin: 1rem auto !important;
+    padding: 1.25rem !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Form Elements Touch Target Comfort */
+  .form-control,
+  .admin-filter-input,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important; /* Prevents auto-zoom in mobile Safari */
+    min-height: 44px; /* Minimum Apple/Google recommended touch target */
+  }
+
+  .btn {
+    min-height: 40px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-xs {
+    min-height: 32px;
+    padding: 0.25rem 0.65rem;
+  }
+
+  /* Pagination Bar on Mobile */
+  .admin-pagination-bar {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    align-items: center !important;
+    text-align: center;
+  }
+
+  .pagination-buttons {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .pagination-buttons .btn {
+    flex: 1;
+    max-width: 48%;
+  }
+}
+
+/* Small Smartphone Viewports (<= 480px / 375px e.g. iPhone SE) */
+@media screen and (max-width: 480px) {
+  .admin-page-container,
+  .citizen-page-container {
+    padding: 0.75rem 0.5rem !important;
+  }
+
+  .admin-page-title {
+    font-size: 1.25rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .admin-page-subtitle {
+    font-size: 0.8125rem !important;
+  }
+
+  .total-records-count {
+    font-size: 0.8rem;
+  }
+
+  /* Button rows wrap comfortably */
+  .modal-actions,
+  .form-actions {
+    flex-direction: column-reverse !important;
+    gap: 0.625rem !important;
+  }
+
+  .modal-actions .btn,
+  .form-actions .btn {
+    width: 100% !important;
+  }
+
+  /* Evidence and Image Cards */
+  .evidence-image-preview,
+  .resolution-image-card {
+    width: 100% !important;
+    max-height: 240px !important;
+    object-fit: cover;
+  }
+
+  /* Toast alerts fill width */
+  .admin-toast,
+  .alert-banner {
+    width: 100% !important;
+    box-sizing: border-box;
+    font-size: 0.85rem;
+    padding: 0.75rem;
+  }
 }

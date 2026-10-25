@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI, Depends, HTTPException, status
 from .config import AI_SERVICE_HOST, AI_SERVICE_PORT, AI_SERVICE_SECRET
-from .schemas import AnalyzeRequest, AnalyzeResponse
+from .schemas import AnalyzeRequest, AnalyzeResponse, ClassifyImageRequest
 from .security import verify_ai_service_secret
 from .providers import get_provider
 
@@ -59,6 +59,28 @@ async def analyze_complaint(request: AnalyzeRequest) -> AnalyzeResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal AI service error",
+        )
+
+@app.post("/classify-image", status_code=status.HTTP_200_OK)
+async def classify_complaint_image(request: ClassifyImageRequest):
+    img_data = request.imageUrl or request.imageBase64
+    if not img_data or not img_data.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either imageUrl or imageBase64 must be provided",
+        )
+    try:
+        from .vgg16_classifier import vgg16_civic_classifier
+        result = vgg16_civic_classifier.classify(img_data, image_hint=request.hint or "")
+        return {
+            "success": True,
+            "data": result,
+        }
+    except Exception as e:
+        logger.error(f"VGG16 classification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Image classification error: {str(e)}",
         )
 
 if __name__ == "__main__":

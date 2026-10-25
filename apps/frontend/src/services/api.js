@@ -418,6 +418,15 @@ export const adminApi = {
   },
 
   /**
+   * Update citizen account status (ACTIVE / DISABLED)
+   * PATCH /api/v1/admin/citizens/:id/status
+   */
+  async updateCitizenStatus(id, data) {
+    const response = await api.patch(`/api/v1/admin/citizens/${id}/status`, data);
+    return response.data;
+  },
+
+  /**
    * Fetch all complaints with filter, sort, and pagination (Admin Portal)
    * GET /api/v1/admin/complaints
    */
@@ -459,6 +468,15 @@ export const adminApi = {
    */
   async verifyComplaint(id, data = {}) {
     const response = await api.patch(`/api/v1/admin/complaints/${id}/verify`, data);
+    return response.data;
+  },
+
+  /**
+   * Super Admin reject resolution evidence and reopen complaint
+   * POST /api/v1/admin/complaints/:id/reject-resolution
+   */
+  async rejectResolution(id, data) {
+    const response = await api.post(`/api/v1/admin/complaints/${id}/reject-resolution`, data);
     return response.data;
   },
 };

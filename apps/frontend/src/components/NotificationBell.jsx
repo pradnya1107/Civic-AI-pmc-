@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notificationApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Format timestamp into human-readable relative or short date format
@@ -32,7 +33,17 @@ function formatTimeAgo(dateString) {
   });
 }
 
-export const NotificationBell = ({ className = '' }) => {
+export const NotificationBell = ({ className = '', role = null }) => {
+  let authUser = null;
+  try {
+    const auth = useAuth();
+    authUser = auth?.user;
+  } catch {
+    authUser = null;
+  }
+
+  const effectiveRole = role || authUser?.role || 'CITIZEN';
+
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -110,14 +121,20 @@ export const NotificationBell = ({ className = '' }) => {
 
     setIsOpen(false);
 
-    // Navigate to complaint details
+    // Navigate to complaint details based on user panel role
     const complaintId =
       typeof notif.complaintId === 'object' && notif.complaintId !== null
         ? notif.complaintId._id || notif.complaintId.id
         : notif.complaintId;
 
     if (complaintId) {
-      navigate(`/complaints/${complaintId}`);
+      if (effectiveRole === 'ADMIN' || effectiveRole === 'SUPER_ADMIN') {
+        navigate(`/admin/complaints/${complaintId}`);
+      } else if (effectiveRole === 'DEPARTMENT_ADMIN') {
+        navigate(`/department/complaints`);
+      } else {
+        navigate(`/complaints/${complaintId}`);
+      }
     }
   };
 

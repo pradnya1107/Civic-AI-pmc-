@@ -259,13 +259,7 @@ export const App = () => {
               />
               <Route
                 path="/department/help"
-                element={
-                  <DepartmentProtectedRoute>
-                    <DepartmentLayout>
-                      <DepartmentHelpPage />
-                    </DepartmentLayout>
-                  </DepartmentProtectedRoute>
-                }
+                element={<Navigate to="/department/dashboard" replace />}
               />
 
               {/* Super Administrative Portal Routes */}

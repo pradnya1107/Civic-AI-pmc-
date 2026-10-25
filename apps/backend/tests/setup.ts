@@ -14,6 +14,8 @@ process.env.SMTP_SECURE = "false";
 process.env.SMTP_USER = "test-user";
 process.env.SMTP_PASSWORD = "test-password";
 process.env.SMTP_FROM = "CivicAI Tests <test@example.invalid>";
+process.env.GEMINI_API_KEY = "";
+process.env.GOOGLE_API_KEY = "";
 
 let mongoServer: MongoMemoryReplSet;
 

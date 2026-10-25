@@ -7,6 +7,7 @@ import {
   getDepartmentComplaints,
   updateDepartmentAdmin,
   listCitizens,
+  updateCitizenAccountStatus,
 } from "./department-admin.service";
 import { Department } from "../departments/department.model";
 
@@ -118,12 +119,17 @@ export const getDepartmentAdminMeHandler: RequestHandler = async (
 export const updateAdminHandler: RequestHandler = async (request, response) => {
   const id = request.params.id as string;
   const { fullName, departmentId, accountStatus } = request.body;
+  const actorId = request.user?.id;
 
-  const result = await updateDepartmentAdmin(id, {
-    fullName,
-    departmentId,
-    accountStatus,
-  });
+  const result = await updateDepartmentAdmin(
+    id,
+    {
+      fullName,
+      departmentId,
+      accountStatus,
+    },
+    actorId,
+  );
 
   response.status(200).json({
     success: true,
@@ -141,6 +147,20 @@ export const listCitizensHandler: RequestHandler = async (request, response) => 
 
   response.status(200).json({
     success: true,
+    data: result,
+  });
+};
+
+export const updateCitizenStatusHandler: RequestHandler = async (request, response) => {
+  const id = request.params.id as string;
+  const { accountStatus } = request.body;
+  const actorId = request.user?.id;
+
+  const result = await updateCitizenAccountStatus(id, accountStatus, actorId);
+
+  response.status(200).json({
+    success: true,
+    message: `Citizen account status updated to ${accountStatus}.`,
     data: result,
   });
 };

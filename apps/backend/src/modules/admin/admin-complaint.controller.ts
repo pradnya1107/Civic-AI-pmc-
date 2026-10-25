@@ -6,6 +6,7 @@ import {
   updateAdminComplaintStatus,
   assignAdminComplaintDepartment,
   verifyAdminComplaint,
+  rejectComplaintResolution,
   type AdminActor,
 } from "./admin-complaint.service";
 
@@ -119,6 +120,26 @@ export const verifyComplaintHandler: RequestHandler = async (
   response.status(200).json({
     success: true,
     message: "Complaint verified successfully.",
+    data: { complaint },
+  });
+};
+
+export const rejectComplaintResolutionHandler: RequestHandler = async (
+  request,
+  response,
+) => {
+  const actor = getActor(request);
+  const id = getParamId(request);
+  const { reason, returnedStatus } = request.body;
+
+  const complaint = await rejectComplaintResolution(actor, id, {
+    reason,
+    returnedStatus,
+  });
+
+  response.status(200).json({
+    success: true,
+    message: "Complaint resolution rejected and returned to active queue.",
     data: { complaint },
   });
 };
