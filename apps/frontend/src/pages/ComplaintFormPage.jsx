@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CitizenLayout } from '../components/CitizenLayout';
+import { LocationPickerMap } from '../components/LocationPickerMap';
 import { complaintApi, aiApi } from '../services/api';
 import { PMC_CATEGORIES, PMC_WARDS } from '../constants/pmcData';
 export { PMC_CATEGORIES, PMC_WARDS };
@@ -49,10 +50,32 @@ const DEMO_PRESETS = [
   },
 ];
 
+/**
+ * Strips the [AI Visible Evidence] block from a complaint description,
+ * preserving only the citizen's manually entered text.
+ */
+export function extractManualDescription(fullDescription) {
+  if (!fullDescription || typeof fullDescription !== 'string') return '';
+  return fullDescription.replace(/\n*\s*\[AI Visible Evidence\]:[\s\S]*$/i, '').trim();
+}
+
+/**
+ * Combines citizen manual text with an AI visible evidence block.
+ * Replaces any existing AI block rather than accumulating duplicates.
+ */
+export function mergeDescriptionWithAiEvidence(currentDescription, aiEvidenceText) {
+  const manual = extractManualDescription(currentDescription);
+  const evidence = (aiEvidenceText || '').trim();
+  if (!evidence) return manual;
+  if (!manual) return `[AI Visible Evidence]: ${evidence}`;
+  return `${manual}\n\n[AI Visible Evidence]: ${evidence}`;
+}
+
 export const ComplaintFormPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const activeScanIdRef = useRef(0);
 
   // Controlled form state
   const [formData, setFormData] = useState({
@@ -85,6 +108,20 @@ export const ComplaintFormPage = () => {
   const [geoNotice, setGeoNotice] = useState('');
   const [step7Completed, setStep7Completed] = useState(false);
   const [createdComplaintData, setCreatedComplaintData] = useState(null);
+
+  /**
+   * Invalidates existing AI result and strips previous AI evidence
+   * whenever the user replaces or clears the complaint image.
+   */
+  const invalidateImageAnalysis = () => {
+    activeScanIdRef.current += 1;
+    setIsAiScanning(false);
+    setAiResult(null);
+    setFormData((prev) => ({
+      ...prev,
+      description: extractManualDescription(prev.description),
+    }));
+  };
 
   // Handle input change
   const handleChange = (e) => {
@@ -196,12 +233,19 @@ const compressImageFile = (file) => {
     }
 
     setServerError('');
+    // Invalidate stale AI analysis immediately when replacing image
+    invalidateImageAnalysis();
+
     try {
       const compressedDataUrl = await compressImageFile(file);
       if (compressedDataUrl) {
         setImagePreview(compressedDataUrl);
         setImageBase64(compressedDataUrl);
-        setFormData((prev) => ({ ...prev, imageUrl: compressedDataUrl }));
+        setFormData((prev) => ({
+          ...prev,
+          imageUrl: compressedDataUrl,
+          description: extractManualDescription(prev.description),
+        }));
         return;
       }
     } catch {
@@ -212,25 +256,34 @@ const compressImageFile = (file) => {
     reader.onload = () => {
       setImagePreview(reader.result);
       setImageBase64(reader.result);
-      setFormData((prev) => ({ ...prev, imageUrl: reader.result }));
+      setFormData((prev) => ({
+        ...prev,
+        imageUrl: reader.result,
+        description: extractManualDescription(prev.description),
+      }));
     };
     reader.readAsDataURL(file);
   };
 
   // Select demo preset
   const handleSelectPreset = (preset) => {
+    // Invalidate stale AI analysis and strip previous AI evidence
+    invalidateImageAnalysis();
     setImagePreview(preset.url);
     setImageBase64('');
-    setFormData((prev) => ({
-      ...prev,
-      imageUrl: preset.url,
-      category: preset.category,
-      address: preset.address,
-      ward: preset.ward,
-      latitude: preset.lat,
-      longitude: preset.lng,
-      description: prev.description || preset.hint,
-    }));
+    setFormData((prev) => {
+      const manualDesc = extractManualDescription(prev.description);
+      return {
+        ...prev,
+        imageUrl: preset.url,
+        category: preset.category,
+        address: preset.address,
+        ward: preset.ward,
+        latitude: preset.lat,
+        longitude: preset.lng,
+        description: manualDesc || preset.hint,
+      };
+    });
   };
 
   // Trigger Gemini AI Vision Scan
@@ -240,18 +293,28 @@ const compressImageFile = (file) => {
       return;
     }
 
+    const scanId = ++activeScanIdRef.current;
+
     try {
       setIsAiScanning(true);
       setServerError('');
       const isHttp = typeof formData.imageUrl === 'string' && formData.imageUrl.startsWith('http');
       const isBase64 = (typeof formData.imageUrl === 'string' && formData.imageUrl.startsWith('data:image/')) || Boolean(imageBase64);
 
+      // Pass only the citizen's manual description as hint, not stale AI evidence
+      const manualDesc = extractManualDescription(formData.description);
+
       const res = await aiApi.analyzeComplaint({
         imageUrl: isHttp ? formData.imageUrl : undefined,
         imageBase64: isBase64 ? (imageBase64 || formData.imageUrl) : undefined,
-        descriptionHint: formData.description || formData.title,
+        descriptionHint: manualDesc || formData.title,
         category: formData.category,
       });
+
+      // Ignore older asynchronous responses if the image was replaced during scan
+      if (scanId !== activeScanIdRef.current) {
+        return;
+      }
 
       if (res && res.success && res.data) {
         const ai = res.data;
@@ -265,7 +328,7 @@ const compressImageFile = (file) => {
         setFormData((prev) => ({
           ...prev,
           title: prev.title.trim() ? prev.title : aiTitle,
-          description: prev.description.trim() ? `${prev.description}\n\n[AI Visible Evidence]: ${aiDesc}` : aiDesc,
+          description: mergeDescriptionWithAiEvidence(prev.description, aiDesc),
           category: prev.category || aiCategory,
           priority: aiPriority,
         }));
@@ -280,9 +343,16 @@ const compressImageFile = (file) => {
         }
       }
     } catch (err) {
+      if (scanId !== activeScanIdRef.current) {
+        return;
+      }
+      // On failure, clear stale result to avoid showing invalid information
+      setAiResult(null);
       setServerError(err.message || 'AI analysis failed. You can continue filling the form manually.');
     } finally {
-      setIsAiScanning(false);
+      if (scanId === activeScanIdRef.current) {
+        setIsAiScanning(false);
+      }
     }
   };
 
@@ -323,11 +393,17 @@ const compressImageFile = (file) => {
       newErrors.address = 'Address cannot exceed 300 characters.';
     }
 
-    // Latitude & Longitude pairing validation
+    // Latitude & Longitude pairing and PMC boundary validation
     const hasLat = formData.latitude !== '' && formData.latitude !== null && formData.latitude !== undefined;
     const hasLng = formData.longitude !== '' && formData.longitude !== null && formData.longitude !== undefined;
     if (hasLat !== hasLng) {
       newErrors.location = 'Latitude and longitude must both be provided together or left blank.';
+    } else if (hasLat && hasLng) {
+      const latNum = Number(formData.latitude);
+      const lngNum = Number(formData.longitude);
+      if (latNum < 18.30 || latNum > 18.70 || lngNum < 73.65 || lngNum > 74.05) {
+        newErrors.location = 'Coordinates must fall within the Pune Municipal Corporation (PMC) boundary (Lat 18.30-18.70, Lng 73.65-74.05).';
+      }
     }
 
     return newErrors;
@@ -713,6 +789,8 @@ const compressImageFile = (file) => {
                     onChange={(e) => {
                       handleChange(e);
                       setImagePreview(e.target.value);
+                      setImageBase64('');
+                      invalidateImageAnalysis();
                     }}
                   />
                 </div>
@@ -1167,6 +1245,21 @@ const compressImageFile = (file) => {
                   </select>
                 </div>
               </div>
+
+              {/* Interactive Pune Municipal Corporation Location Picker Map */}
+              <LocationPickerMap
+                latitude={formData.latitude}
+                longitude={formData.longitude}
+                onLocationChange={({ latitude, longitude, addressHint }) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    latitude: latitude !== '' ? latitude : '',
+                    longitude: longitude !== '' ? longitude : '',
+                    address: prev.address || addressHint || prev.address,
+                  }));
+                }}
+                disabled={isSubmitting}
+              />
 
               {/* Coordinates (optional) */}
               <div className="form-row-2">

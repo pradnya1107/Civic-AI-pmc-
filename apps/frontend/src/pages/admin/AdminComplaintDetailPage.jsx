@@ -49,9 +49,40 @@ export const AdminComplaintDetailPage = () => {
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [isApplyingAi, setIsApplyingAi] = useState(false);
 
+  // Super Admin Resolution Rejection modal
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionReturnedStatus, setRejectionReturnedStatus] = useState('IN_PROGRESS');
+  const [isRejectingResolution, setIsRejectingResolution] = useState(false);
+
   const showToast = (message) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleRejectResolution = async (e) => {
+    e.preventDefault();
+    if (!rejectionReason.trim() || rejectionReason.trim().length < 10) {
+      showToast('Please provide a detailed rejection reason (minimum 10 characters).');
+      return;
+    }
+    setIsRejectingResolution(true);
+    try {
+      const res = await adminApi.rejectResolution(id, {
+        reason: rejectionReason.trim(),
+        returnedStatus: rejectionReturnedStatus,
+      });
+      if (res && res.success) {
+        showToast('Resolution evidence rejected. Complaint reopened and audit trail updated.');
+        setShowRejectModal(false);
+        setRejectionReason('');
+        loadData();
+      }
+    } catch (err) {
+      showToast(`Rejection failed: ${err.message || 'Please try again.'}`);
+    } finally {
+      setIsRejectingResolution(false);
+    }
   };
 
   const handleAcceptCategory = async () => {
@@ -585,6 +616,95 @@ export const AdminComplaintDetailPage = () => {
             </div>
           )}
 
+          {/* Super Admin Rejection Alert Banner */}
+          {complaint.resolutionAudit?.isRejectionActive && (
+            <div
+              style={{
+                padding: '14px 18px',
+                borderRadius: '8px',
+                background: '#FEF2F2',
+                border: '1.5px solid #EF4444',
+                marginBottom: '16px',
+                color: '#991B1B',
+              }}
+              id="resolution-rejection-banner"
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <strong style={{ fontSize: '14px' }}>⚠️ Resolution Evidence Rejected by Super Admin</strong>
+                <span style={{ fontSize: '12px', fontWeight: 600 }}>
+                  Returned to {complaint.resolutionAudit.returnedStatus || 'IN_PROGRESS'}
+                </span>
+              </div>
+              <p style={{ margin: '0 0 6px 0', fontSize: '13px', lineHeight: 1.5 }}>
+                <strong>Rejection Reason:</strong> {complaint.resolutionAudit.rejectionReason}
+              </p>
+              <div style={{ fontSize: '12px', color: '#B91C1C' }}>
+                Audit by: <strong>{complaint.resolutionAudit.rejectedBy?.adminName || 'Super Admin'}</strong>
+                {complaint.resolutionAudit.rejectedAt && (
+                  <span> &bull; {new Date(complaint.resolutionAudit.rejectedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Officer Resolution Accountability Record */}
+          {(complaint.resolutionAudit?.resolvedBy || (complaint.status === 'RESOLVED' && complaint.assignedOfficer)) && (
+            <div className="admin-card mb-4" id="officer-accountability-card" style={{ borderLeft: '4px solid #10B981' }}>
+              <div className="admin-card-header d-flex justify-between align-center">
+                <div className="d-flex align-center gap-2">
+                  <h2 className="admin-card-title">Officer Resolution Accountability</h2>
+                </div>
+                <span className="badge badge-success text-xs">Authenticated Sign-Off</span>
+              </div>
+              <div className="admin-card-body">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                  <div>
+                    <span className="text-xs text-muted d-block">Resolving Officer:</span>
+                    <strong>{complaint.resolutionAudit?.resolvedBy?.officerName || complaint.assignedOfficer || 'PMC Field Officer'}</strong>
+                  </div>
+                  {complaint.resolutionAudit?.resolvedBy?.officerId && (
+                    <div>
+                      <span className="text-xs text-muted d-block">Officer ID:</span>
+                      <code style={{ fontSize: '12px' }}>{complaint.resolutionAudit.resolvedBy.officerId}</code>
+                    </div>
+                  )}
+                  {complaint.resolutionAudit?.resolvedBy?.officerRole && (
+                    <div>
+                      <span className="text-xs text-muted d-block">Designation / Role:</span>
+                      <span>{complaint.resolutionAudit.resolvedBy.officerRole}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-xs text-muted d-block">Resolution Timestamp:</span>
+                    <span>
+                      {new Date(complaint.resolutionAudit?.resolvedBy?.timestamp || complaint.updatedAt || Date.now()).toLocaleString('en-IN', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {complaint.status === 'RESOLVED' && (
+                  <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '12px', marginTop: '12px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-danger btn-sm"
+                      onClick={() => setShowRejectModal(true)}
+                      id="reject-resolution-btn"
+                      style={{ color: '#DC2626', borderColor: '#DC2626' }}
+                    >
+                      🛑 Reject Resolution Evidence (Super Admin)
+                    </button>
+                    <p className="text-xs text-muted mt-1" style={{ margin: '4px 0 0 0' }}>
+                      If the repair photo is fake, staged, or inadequate, reject it to reopen the complaint and audit the officer.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Activity Timeline & Audit Logs */}
           <div className="admin-card">
             <div className="admin-card-header">
@@ -856,6 +976,18 @@ export const AdminComplaintDetailPage = () => {
               >
                 Mark as Resolved
               </button>
+
+              {complaint.status === 'RESOLVED' && (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-danger btn-block mt-2"
+                  onClick={() => setShowRejectModal(true)}
+                  id="quick-reject-resolution-btn"
+                  style={{ color: '#DC2626', borderColor: '#DC2626' }}
+                >
+                  🛑 Reject Resolution Evidence
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1007,6 +1139,100 @@ export const AdminComplaintDetailPage = () => {
                     {isResolving ? 'Auditing with Gemini AI...' : 'Verify & Mark Resolved'}
                   </button>
                 )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Resolution Rejection Modal */}
+      {showRejectModal && (
+        <div
+          className="admin-modal-backdrop"
+          onClick={() => !isRejectingResolution && setShowRejectModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="admin-modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header" style={{ borderBottom: '2px solid #DC2626' }}>
+              <h3 className="admin-modal-title" style={{ color: '#DC2626' }}>
+                🛑 Reject Resolution Evidence & Reopen
+              </h3>
+              <button
+                type="button"
+                className="admin-modal-close-btn"
+                onClick={() => setShowRejectModal(false)}
+                disabled={isRejectingResolution}
+              >
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleRejectResolution}>
+              <div className="admin-modal-body">
+                <div
+                  style={{
+                    background: '#FEF2F2',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    marginBottom: '14px',
+                    fontSize: '12px',
+                    color: '#991B1B',
+                  }}
+                >
+                  <strong>Accountability Audit:</strong> This will reject the officer's submitted repair photo, record this audit event in the PMC immutable audit log, notify the citizen, and return the grievance to active work.
+                </div>
+
+                <div className="form-group mb-3">
+                  <label htmlFor="rejection-status-select" className="form-label">Return Grievance To Status</label>
+                  <select
+                    id="rejection-status-select"
+                    className="form-select"
+                    value={rejectionReturnedStatus}
+                    onChange={(e) => setRejectionReturnedStatus(e.target.value)}
+                    disabled={isRejectingResolution}
+                  >
+                    <option value="IN_PROGRESS">IN_PROGRESS (Return to Field Remediation)</option>
+                    <option value="UNDER_REVIEW">UNDER_REVIEW (Return to Municipal Review)</option>
+                  </select>
+                </div>
+
+                <div className="form-group mb-2">
+                  <label htmlFor="rejection-reason-text" className="form-label">
+                    Audit Rejection Reason <span className="text-danger">*</span>
+                  </label>
+                  <textarea
+                    id="rejection-reason-text"
+                    rows={4}
+                    className="form-textarea"
+                    placeholder="Specify why the evidence is unacceptable (e.g. AI-generated photo, wrong location, repair incomplete, incorrect street)..."
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    disabled={isRejectingResolution}
+                    required
+                  />
+                  <small className="text-muted d-block mt-1">
+                    Minimum 10 characters required for municipal audit compliance.
+                  </small>
+                </div>
+              </div>
+              <div className="admin-modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setShowRejectModal(false)}
+                  disabled={isRejectingResolution}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-danger"
+                  disabled={isRejectingResolution || rejectionReason.trim().length < 10}
+                  id="confirm-reject-resolution-btn"
+                  style={{ background: '#DC2626', borderColor: '#DC2626', color: '#FFFFFF' }}
+                >
+                  {isRejectingResolution ? 'Auditing & Reopening...' : 'Confirm Rejection & Reopen'}
+                </button>
               </div>
             </form>
           </div>

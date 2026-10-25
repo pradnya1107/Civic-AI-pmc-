@@ -1,8 +1,9 @@
 import { Types } from "mongoose";
-import type { UserRole } from "../users/user.model";
+import { User, type UserRole } from "../users/user.model";
 import { Department } from "../departments/department.model";
 import { AppError } from "../../utils/app-error";
 import { Complaint, calculateSlaDeadline } from "./complaint.model";
+import { getSlaStatusDetails, PMC_PUBLIC_HOLIDAYS } from "./sla-calendar.service";
 import { verifyResolution, isGoogleOrWebSearchUrl } from "../ai/gemini-ai.service";
 import type {
   ComplaintListQuery,
@@ -66,13 +67,46 @@ export async function createComplaint(
 ) {
   const priority = input.priority || "MEDIUM";
 
+  // Check AI confidence and authenticity flags
+  const isPossibleAi = Boolean(input.aiAnalysis?.authenticityAssessment?.possibleAiGenerated);
+
+  // Extract calibrated confidence score if supplied by provider (do not invent if not provided)
+  const aiConfidenceScore = typeof input.aiAnalysis?.confidenceScore === "number"
+    ? input.aiAnalysis.confidenceScore
+    : (typeof input.aiAnalysis?.confidence === "number"
+        ? (input.aiAnalysis.confidence <= 1 ? input.aiAnalysis.confidence * 100 : input.aiAnalysis.confidence)
+        : undefined);
+
+  // AI confidence below operational threshold (60%) triggers manual review
+  const isLowConfidence = aiConfidenceScore !== undefined && aiConfidenceScore < 60;
+
+  const manualReviewNeeded = Boolean(
+    input.aiAnalysis?.manualReviewNeeded ||
+    isPossibleAi ||
+    isLowConfidence
+  );
+
+  const manualReviewReason =
+    input.aiAnalysis?.manualReviewReason ||
+    (isPossibleAi
+      ? "Image exhibits cues of possible AI synthesis or digital modification; marked for on-site municipal field verification."
+      : isLowConfidence
+        ? `AI prediction confidence (${Math.round(aiConfidenceScore!)}%) is below operational threshold (60%); flagged for municipal officer manual verification.`
+        : undefined);
+
   let departmentId: Types.ObjectId | undefined;
   try {
-    const deptTerm = input.aiAnalysis?.suggestedDepartment || input.category;
+    // Only use AI suggestedDepartment if AI prediction is confident and manual review is not needed!
+    // When confidence is low or manual review is required, rely on citizen's selected category.
+    const deptTerm = (!manualReviewNeeded && input.aiAnalysis?.suggestedDepartment)
+      ? input.aiAnalysis.suggestedDepartment
+      : input.category;
+
     if (deptTerm) {
       const firstWord = deptTerm.split(/[ &/-]/)[0];
       const matchedDept = await Department.findOne({
         $or: [
+          { name: { $regex: new RegExp(`^${deptTerm}$`, "i") } },
           { name: { $regex: new RegExp(deptTerm, "i") } },
           { name: { $regex: new RegExp(firstWord, "i") } },
           { slug: { $regex: new RegExp(firstWord.toLowerCase(), "i") } },
@@ -88,7 +122,6 @@ export async function createComplaint(
   }
 
   // Requirement: Strictly reject complaints if image is AI-created OR taken from Google / web
-  const isPossibleAi = Boolean(input.aiAnalysis?.authenticityAssessment?.possibleAiGenerated);
   let isSyntheticUrl = false;
   let isGoogleWebUrl = false;
   if (input.imageUrl && (input.imageUrl.startsWith("http://") || input.imageUrl.startsWith("https://"))) {
@@ -120,9 +153,6 @@ export async function createComplaint(
       "GOOGLE_WEB_IMAGE_REJECTED",
     );
   }
-
-  const manualReviewNeeded = Boolean(input.aiAnalysis?.manualReviewNeeded);
-  const manualReviewReason = input.aiAnalysis?.manualReviewReason;
 
   const aiAnalysisPayload = input.aiAnalysis
     ? {
@@ -221,10 +251,11 @@ export async function getComplaint(actor: RequestActor, id: string) {
     (actor.role === "ADMIN" || actor.role === "DEPARTMENT_ADMIN") &&
     actor.departmentId
   ) {
+    const rawDept = complaint.departmentId as any;
     const complaintDeptId =
-      complaint.departmentId && typeof complaint.departmentId === "object" && "_id" in complaint.departmentId
-        ? (complaint.departmentId as any)._id.toString()
-        : complaint.departmentId?.toString();
+      rawDept && typeof rawDept === "object" && "_id" in rawDept
+        ? rawDept._id?.toString()
+        : rawDept?.toString();
     if (
       !complaintDeptId ||
       complaintDeptId !== actor.departmentId
@@ -456,7 +487,12 @@ export async function getHeatmapData(filterQuery: {
 export async function resolveComplaintWithVerification(
   actor: RequestActor,
   id: string,
-  input: { resolutionImageUrl?: string; resolutionNotes?: string },
+  input: {
+    resolutionImageUrl?: string;
+    resolutionNotes?: string;
+    humanReviewed?: boolean;
+    forceResolve?: boolean;
+  },
 ) {
   if (!isPrivilegedAdmin(actor.role)) {
     throw new AppError("Only administrators can resolve complaints.", 403, "FORBIDDEN");
@@ -499,7 +535,53 @@ export async function resolveComplaintWithVerification(
         throw e;
       }
       console.warn("AI verification error:", e);
+      aiVerdict = {
+        resolutionVerdict: "INCONCLUSIVE",
+        resolutionConfidence: 50,
+        resolutionAnalysis: "Automated verification encountered an error; manual inspection required.",
+      };
     }
+  }
+
+  // Verification Safety Check:
+  // If verification returns POTENTIALLY_UNRESOLVED, do NOT mark complaint RESOLVED unless an authorized
+  // administrator has explicitly reviewed and confirmed the resolution (humanReviewed: true).
+  const isPotentiallyUnresolved = aiVerdict?.resolutionVerdict === "POTENTIALLY_UNRESOLVED";
+  const isHumanConfirmed = Boolean(input.humanReviewed || input.forceResolve);
+
+  if (isPotentiallyUnresolved && !isHumanConfirmed) {
+    // Follow safe existing workflow: preserve evidence & analysis, leave in IN_PROGRESS, log audit, and reject unsupported resolution
+    if (input.resolutionImageUrl) complaint.resolutionImageUrl = input.resolutionImageUrl;
+    if (input.resolutionNotes) complaint.resolutionNotes = input.resolutionNotes;
+    if (aiVerdict) {
+      complaint.aiAnalysis = {
+        ...(complaint.aiAnalysis || {}),
+        ...aiVerdict,
+      };
+    }
+    await complaint.save();
+
+    await AuditLog.create({
+      actorRef: requireObjectId(actor.id),
+      action: "RESOLUTION_VERIFICATION_REJECTED",
+      targetRef: complaint._id,
+      targetModel: "Complaint",
+      metadata: {
+        action: "RESOLUTION_VERIFICATION_BLOCKED",
+        previousStatus: complaint.status,
+        newStatus: complaint.status,
+        resolutionVerdict: "POTENTIALLY_UNRESOLVED",
+        analysis: aiVerdict.resolutionAnalysis,
+        complaintNumber: complaint.complaintNumber,
+      },
+    });
+
+    throw new AppError(
+      aiVerdict.resolutionAnalysis ||
+        "Resolution verification failed: visual evidence indicates the civic defect is potentially unresolved. Manual inspection and confirmation are required.",
+      400,
+      "RESOLUTION_VERIFICATION_FAILED",
+    );
   }
 
   complaint.status = "RESOLVED";
@@ -515,6 +597,22 @@ export async function resolveComplaintWithVerification(
     }
   }
 
+  // Officer Accountability: Record authenticated officer ID/name and exact resolution timestamp
+  const resolvingUser = await User.findById(requireObjectId(actor.id)).select("fullName email role").lean();
+  const resolutionTimestamp = new Date();
+
+  complaint.resolutionAudit = {
+    resolvedBy: {
+      officerId: requireObjectId(actor.id),
+      officerName: resolvingUser?.fullName || "Municipal Officer",
+      officerEmail: resolvingUser?.email,
+      officerRole: actor.role,
+      timestamp: resolutionTimestamp,
+    },
+    resolvedAt: resolutionTimestamp,
+    isRejectionActive: false,
+  };
+
   await complaint.save();
 
   await AuditLog.create({
@@ -528,6 +626,13 @@ export async function resolveComplaintWithVerification(
       newStatus: "RESOLVED",
       resolutionVerdict: aiVerdict?.resolutionVerdict || "MANUAL_VERIFIED",
       photoAuthenticity: aiVerdict?.resolutionAuthenticity?.assessment || "AUTHENTIC_REAL_PHOTO",
+      officerId: actor.id,
+      officerName: resolvingUser?.fullName || "Municipal Officer",
+      officerEmail: resolvingUser?.email,
+      resolvingOfficerId: actor.id,
+      resolvingOfficerName: resolvingUser?.fullName || "Municipal Officer",
+      resolutionTimestamp,
+      ...(isHumanConfirmed ? { humanReviewConfirmed: true } : {}),
     },
   });
 
@@ -651,13 +756,29 @@ export async function getSlaMonitoringOverview() {
   const compliantCount = Math.max(0, totalOpen - overdueCount);
   const complianceRate = totalOpen > 0 ? Math.round((compliantCount / totalOpen) * 100) : 100;
 
+  const overdueWithDetails = overdueComplaints.map((c: any) => ({
+    ...c,
+    slaDetails: getSlaStatusDetails(c.slaDeadline, c.status, now),
+  }));
+
+  const approachingWithDetails = approachingComplaints.map((c: any) => ({
+    ...c,
+    slaDetails: getSlaStatusDetails(c.slaDeadline, c.status, now),
+  }));
+
   return {
     totalOpen,
     overdueCount,
     approachingCount: approachingComplaints.length,
     resolvedCount,
     complianceRate,
-    overdueComplaints,
-    approachingComplaints,
+    workingCalendar: {
+      standardHours: "09:30 - 18:00 IST (Mon - Fri)",
+      weekendPolicy: "Saturdays & Sundays excluded from non-emergency resolution time",
+      emergencyPolicy: "CRITICAL priority handled under 24x7 continuous emergency response",
+      totalRegisteredHolidays: Object.keys(PMC_PUBLIC_HOLIDAYS).length,
+    },
+    overdueComplaints: overdueWithDetails,
+    approachingComplaints: approachingWithDetails,
   };
 }

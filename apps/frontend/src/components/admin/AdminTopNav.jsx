@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { notificationApi } from '../../services/api';
+import { NotificationBell } from '../NotificationBell';
 
 export const AdminTopNav = ({ onOpenMobile }) => {
   const { user, logout } = useAuth();
@@ -205,24 +206,8 @@ export const AdminTopNav = ({ onOpenMobile }) => {
           </div>
         </button>
 
-        {/* Notification Bell */}
-        <Link
-          to="/admin/notifications"
-          className="admin-notif-btn"
-          aria-label={`Administrative notifications: ${unreadCount} unread`}
-          title={`Alerts & Notifications (${unreadCount} unread)`}
-          id="admin-notifications-bell"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-          {unreadCount > 0 && (
-            <span className="admin-notif-badge" aria-hidden="true">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </Link>
+        {/* Unified CivicAI Notification Bell Component */}
+        <NotificationBell role="ADMIN" className="admin-unified-bell" />
 
         {/* Quick Action Button */}
         <Link

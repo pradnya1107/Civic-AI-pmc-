@@ -55,17 +55,26 @@ export const NearbyIssuesMap = ({ onSelectComplaint }) => {
         const res = await complaintApi.getComplaints({ limit: 100 });
         const list = res?.data?.complaints || res?.complaints || res?.data || [];
         if (Array.isArray(list) && isMounted) {
-          // Keep complaints that have coordinates or assign default demo coordinates
-          const withCoords = list.map((c, i) => {
-            const lat = c.location?.latitude || (18.50 + (i % 15) * 0.015);
-            const lng = c.location?.longitude || (73.82 + ((i * 3) % 15) * 0.015);
-            return {
+          // Never invent or fabricate fake coordinates: display only genuine grievances with validated PMC coordinates
+          const genuineWithCoords = list
+            .filter((c) => {
+              const lat = Number(c.location?.latitude);
+              const lng = Number(c.location?.longitude);
+              return (
+                !isNaN(lat) &&
+                !isNaN(lng) &&
+                lat >= 18.30 &&
+                lat <= 18.70 &&
+                lng >= 73.65 &&
+                lng <= 74.05
+              );
+            })
+            .map((c) => ({
               ...c,
-              _computedLat: Number(lat),
-              _computedLng: Number(lng),
-            };
-          });
-          setComplaints(withCoords);
+              _computedLat: Number(c.location.latitude),
+              _computedLng: Number(c.location.longitude),
+            }));
+          setComplaints(genuineWithCoords);
         }
       } catch (err) {
         if (isMounted) setMapError('Unable to load nearby complaints. Please check connection.');
