@@ -569,7 +569,6 @@ export const AdminDashboardPage = () => {
               <tr>
                 <th scope="col">Complaint ID</th>
                 <th scope="col">Title & Location</th>
-                <th scope="col">Citizen</th>
                 <th scope="col">Department</th>
                 <th scope="col">Priority</th>
                 <th scope="col">Status (Inline Update)</th>
@@ -585,6 +584,7 @@ export const AdminDashboardPage = () => {
                   departments={departments}
                   onStatusChange={handleStatusChange}
                   onAssignClick={handleOpenAssignModal}
+                  showCitizen={false}
                 />
               ))}
             </tbody>

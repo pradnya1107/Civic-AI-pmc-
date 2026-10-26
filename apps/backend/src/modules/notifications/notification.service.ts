@@ -1,13 +1,55 @@
 import { Types } from "mongoose";
 import { AppError } from "../../utils/app-error";
 import { User } from "../users/user.model";
+import { Department } from "../departments/department.model";
 import type { ComplaintRecord, ComplaintStatus } from "../complaints/complaint.model";
-import { Notification } from "./notification.model";
+import { Notification, type NotificationType } from "./notification.model";
 
 export async function recordComplaintSubmission(
   complaint: ComplaintRecord & { _id: Types.ObjectId },
 ): Promise<void> {
   try {
+    const notificationsToCreate: Array<{
+      recipientId: Types.ObjectId;
+      complaintId: Types.ObjectId;
+      type: NotificationType;
+      title: string;
+      message: string;
+    }> = [];
+    const handledRecipients = new Set<string>();
+
+    let deptName = "Municipal Department";
+    if (complaint.departmentId) {
+      const dept = await Department.findById(complaint.departmentId).select("name code").lean();
+      if (dept) {
+        deptName = dept.name;
+      }
+
+      // 1. Notify Department Administrators of the assigned department
+      const deptAdmins = await User.find({
+        departmentId: complaint.departmentId,
+        role: { $in: ["DEPARTMENT_ADMIN", "ADMIN"] },
+        accountStatus: "ACTIVE",
+      })
+        .select("_id")
+        .lean();
+
+      for (const admin of deptAdmins) {
+        const idStr = admin._id.toString();
+        if (!handledRecipients.has(idStr)) {
+          handledRecipients.add(idStr);
+          notificationsToCreate.push({
+            recipientId: admin._id,
+            complaintId: complaint._id,
+            type: "COMPLAINT_SUBMITTED",
+            title: "New Complaint Auto-Assigned by AI",
+            message: `Complaint ${complaint.complaintNumber} (${complaint.category}) was auto-forwarded by AI to your department (${deptName}).`,
+          });
+        }
+      }
+    }
+
+    // 2. Notify Super Administrators for central tracking
     const administrators = await User.find({
       role: "ADMIN",
       accountStatus: "ACTIVE",
@@ -16,19 +58,23 @@ export async function recordComplaintSubmission(
       .select("_id")
       .lean();
 
-    if (administrators.length === 0) {
-      return;
+    for (const admin of administrators) {
+      const idStr = admin._id.toString();
+      if (!handledRecipients.has(idStr)) {
+        handledRecipients.add(idStr);
+        notificationsToCreate.push({
+          recipientId: admin._id,
+          complaintId: complaint._id,
+          type: "COMPLAINT_SUBMITTED",
+          title: "New civic complaint",
+          message: `Complaint ${complaint.complaintNumber} was submitted.`,
+        });
+      }
     }
 
-    await Notification.insertMany(
-      administrators.map(({ _id }) => ({
-        recipientId: _id,
-        complaintId: complaint._id,
-        type: "COMPLAINT_SUBMITTED",
-        title: "New civic complaint",
-        message: `Complaint ${complaint.complaintNumber} was submitted.`,
-      })),
-    );
+    if (notificationsToCreate.length > 0) {
+      await Notification.insertMany(notificationsToCreate);
+    }
   } catch (error) {
     const errorName = error instanceof Error ? error.name : "UnknownError";
     console.error(`Failed to record complaint notifications (${errorName}).`);

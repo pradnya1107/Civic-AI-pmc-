@@ -18,6 +18,7 @@ export const ComplaintRow = ({
   onStatusChange,
   onAssignClick,
   isUpdating = false,
+  showCitizen = true,
 }) => {
   const navigate = useNavigate();
   const [localStatus, setLocalStatus] = useState(complaint.status || 'SUBMITTED');
@@ -96,14 +97,16 @@ export const ComplaintRow = ({
       </td>
 
       {/* Citizen Information */}
-      <td>
-        <div className="citizen-info-cell">
-          <span className="citizen-name text-sm font-medium">{citizenName}</span>
-          {citizenEmail && (
-            <span className="citizen-email text-xs text-muted truncate">{citizenEmail}</span>
-          )}
-        </div>
-      </td>
+      {showCitizen && (
+        <td>
+          <div className="citizen-info-cell">
+            <span className="citizen-name text-sm font-medium">{citizenName}</span>
+            {citizenEmail && (
+              <span className="citizen-email text-xs text-muted truncate">{citizenEmail}</span>
+            )}
+          </div>
+        </td>
+      )}
 
       {/* Department & Quick Assign */}
       <td>
@@ -120,7 +123,7 @@ export const ComplaintRow = ({
             title="Assign or reassign municipal department"
             disabled={isUpdating}
           >
-            Assign
+            {complaint.departmentId ? 'Reassign' : 'Assign'}
           </button>
         </div>
       </td>

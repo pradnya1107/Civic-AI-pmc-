@@ -198,7 +198,6 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDensityCircles, setShowDensityCircles] = useState(true);
 
   // Load points from API
   const loadHeatmapData = async () => {
@@ -419,20 +418,6 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
           setSelectedPointId(pt.id);
         });
         markersLayerRef.current.addLayer(marker);
-
-        // Add density circles if enabled for high/critical issues
-        if (showDensityCircles && circlesLayerRef.current && (severity === 'CRITICAL' || severity === 'HIGH')) {
-          const radius = severity === 'CRITICAL' ? 350 : 200;
-          const color = SEVERITY_COLORS[severity] || '#ef4444';
-          const circle = L.circle([pt.lat, pt.lng], {
-            color: color,
-            fillColor: color,
-            fillOpacity: 0.12,
-            weight: 1.5,
-            radius: radius,
-          });
-          circlesLayerRef.current.addLayer(circle);
-        }
       });
 
       // If points exist and map is active, fit bounds if more than 1 point
@@ -445,7 +430,7 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
     } catch (err) {
       console.warn('Error updating heatmap markers:', err);
     }
-  }, [filteredPoints, showDensityCircles, isAdmin]);
+  }, [filteredPoints, isAdmin]);
 
   return (
     <div className="civic-heatmap-wrapper">
@@ -513,20 +498,6 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
           </div>
 
           <div className="heatmap-control-actions">
-            <button
-              type="button"
-              className={`btn btn-sm ${showDensityCircles ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setShowDensityCircles(!showDensityCircles)}
-              title="Toggle severity impact circles"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="6" />
-                <circle cx="12" cy="12" r="2" />
-              </svg>
-              {showDensityCircles ? 'Impact Radii: ON' : 'Impact Radii: OFF'}
-            </button>
-
             <button
               type="button"
               className="btn btn-outline btn-sm"
