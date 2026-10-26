@@ -333,19 +333,19 @@ export const NearbyIssuesMap = ({ onSelectComplaint }) => {
 
             {/* Severity Pin Color Sub-legend */}
             <div className="compact-legend-footer">
-              <div className="legend-footer-title">Severity Pin Color:</div>
+              <div className="legend-footer-title">Severity Pin Color (Working Days SLA):</div>
               <div className="legend-footer-dots">
-                <span className="legend-dot-pill" title="Critical (< 12h SLA)">
-                  <span className="dot dot-crit" /> &lt;12h
+                <span className="legend-dot-pill" title="Critical (24x7 / 1 Working Day SLA)">
+                  <span className="dot dot-crit" /> 1 Day
                 </span>
-                <span className="legend-dot-pill" title="High (< 24h SLA)">
-                  <span className="dot dot-high" /> &lt;24h
+                <span className="legend-dot-pill" title="High (2 Working Days SLA)">
+                  <span className="dot dot-high" /> 2 Days
                 </span>
-                <span className="legend-dot-pill" title="Medium (< 48h SLA)">
-                  <span className="dot dot-med" /> &lt;48h
+                <span className="legend-dot-pill" title="Medium (4 Working Days SLA)">
+                  <span className="dot dot-med" /> 4 Days
                 </span>
-                <span className="legend-dot-pill" title="Low (< 72h SLA)">
-                  <span className="dot dot-low" /> &lt;72h
+                <span className="legend-dot-pill" title="Low (7 Working Days SLA)">
+                  <span className="dot dot-low" /> 7 Days
                 </span>
               </div>
             </div>
