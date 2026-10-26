@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { departmentAdminApi } from '../../services/api';
 
 export const DepartmentSettingsPage = ({ lastRefreshed, onRefreshNeeded }) => {
   const { user } = useAuth();
   const [toastMessage, setToastMessage] = useState(null);
+  const toastTimeoutRef = useRef(null);
 
   // Change Password Form State
   const [passwordForm, setPasswordForm] = useState({
@@ -20,9 +21,16 @@ export const DepartmentSettingsPage = ({ lastRefreshed, onRefreshNeeded }) => {
   const [passwordSuccess, setPasswordSuccess] = useState(null);
 
   const showToast = (msg, isError = false) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToastMessage({ text: msg, isError });
-    setTimeout(() => setToastMessage(null), 4000);
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 4000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   const validatePasswordForm = () => {
     const errors = {};

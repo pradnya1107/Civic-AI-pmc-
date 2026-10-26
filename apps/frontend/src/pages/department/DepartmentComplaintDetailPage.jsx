@@ -52,10 +52,19 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
+  const toastTimeoutRef = useRef(null);
+
   const showToast = (msg) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 4000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   const loadComplaint = useCallback(async () => {
     setIsLoading(true);
