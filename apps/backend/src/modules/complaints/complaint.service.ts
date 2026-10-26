@@ -97,12 +97,15 @@ export async function createComplaint(
   let departmentId: Types.ObjectId | undefined;
   try {
     // Authoritative PMC Category-to-Department Matrix
-    const categoryTerm = (
-      input.aiAnalysis?.suggestedDepartment ||
-      input.category ||
-      input.aiAnalysis?.category ||
-      ""
-    ).trim();
+    const rawCategory =
+      typeof input.aiAnalysis?.suggestedDepartment === "string"
+        ? input.aiAnalysis.suggestedDepartment
+        : typeof input.category === "string"
+          ? input.category
+          : typeof input.aiAnalysis?.category === "string"
+            ? input.aiAnalysis.category
+            : "";
+    const categoryTerm: string = String(rawCategory || "").trim();
 
     const searchConditions: any[] = [];
 
@@ -157,7 +160,7 @@ export async function createComplaint(
     }
 
     if (categoryTerm) {
-      const words = categoryTerm.split(/[ &/-]/).filter((w) => w.length > 2);
+      const words = categoryTerm.split(/[ &/-]/).filter((w: string) => w.length > 2);
       for (const w of words) {
         searchConditions.push(
           { name: new RegExp(w, "i") },
