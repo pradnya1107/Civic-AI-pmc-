@@ -515,8 +515,8 @@ export const AdminComplaintDetailPage = () => {
             </div>
           </div>
 
-          {/* Citizen Details Card */}
-          <div className="admin-card mb-4">
+          {/* Citizen Privacy-Protected Reference Card */}
+          <div className="admin-card mb-4" data-testid="citizen-details-card">
             <div className="admin-card-header">
               <h2 className="admin-card-title">Citizen Details</h2>
             </div>
@@ -529,10 +529,9 @@ export const AdminComplaintDetailPage = () => {
                   <h3 className="text-base font-semibold">
                     {citizen?.fullName || citizen?.name || 'Anonymous Citizen'}
                   </h3>
-                  <p className="text-sm text-muted">📧 {citizen?.email || 'N/A'}</p>
-                  {citizen?.phoneNumber && (
-                    <p className="text-sm text-muted">📞 {citizen.phoneNumber}</p>
-                  )}
+                  <p className="text-xs text-muted">
+                    🛡️ Citizen contact details hidden in administrative view for privacy protection.
+                  </p>
                 </div>
               </div>
             </div>

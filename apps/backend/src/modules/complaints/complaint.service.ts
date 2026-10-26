@@ -96,26 +96,91 @@ export async function createComplaint(
 
   let departmentId: Types.ObjectId | undefined;
   try {
-    // Only use AI suggestedDepartment if AI prediction is confident and manual review is not needed!
-    // When confidence is low or manual review is required, rely on citizen's selected category.
-    const deptTerm = (!manualReviewNeeded && input.aiAnalysis?.suggestedDepartment)
-      ? input.aiAnalysis.suggestedDepartment
-      : input.category;
+    // Authoritative PMC Category-to-Department Matrix
+    const categoryTerm = (
+      input.aiAnalysis?.suggestedDepartment ||
+      input.category ||
+      input.aiAnalysis?.category ||
+      ""
+    ).trim();
 
-    if (deptTerm) {
-      const firstWord = deptTerm.split(/[ &/-]/)[0];
-      const matchedDept = await Department.findOne({
-        $or: [
-          { name: { $regex: new RegExp(`^${deptTerm}$`, "i") } },
-          { name: { $regex: new RegExp(deptTerm, "i") } },
-          { name: { $regex: new RegExp(firstWord, "i") } },
-          { slug: { $regex: new RegExp(firstWord.toLowerCase(), "i") } },
-        ],
+    const searchConditions: any[] = [];
+
+    if (/road|pothole|footpath|tar|divider|asphalt|traffic|transport/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "ROADS" },
+        { slug: /road/i },
+        { name: /road/i },
+      );
+    } else if (/waste|garbage|trash|clean|swm|rubbish|dump|litter/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "SWMB" },
+        { slug: /waste|swm/i },
+        { name: /waste|garbage/i },
+      );
+    } else if (/water|leak|pipe|supply|burst/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "WATER" },
+        { slug: /water/i },
+        { name: /water/i },
+      );
+    } else if (/drain|sewer|manhole|gutter/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "DRAINAGE" },
+        { slug: /drain/i },
+        { name: /drain/i },
+      );
+    } else if (/electric|light|pole|wire|street/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "ELECTRICAL" },
+        { slug: /electric/i },
+        { name: /electric|light/i },
+      );
+    } else if (/health|sanitation|hospital|pest|mosquito/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "HEALTH" },
+        { slug: /health/i },
+        { name: /health/i },
+      );
+    } else if (/encroachment|building|unauthorized|hawker/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "ENCROACHMENT" },
+        { slug: /encroach/i },
+        { name: /encroachment/i },
+      );
+    } else if (/garden|tree|park|trim/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "GARDEN" },
+        { slug: /garden/i },
+        { name: /garden|tree/i },
+      );
+    }
+
+    if (categoryTerm) {
+      const words = categoryTerm.split(/[ &/-]/).filter((w) => w.length > 2);
+      for (const w of words) {
+        searchConditions.push(
+          { name: new RegExp(w, "i") },
+          { slug: new RegExp(w, "i") },
+        );
+      }
+    }
+
+    let matchedDept = null;
+    if (searchConditions.length > 0) {
+      matchedDept = await Department.findOne({
+        $or: searchConditions,
         isActive: true,
       });
-      if (matchedDept) {
-        departmentId = matchedDept._id;
-      }
+    }
+
+    // Fallback: If no direct keyword matched, grab the first active department so it never stays unassigned
+    if (!matchedDept) {
+      matchedDept = await Department.findOne({ isActive: true }).sort({ createdAt: 1 });
+    }
+
+    if (matchedDept) {
+      departmentId = matchedDept._id;
     }
   } catch (deptErr) {
     console.warn("Could not auto-assign department:", deptErr);
