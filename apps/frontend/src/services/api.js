@@ -288,7 +288,7 @@ export const complaintApi = {
 
 export const aiApi = {
   /**
-   * Check Gemini AI connection status
+   * Check AI connection status
    * GET /api/v1/ai/status
    */
   async getAiStatus() {
@@ -306,7 +306,7 @@ export const aiApi = {
   },
 
   /**
-   * Analyze complaint image + text with Gemini Vision
+   * Analyze complaint image + text with Vision AI
    * POST /api/v1/ai/analyze-complaint
    */
   async analyzeComplaint(data) {

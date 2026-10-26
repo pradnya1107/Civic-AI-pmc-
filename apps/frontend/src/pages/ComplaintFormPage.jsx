@@ -286,7 +286,7 @@ const compressImageFile = (file) => {
     });
   };
 
-  // Trigger Gemini AI Vision Scan
+  // Trigger AI Vision Scan
   const handleAiScan = async () => {
     if (!formData.imageUrl && !imageBase64) {
       setServerError('Please upload or select an issue photo first to run AI Severity Analysis.');
@@ -697,13 +697,13 @@ const compressImageFile = (file) => {
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                   <circle cx="12" cy="13" r="4" />
                 </svg>
-                <h3 className="scanner-title">Photo Attachment & Gemini AI Scanner</h3>
+                <h3 className="scanner-title">Photo Attachment & AI Scanner</h3>
               </div>
               <span className="scanner-tag">Multimodal AI 1.5</span>
             </div>
 
             <p className="scanner-intro">
-              Upload a picture of the civic problem. Our Gemini AI engine will analyze image patterns, estimate hazard severity, recommend the municipal department, and auto-populate your grievance.
+              Upload a picture of the civic problem. Our AI engine will analyze image patterns, estimate hazard severity, recommend the municipal department, and auto-populate your grievance.
             </p>
 
             {/* Quick Demo Presets */}
@@ -810,7 +810,7 @@ const compressImageFile = (file) => {
                       {isAiScanning ? (
                         <>
                           <span className="spinner" style={{ width: '0.9rem', height: '0.9rem' }} />
-                          <span>Gemini AI Analyzing...</span>
+                          <span>AI Analyzing...</span>
                         </>
                       ) : (
                         <>

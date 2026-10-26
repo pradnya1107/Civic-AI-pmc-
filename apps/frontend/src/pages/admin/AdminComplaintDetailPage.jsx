@@ -261,7 +261,7 @@ export const AdminComplaintDetailPage = () => {
       });
 
       if (res && res.success) {
-        showToast('Complaint resolved! Gemini AI before-and-after audit completed.');
+        showToast('Complaint resolved! AI before-and-after audit completed.');
         setShowResolveModal(false);
         setPhotoScanResult(null);
         loadData();
@@ -609,7 +609,7 @@ export const AdminComplaintDetailPage = () => {
 
                 {complaint.verificationConfidence !== undefined && (
                   <div className="ai-verification-meta">
-                    <span>Gemini Vision Audit Confidence: <strong>{complaint.verificationConfidence}%</strong></span>
+                    <span>AI Vision Audit Confidence: <strong>{complaint.verificationConfidence}%</strong></span>
                   </div>
                 )}
               </div>
@@ -1004,7 +1004,7 @@ export const AdminComplaintDetailPage = () => {
             <form onSubmit={handleResolveWithVerification}>
               <div className="admin-modal-body">
                 <p className="text-sm text-muted mb-3">
-                  Upload repair photo evidence. Gemini AI vision engine will audit the work before final citizen notification.
+                  Upload repair photo evidence. AI vision engine will audit the work before final citizen notification.
                 </p>
                 <div className="form-group">
                   <label htmlFor="resolve-img-url" className="form-label">Repair Work Photo URL</label>
@@ -1136,7 +1136,7 @@ export const AdminComplaintDetailPage = () => {
                   </button>
                 ) : (
                   <button type="submit" className="btn btn-success" disabled={isResolving || isScanningPhoto}>
-                    {isResolving ? 'Auditing with Gemini AI...' : 'Verify & Mark Resolved'}
+                    {isResolving ? 'Auditing with AI...' : 'Verify & Mark Resolved'}
                   </button>
                 )}
               </div>

@@ -77,7 +77,7 @@ export const HelpCenterModal = ({ isOpen, onClose }) => {
           <section className="faq-section mt-3">
             <h3 className="section-subtitle">Frequently Asked Questions</h3>
             <details className="faq-item">
-              <summary>How does Gemini AI analyze my reported photo?</summary>
+              <summary>How does AI analyze my reported photo?</summary>
               <p>Our multimodal AI automatically detects the category (e.g. Pothole, Garbage, Waterlogging), measures visual severity (Low, Medium, High, Critical), estimates resolution SLA, and routes it directly to the responsible Pune Municipal Corporation department.</p>
             </details>
             <details className="faq-item">

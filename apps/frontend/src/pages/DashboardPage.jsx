@@ -238,7 +238,7 @@ export const DashboardPage = () => {
                 </h1>
 
                 <p className="citizen-welcome-desc">
-                  Pune Municipal Corporation Civic Intelligence Platform. Report potholes, waste overflows, water stagnation, or broken streetlights using multimodal Gemini AI and live GPS tracking.
+                  Pune Municipal Corporation Civic Intelligence Platform. Report potholes, waste overflows, water stagnation, or broken streetlights using multimodal AI and live GPS tracking.
                 </p>
 
                 {/* Location Badge & Voice Note Player */}

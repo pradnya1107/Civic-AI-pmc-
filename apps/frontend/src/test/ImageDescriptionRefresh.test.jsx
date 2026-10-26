@@ -119,7 +119,7 @@ describe('Phase 1: Image Description Refresh & Separation', () => {
       const scanBtn = screen.getByRole('button', { name: /Scan & Auto-Fill with AI/i });
       fireEvent.click(scanBtn);
 
-      expect(screen.getByText(/Gemini AI Analyzing.../i)).toBeInTheDocument();
+      expect(screen.getByText(/AI Analyzing.../i)).toBeInTheDocument();
 
       // While first scan is in-flight, user switches to Garbage preset
       const garbagePresetBtn = screen.getByRole('button', { name: /Garbage Overflow/i });

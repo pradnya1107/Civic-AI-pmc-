@@ -565,7 +565,7 @@ export const ComplaintDetailPage = () => {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ color: '#10b981' }}>
                       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                     </svg>
-                    <span>Gemini Vision AI Confidence: {complaint.verificationConfidence}%</span>
+                    <span>AI Vision Confidence: {complaint.verificationConfidence}%</span>
                   </div>
                 )}
               </section>
@@ -853,7 +853,7 @@ export const ComplaintDetailPage = () => {
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-primary)' }}>
                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                       </svg>
-                      <strong>Gemini AI Diagnostics:</strong>
+                      <strong>AI Diagnostics:</strong>
                     </div>
                     {complaint.aiAnalysis.detectedCivicIssue && (
                       <p style={{ margin: '4px 0', fontWeight: 600, color: 'var(--color-primary)' }}>

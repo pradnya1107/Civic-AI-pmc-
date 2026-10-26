@@ -833,7 +833,7 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
               <span style={{ fontSize: '20px' }}>🤖</span>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0F766E' }}>
-                Gemini Vision AI Analysis
+                AI Vision Analysis
               </h3>
             </div>
 

@@ -61,7 +61,7 @@ const RootIndexRedirect = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/splash" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   const role = (user?.role || 'CITIZEN').toUpperCase();
@@ -110,7 +110,7 @@ export const App = () => {
               <Route path="/" element={<RootIndexRedirect />} />
 
               {/* Public Welcome & Auth Routes */}
-              <Route path="/splash" element={<SplashScreen />} />
+              <Route path="/splash" element={<Navigate to="/login" replace />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
