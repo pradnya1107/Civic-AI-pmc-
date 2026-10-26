@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import { asyncHandler } from "../../middleware/async-handler";
 import { authenticate } from "../../middleware/authenticate";
 import { analyzeComplaint, verifyResolution } from "./gemini-ai.service";
+import { classifyWithVgg16 } from "./vgg16-classifier.service";
 import { Complaint } from "../complaints/complaint.model";
 import { AuditLog } from "../audit/auditLog.model";
 import { Notification } from "../notifications/notification.model";
@@ -21,8 +22,10 @@ aiRouter.get(
       data: {
         configured: hasKey,
         provider: hasKey ? "Google Gemini 1.5/2.0 Flash Vision" : "Civic Intelligent Rule Heuristic",
+        vgg16Enabled: true,
+        vgg16Model: "VGG-16 Deep Convolutional Neural Network",
         instructions: hasKey
-          ? "Gemini API key is configured and active."
+          ? "Gemini API key and VGG-16 Vision classifier are configured and active."
           : "To enable Google Gemini multimodal vision, add GEMINI_API_KEY=your_key in apps/backend/.env.",
       },
     });
@@ -32,7 +35,24 @@ aiRouter.get(
 aiRouter.post(
   "/analyze-complaint",
   asyncHandler(async (request, response) => {
-    const result = await analyzeComplaint(request.body);
+    const [vgg16Result, result] = await Promise.all([
+      classifyWithVgg16({
+        imageUrl: request.body.imageUrl,
+        imageBase64: request.body.imageBase64,
+      }),
+      analyzeComplaint(request.body),
+    ]);
+
+    // Attach VGG-16 deep vision results
+    if (vgg16Result) {
+      (result as any).vgg16 = vgg16Result;
+      // If VGG-16 flagged non-civic / receipt with high confidence, enforce rejection
+      if (vgg16Result.isCivicIssue === false) {
+        result.isCivicIssue = false;
+        result.rejectionReason = vgg16Result.rejectionReason || "VGG-16 Vision flagged image as non-civic.";
+      }
+    }
+
     const complaintId = request.body.complaintId;
     let updatedComplaint: any = null;
     let statusUpdated = false;

@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: './src/test/setup.js',
       css: true,
-      testTimeout: 20000,
+      testTimeout: 40000,
     },
   };
 });

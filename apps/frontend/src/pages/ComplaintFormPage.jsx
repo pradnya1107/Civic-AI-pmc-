@@ -1100,6 +1100,14 @@ const compressImageFile = (file) => {
                       <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#15803D', lineHeight: 1.5 }}>
                         AI forensic audit confirms authentic physical camera capture with natural optical sensor noise, organic wear, and real-world lighting.
                       </p>
+                      {aiResult.vgg16 && (
+                        <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#166534' }}>
+                          <span style={{ background: '#DCFCE7', padding: '2px 8px', borderRadius: '4px', border: '1px solid #86EFAC', fontWeight: 700 }}>
+                            🧠 VGG-16 CNN Verified
+                          </span>
+                          <span>Detected Defect: <strong>{aiResult.vgg16.detectedClass}</strong> ({aiResult.vgg16.confidenceScore}% Match)</span>
+                        </div>
+                      )}
                       <div
                         style={{
                           background: '#16A34A',

@@ -45,6 +45,7 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-"CivicAI PMC <noreply@pmc.gov.in>"}
+      VISION_SERVICE_URL: ${VISION_SERVICE_URL:-http://vision-service:8000}
     networks:
       - civicai-network
     expose:
@@ -55,6 +56,24 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+
+  # VGG-16 Deep Vision Classification Microservice
+  vision-service:
+    build:
+      context: ./services/vision-service
+      dockerfile: Dockerfile
+    container_name: civicai-vision
+    restart: unless-stopped
+    networks:
+      - civicai-network
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   # Frontend Web / Reverse Proxy Service
   web:
