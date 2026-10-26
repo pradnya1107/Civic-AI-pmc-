@@ -72,6 +72,17 @@ export const createComplaintSchema = z
           })
           .passthrough()
           .optional(),
+        isCivicIssue: z.boolean().optional(),
+        isDocumentOrNonCivic: z.boolean().optional(),
+        civicIssue: z
+          .object({
+            isCivicIssue: z.boolean().optional(),
+            confidence: z.number().optional(),
+            reason: z.string().optional(),
+            categoryDetected: z.string().optional(),
+          })
+          .passthrough()
+          .optional(),
       })
       .passthrough()
       .optional(),
