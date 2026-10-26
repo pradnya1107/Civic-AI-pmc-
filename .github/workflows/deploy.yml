@@ -47,7 +47,7 @@ jobs:
         id: meta-backend
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/backend
+          images: ghcr.io/${{ github.repository_owner }}/civic-ai-backend
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=short
@@ -67,7 +67,7 @@ jobs:
         id: meta-web
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/web
+          images: ghcr.io/${{ github.repository_owner }}/civic-ai-web
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=short
