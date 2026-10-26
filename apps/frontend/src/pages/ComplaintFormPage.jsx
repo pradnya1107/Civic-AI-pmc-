@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CitizenLayout } from '../components/CitizenLayout';
 import { LocationPickerMap } from '../components/LocationPickerMap';
+import { CameraCaptureModal } from '../components/CameraCaptureModal';
 import { useLanguage } from '../context/LanguageContext';
 import { complaintApi, aiApi } from '../services/api';
 import { PMC_CATEGORIES, PMC_WARDS } from '../constants/pmcData';
@@ -110,6 +111,32 @@ export const ComplaintFormPage = () => {
   const [geoNotice, setGeoNotice] = useState('');
   const [step7Completed, setStep7Completed] = useState(false);
   const [createdComplaintData, setCreatedComplaintData] = useState(null);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+
+  /**
+   * Snaps a photo directly from the live camera stream
+   */
+  const handleCameraCapture = (capturedDataUrl) => {
+    invalidateImageAnalysis();
+    setImagePreview(capturedDataUrl);
+    setImageBase64(capturedDataUrl);
+    setFormData((prev) => ({
+      ...prev,
+      imageUrl: capturedDataUrl,
+      description: extractManualDescription(prev.description),
+    }));
+  };
+
+  /**
+   * Opens live in-app camera viewfinder when available, or falls back to file picker
+   */
+  const handleOpenLiveCamera = () => {
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+      setIsCameraModalOpen(true);
+    } else {
+      cameraInputRef.current?.click();
+    }
+  };
 
   /**
    * Invalidates existing AI result and strips previous AI evidence
@@ -787,7 +814,7 @@ const compressImageFile = (file) => {
                   <button
                     type="button"
                     className="btn btn-primary scanner-pick-btn"
-                    onClick={() => cameraInputRef.current?.click()}
+                    onClick={handleOpenLiveCamera}
                     disabled={isAiScanning}
                     style={{ background: '#0284C7', borderColor: '#0369A1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
@@ -1524,6 +1551,13 @@ const compressImageFile = (file) => {
           </form>
         </section>
       </div>
+
+      <CameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCapture={handleCameraCapture}
+        onFallbackToFile={() => fileInputRef.current?.click()}
+      />
     </CitizenLayout>
   );
 };

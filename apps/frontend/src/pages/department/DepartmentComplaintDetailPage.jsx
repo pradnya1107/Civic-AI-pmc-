@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { departmentAdminApi, aiApi } from '../../services/api';
+import { CameraCaptureModal } from '../../components/CameraCaptureModal';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -45,6 +46,12 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
   const [isPhotoScanning, setIsPhotoScanning] = useState(false);
   const [photoScanResult, setPhotoScanResult] = useState(null);
   const [isScanningPhoto, setIsScanningPhoto] = useState(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+
+  const handleCameraCapture = (capturedDataUrl) => {
+    setResolutionImageUrl(capturedDataUrl);
+    setPhotoScanResult(null);
+  };
 
   const [newNoteText, setNewNoteText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1498,18 +1505,31 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
                   <span style={{ fontSize: '11px', color: '#0D9488', fontWeight: 600 }}>Supports JPEG, PNG, WebP (Max 5MB)</span>
                 </label>
 
-                <div
-                  style={{
-                    border: '2px dashed #CBD5E1',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    textAlign: 'center',
-                    background: '#F8FAFC',
-                    cursor: 'pointer',
-                    marginBottom: '10px',
-                  }}
-                  onClick={() => document.getElementById('resolution-file-input')?.click()}
-                >
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+                        setIsCameraModalOpen(true);
+                      } else {
+                        document.getElementById('resolution-file-input')?.click();
+                      }
+                    }}
+                    style={{ background: '#0284C7', borderColor: '#0369A1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  >
+                    <span>📷 Take Live Photo</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => document.getElementById('resolution-file-input')?.click()}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  >
+                    <span>📁 Browse Files</span>
+                  </button>
+
                   <input
                     type="file"
                     id="resolution-file-input"
@@ -1517,13 +1537,6 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
                     onChange={handlePhotoFileUpload}
                     style={{ display: 'none' }}
                   />
-                  <div style={{ fontSize: '28px', marginBottom: '6px' }}>📷</div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#0B1D33' }}>
-                    Click to browse or take photo with device camera
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
-                    Officer on-site capture
-                  </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0' }}>
@@ -2055,6 +2068,14 @@ export const DepartmentComplaintDetailPage = ({ lastRefreshed, onRefreshNeeded }
           </div>
         </div>
       )}
+
+      {/* Live Camera Viewfinder Modal */}
+      <CameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCapture={handleCameraCapture}
+        onFallbackToFile={() => document.getElementById('resolution-file-input')?.click()}
+      />
     </div>
   );
 };
