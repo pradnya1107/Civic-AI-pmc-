@@ -113,8 +113,18 @@ export const AdminSidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCl
         {/* Brand / Logo Header */}
         <div className="admin-sidebar-header">
           <Link to="/admin" className="admin-brand-link" title="CivicAI PMC Portal">
-            <div className="admin-brand-logo-wrap" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <div className="admin-brand-logo-wrap" aria-hidden="true" style={{ overflow: 'hidden' }}>
+              <img
+                src="/civicai-logo.jpg"
+                alt="CivicAI PMC"
+                className="sidebar-brand-logo-img"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'block';
+                }}
+              />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'none' }}>
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
               </svg>
             </div>

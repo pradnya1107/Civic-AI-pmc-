@@ -30,7 +30,16 @@ export const Navbar = () => {
       <div className="portal-nav__inner">
         {/* Brand / Logo */}
         <Link to="/dashboard" className="portal-brand" aria-label="CivicAI PMC Dashboard">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-primary)' }} aria-hidden="true">
+          <img
+            src="/civicai-logo.jpg"
+            alt="CivicAI PMC"
+            style={{ width: '28px', height: '28px', borderRadius: '7px', objectFit: 'cover' }}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'inline-block';
+            }}
+          />
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-primary)', display: 'none' }} aria-hidden="true">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
           <span className="portal-brand-text">CivicAI PMC</span>

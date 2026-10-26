@@ -163,5 +163,49 @@ describe('Phase 1: Image Description Refresh & Separation', () => {
         expect(screen.queryByText(/Civic Issue Recognition/i)).not.toBeInTheDocument();
       });
     });
+
+    it('blocks submission button and displays warning when non-civic receipt/document image is scanned', async () => {
+      aiApi.analyzeComplaint.mockResolvedValueOnce({
+        success: true,
+        data: {
+          isCivicIssue: false,
+          detectedCivicIssue: 'No Visible Civic Issue',
+          category: 'Other Civic Grievance',
+          suggestedTitle: 'No Visible Civic Issue',
+          visibleEvidence: 'The image displays a blank paper receipt or cash sale invoice book page with no civic infrastructure defects.',
+          severity: 'LOW',
+          confidenceScore: 0,
+          authenticityAssessment: {
+            possibleAiGenerated: false,
+            isDocumentOrNonCivic: true,
+            confidence: 'HIGH',
+            indicators: ['Image depicts an invoice or document'],
+          },
+          safetyHazards: ['Non-civic image', 'Invoice document'],
+        },
+      });
+
+      render(
+        <MemoryRouter>
+          <ComplaintFormPage />
+        </MemoryRouter>,
+      );
+
+      const potholePresetBtn = screen.getByRole('button', { name: /Road Pothole/i });
+      fireEvent.click(potholePresetBtn);
+
+      const scanBtn = screen.getByRole('button', { name: /Scan & Auto-Fill with AI/i });
+      fireEvent.click(scanBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('No Civic Issue Detected')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Submission Blocked \(No Civic Issue Detected\)/i })).toBeInTheDocument();
+        expect(screen.getByText(/Non-Civic Media \/ Document Detected/i)).toBeInTheDocument();
+        expect(screen.queryByText(/Authentic Real Camera Photo Verified/i)).not.toBeInTheDocument();
+      });
+
+      const submitBlockedBtn = screen.getByRole('button', { name: /Submission Blocked \(No Civic Issue Detected\)/i });
+      expect(submitBlockedBtn).toBeDisabled();
+    });
   });
 });

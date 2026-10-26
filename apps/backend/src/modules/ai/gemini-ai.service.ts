@@ -17,13 +17,16 @@ export interface AuthenticityAssessment {
   possibleAiGenerated: boolean;
   isGoogleOrWebImage?: boolean;
   isCameraCaptured?: boolean;
-  sourceType?: "CAMERA_CAPTURE" | "AI_GENERATED" | "GOOGLE_WEB_DOWNLOAD";
+  isDocumentOrNonCivic?: boolean;
+  sourceType?: "CAMERA_CAPTURE" | "AI_GENERATED" | "GOOGLE_WEB_DOWNLOAD" | "NON_CIVIC_DOCUMENT";
   confidence: "LOW" | "MEDIUM" | "HIGH";
   indicators: string[];
   disclaimer: string;
 }
 
 export interface CivicIssueDetail {
+  isCivicIssue?: boolean;
+  rejectionReason?: string;
   detectedCivicIssue: string;
   category: string;
   suggestedTitle: string;
@@ -36,6 +39,8 @@ export interface CivicIssueDetail {
 
 export interface AnalysisOutput {
   // Civic defect recognition
+  isCivicIssue?: boolean;
+  rejectionReason?: string;
   detectedCivicIssue: string;
   category: string;
   suggestedTitle: string;
@@ -202,27 +207,51 @@ function heuristicAnalyzeComplaint(input: AnalysisInput): AnalysisOutput {
     }
   }
 
+  const isDocumentOrReceipt = /receipt|invoice|bill\s*book|cash\s*memo|voucher|document|paper\s*slip|screenshot|bon\s*general/i.test(combinedText);
+  let isCivicIssue = true;
+  let rejectionReason: string | undefined;
+
+  if (isDocumentOrReceipt) {
+    isCivicIssue = false;
+    detectedCategory = "Other Civic Grievance";
+    suggestedDepartment = "General Administration";
+    severity = "LOW";
+    score = 0;
+    reasoning = "Uploaded image/text represents an invoice or document with no visible municipal infrastructure defects.";
+    rejectionReason = "The uploaded file does not show any municipal or civic defect. Receipts and invoices cannot be submitted as civic grievances.";
+    detectedIssues.length = 0;
+    detectedIssues.push("Non-civic image", "Invoice document");
+  }
+
   const locationHint = input.address ? ` near ${input.address}` : "";
-  const suggestedTitle = input.title || `${detectedCategory} Issue${locationHint}`;
+  const suggestedTitle = input.title || (isCivicIssue ? `${detectedCategory} Issue${locationHint}` : "No Visible Civic Issue");
   const generatedDescription = input.description && input.description.length >= 20
     ? input.description
     : `Civic report identifying ${detectedCategory.toLowerCase()} problem${locationHint}. Field inspection and resolution requested by responsible department. ${reasoning}`;
 
   const estimatedHours = severity === "CRITICAL" ? 12 : severity === "HIGH" ? 24 : severity === "MEDIUM" ? 48 : 72;
-  const detectedCivicIssue = detectedIssues[0] || `${detectedCategory} Defect`;
+  const detectedCivicIssue = !isCivicIssue ? "No Visible Civic Issue" : (detectedIssues[0] || `${detectedCategory} Defect`);
   const visibleEvidence = reasoning;
   const confidenceScore = score;
-  const manualReviewNeeded = false;
-  const manualReviewReason = "Heuristic automated preliminary intake; standard field workflow applies.";
+  const manualReviewNeeded = !isCivicIssue;
+  const manualReviewReason = !isCivicIssue
+    ? "No evident civic issue identified in image; grievance submission blocked."
+    : "Heuristic automated preliminary intake; standard field workflow applies.";
 
   const authenticityAssessment: AuthenticityAssessment = {
     possibleAiGenerated: false,
     confidence: "LOW",
-    indicators: ["Preliminary rule heuristic evaluation; pixel-level synthesis detection requires multimodal vision model."],
+    isDocumentOrNonCivic: !isCivicIssue,
+    sourceType: !isCivicIssue ? "NON_CIVIC_DOCUMENT" : "CAMERA_CAPTURE",
+    indicators: !isCivicIssue
+      ? ["Heuristic analysis identified invoice/document content with no civic defect."]
+      : ["Preliminary rule heuristic evaluation; pixel-level synthesis detection requires multimodal vision model."],
     disclaimer: "Visual appearance alone cannot definitively prove an image's origin; this assessment is an automated heuristic and should be verified independently if questioned.",
   };
 
   const civicIssue: CivicIssueDetail = {
+    isCivicIssue,
+    rejectionReason,
     detectedCivicIssue,
     category: detectedCategory,
     suggestedTitle,
@@ -234,6 +263,8 @@ function heuristicAnalyzeComplaint(input: AnalysisInput): AnalysisOutput {
   };
 
   return {
+    isCivicIssue,
+    rejectionReason,
     detectedCivicIssue,
     category: detectedCategory,
     suggestedTitle,
@@ -309,8 +340,18 @@ CRITICAL OPERATIONAL REQUIREMENTS:
 1. SUPPORT ALL IMAGES: You MUST analyze both real photographs AND AI-generated or AI-edited images.
 2. RECOGNIZE VISIBLE CIVIC DEFECTS:
    - Identify visible civic issues such as potholes, garbage accumulation, broken roads, drainage problems, waterlogging, damaged streetlights, pipeline leaks, or public hazards, REGARDLESS of whether the image is a real camera photo or AI-generated.
-   - If the image depicts a civic issue, describe the visible physical evidence accurately.
-   - If the image shows NO civic issue (e.g. selfie, pet, indoor room, meme, landscape with no defects), set detectedCivicIssue to "No Visible Civic Issue", category to "Other Civic Grievance", low confidenceScore (<40), and manualReviewNeeded to true.
+   - If the image depicts an actual civic issue:
+     * set "isCivicIssue": true
+     * describe the visible physical evidence accurately.
+   - If the image shows NO civic issue (e.g. document, invoice, receipt, cash memo, bill, voucher, handwritten note, screenshot, WhatsApp download/chat/forward, indoor furniture, selfie, pet, food, meme, personal portrait, vehicle without damage, or landscape with no municipal defects):
+     * set "isCivicIssue": false
+     * set "detectedCivicIssue": "No Visible Civic Issue"
+     * set "rejectionReason": "Uploaded image does not contain any municipal or civic defect (potholes, garbage, drainage, streetlights, water supply). Receipts, documents, invoices, screenshots, or non-civic photos cannot be filed."
+     * set "category": "Other Civic Grievance"
+     * set "confidenceScore": 0
+     * set "severity": "LOW"
+     * set "manualReviewNeeded": true
+     * in visibleEvidence: describe what the image actually depicts (e.g. "Invoice receipt from an electronics store with no municipal or public damage visible").
 3. TWO COMPLETELY SEPARATE ASSESSMENTS:
    - Assessment A (Civic Issue Recognition): What problem or municipal defect is visually depicted in the image? Describe visible evidence in detail regardless of whether the image is real or AI-generated.
    - Assessment B (Image Authenticity Forensic Evaluation):
@@ -323,8 +364,9 @@ CRITICAL OPERATIONAL REQUIREMENTS:
        5. Diffusion boundary blending: Puddle water margins blending unnaturally or "melting" into the pavement without crisp physical waterline meniscus.
      * DECISION RULES FOR AUTHENTICITY:
        - If ANY of these generative cues, repetitive puddle patterns, or synthetic smoothing are visible, you MUST set "possibleAiGenerated": true.
+       - If the image is a document, invoice, receipt, screenshot, or non-civic media, set "isDocumentOrNonCivic": true, and DO NOT certify it as verified authentic camera evidence of a civic problem.
        - Set "confidence": "HIGH" or "MEDIUM" based on the strength of visual indicators.
-       - In "indicators", list the EXACT observable cues you spotted (e.g. "Repetitive procedural puddle geometry arranged unnaturally across road width", "Unnaturally smooth ground textures characteristic of diffusion generative models", "Exaggerated artistic composition typical of text-to-image AI generators").
+       - In "indicators", list the EXACT observable cues you spotted.
        - When "possibleAiGenerated" is true, ALWAYS set "manualReviewNeeded": true.
        - ONLY set "possibleAiGenerated": false if the image has genuine smartphone camera noise, authentic irregular physical damage, natural asphalt texture, and standard lens optical traits.
        - If possibleAiGenerated is true, flag that complaint submission is prohibited; authentic real camera photo evidence is strictly required.
@@ -346,7 +388,9 @@ User Context:
 Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra commentary):
 {
   "civicIssue": {
+    "isCivicIssue": true | false,
     "detectedCivicIssue": "Brief name of visible defect (e.g. Deep Pothole on Asphalt Road, or No Visible Civic Issue)",
+    "rejectionReason": "If isCivicIssue is false, state why submission is blocked",
     "category": "Roads & Potholes" | "Water Supply" | "Drainage & Sewerage" | "Solid Waste & Garbage" | "Street Lighting & Electrical" | "Health & Sanitation" | "Garden & Tree Trimming" | "Other Civic Grievance",
     "suggestedTitle": "Descriptive, concise title without invented street names",
     "visibleEvidence": "Detailed description of observable physical evidence of the defect visible in the image",
@@ -357,6 +401,7 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
   },
   "authenticityAssessment": {
     "possibleAiGenerated": true | false,
+    "isDocumentOrNonCivic": true | false,
     "confidence": "LOW" | "MEDIUM" | "HIGH",
     "indicators": ["visual cue 1", "visual cue 2"],
     "disclaimer": "Visual appearance alone cannot definitively prove an image's origin; this assessment is an automated heuristic and should be verified independently if questioned."
@@ -468,7 +513,21 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
         ? parsed.detectedIssues
         : [detectedCivicIssue];
 
-    const suggestedTitle = civicRaw.suggestedTitle || parsed.suggestedTitle || input.title || `${category} Issue`;
+    // Non-civic image and document detection
+    const nonCivicRegex = /no\s*visible\s*civic|non[-_]?civic|invoice|receipt|cash\s*sale|bill\s*book|voucher|paper\s*slip|document\s*page|screenshot|indoor\s*pet|selfie|food\s*dish|blank\s*paper/i;
+    const isExplicitNonCivic = civicRaw.isCivicIssue === false || parsed.isCivicIssue === false;
+    const hasNonCivicKeywords = nonCivicRegex.test(detectedCivicIssue) || nonCivicRegex.test(visibleEvidence);
+    const hasNonCivicHazards = Array.isArray(detectedIssues) && detectedIssues.some((issue: string) => /non[-_]?civic|invoice|receipt|document/i.test(issue));
+    const isZeroConfidenceOrNoIssue = confidenceScore === 0 || detectedCivicIssue.toLowerCase().includes("no visible civic");
+
+    const isCivicIssue = !isExplicitNonCivic && !hasNonCivicKeywords && !hasNonCivicHazards && !isZeroConfidenceOrNoIssue && confidenceScore >= 25;
+    const rejectionReason = civicRaw.rejectionReason || parsed.rejectionReason || (
+      !isCivicIssue
+        ? "The uploaded image does not contain any recognizable municipal or civic defect (potholes, garbage, drainage, streetlights, water supply). Invoices, receipts, documents, screenshots, and non-civic photos cannot be reported."
+        : undefined
+    );
+
+    const suggestedTitle = civicRaw.suggestedTitle || parsed.suggestedTitle || input.title || (isCivicIssue ? `${category} Issue` : "No Visible Civic Issue");
     const generatedDescription = civicRaw.visibleEvidence || parsed.generatedDescription || input.description || `${category} reported for municipal action. ${visibleEvidence}`;
 
     // Extract authenticity assessment
@@ -479,6 +538,8 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
       authRaw.sourceType === "GOOGLE_WEB_DOWNLOAD" ||
       isGoogleOrWebSearchUrl(input.imageUrl)
     );
+    const isDocumentOrNonCivic = !isCivicIssue || Boolean(authRaw.isDocumentOrNonCivic);
+
     let authConfidence = (authRaw.confidence === "HIGH" || authRaw.confidence === "MEDIUM" || authRaw.confidence === "LOW")
       ? authRaw.confidence
       : "MEDIUM";
@@ -505,16 +566,28 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
               "Procedural repetitive puddle patterning characteristic of generative diffusion models.",
               "Surface texture smoothing and absence of authentic camera sensor noise.",
             ]
-          : [
-              "Natural optical camera sensor noise and realistic focal depth observed.",
-              "Organic, irregular pavement fractures consistent with real vehicular traffic wear.",
-            ]);
+          : isDocumentOrNonCivic
+            ? [
+                "Image depicts an indoor document, receipt, screenshot, or non-civic subject rather than municipal physical infrastructure.",
+                "No physical municipal defect or roadway damage evidence present.",
+              ]
+            : [
+                "Natural optical camera sensor noise and realistic focal depth observed.",
+                "Organic, irregular pavement fractures consistent with real vehicular traffic wear.",
+              ]);
 
     const authenticityAssessment: AuthenticityAssessment = {
       possibleAiGenerated,
       isGoogleOrWebImage: isGoogleWeb,
-      isCameraCaptured: !possibleAiGenerated && !isGoogleWeb,
-      sourceType: possibleAiGenerated ? "AI_GENERATED" : (isGoogleWeb ? "GOOGLE_WEB_DOWNLOAD" : "CAMERA_CAPTURE"),
+      isCameraCaptured: !possibleAiGenerated && !isGoogleWeb && !isDocumentOrNonCivic,
+      isDocumentOrNonCivic,
+      sourceType: possibleAiGenerated
+        ? "AI_GENERATED"
+        : isGoogleWeb
+          ? "GOOGLE_WEB_DOWNLOAD"
+          : isDocumentOrNonCivic
+            ? "NON_CIVIC_DOCUMENT"
+            : "CAMERA_CAPTURE",
       confidence: isGoogleWeb ? "HIGH" : authConfidence,
       indicators: isGoogleWeb
         ? ["Image originated from Google Images or web search engine CDN.", ...indicators]
@@ -523,7 +596,7 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
     };
 
     // Manual review policy: Flag if possible AI-generated, low confidence, ambiguous, or no visible issue
-    const isUnrelatedOrNoIssue = detectedCivicIssue.toLowerCase().includes("no visible") || detectedCivicIssue.toLowerCase().includes("none");
+    const isUnrelatedOrNoIssue = !isCivicIssue || detectedCivicIssue.toLowerCase().includes("no visible") || detectedCivicIssue.toLowerCase().includes("none");
     const manualReviewNeeded = Boolean(
       parsed.manualReviewNeeded ||
       possibleAiGenerated ||
@@ -536,7 +609,7 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
       possibleAiGenerated
         ? "Image exhibits cues of possible generative AI synthesis or digital modification; marked for on-site municipal field verification."
         : isUnrelatedOrNoIssue
-          ? "No evident civic issue identified in image; officer review needed to verify grievance authenticity."
+          ? "No evident civic issue identified in image; grievance submission blocked."
           : confidenceScore < 60 || authConfidence === "LOW"
             ? "Inconclusive visual confidence; requires manual municipal officer review."
             : "Clear photographic evidence of civic issue with high confidence."
@@ -549,6 +622,8 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
     const estimatedHours = severity === "CRITICAL" ? 12 : severity === "HIGH" ? 24 : severity === "MEDIUM" ? 48 : 72;
 
     const civicIssue: CivicIssueDetail = {
+      isCivicIssue,
+      rejectionReason,
       detectedCivicIssue,
       category,
       suggestedTitle,
@@ -560,6 +635,8 @@ Respond ONLY with valid, raw JSON with this exact schema (no markdown, no extra 
     };
 
     return {
+      isCivicIssue,
+      rejectionReason,
       detectedCivicIssue,
       category,
       suggestedTitle,

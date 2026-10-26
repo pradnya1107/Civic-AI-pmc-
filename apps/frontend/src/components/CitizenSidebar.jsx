@@ -34,7 +34,16 @@ export const CitizenSidebar = ({
         <div className="sidebar-brand">
           <Link to="/dashboard" className="sidebar-brand-link" onClick={onClose}>
             <div className="sidebar-brand-logo" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <img
+                src="/civicai-logo.jpg"
+                alt="CivicAI PMC"
+                className="sidebar-brand-logo-img"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'block';
+                }}
+              />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'none' }}>
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
               </svg>
             </div>
