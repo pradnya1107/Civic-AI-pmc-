@@ -463,10 +463,10 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
               className="form-select form-select-sm"
             >
               <option value="ALL">All Severities</option>
-              <option value="CRITICAL">Critical (12h SLA)</option>
-              <option value="HIGH">High (24h SLA)</option>
-              <option value="MEDIUM">Medium (48h SLA)</option>
-              <option value="LOW">Low (72h SLA)</option>
+              <option value="CRITICAL">Critical (24x7 / 1 Working Day SLA)</option>
+              <option value="HIGH">High (2 Working Days SLA)</option>
+              <option value="MEDIUM">Medium (4 Working Days SLA)</option>
+              <option value="LOW">Low (7 Working Days SLA)</option>
             </select>
           </div>
 
@@ -602,19 +602,19 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
 
           {/* Severity Pin Color Sub-legend */}
           <div className="compact-legend-footer">
-            <div className="legend-footer-title">Severity Pin Color:</div>
+            <div className="legend-footer-title">Severity Pin Color (Working Days SLA):</div>
             <div className="legend-footer-dots">
-              <span className="legend-dot-pill" title="Critical (< 12h SLA)">
-                <span className="dot dot-crit" /> &lt;12h
+              <span className="legend-dot-pill" title="Critical (24x7 / 1 Working Day SLA)">
+                <span className="dot dot-crit" /> &lt;12h (1 Day)
               </span>
-              <span className="legend-dot-pill" title="High (< 24h SLA)">
-                <span className="dot dot-high" /> &lt;24h
+              <span className="legend-dot-pill" title="High (2 Working Days SLA)">
+                <span className="dot dot-high" /> &lt;24h (2 Days)
               </span>
-              <span className="legend-dot-pill" title="Medium (< 48h SLA)">
-                <span className="dot dot-med" /> &lt;48h
+              <span className="legend-dot-pill" title="Medium (4 Working Days SLA)">
+                <span className="dot dot-med" /> &lt;48h (4 Days)
               </span>
-              <span className="legend-dot-pill" title="Low (< 72h SLA)">
-                <span className="dot dot-low" /> &lt;72h
+              <span className="legend-dot-pill" title="Low (7 Working Days SLA)">
+                <span className="dot dot-low" /> &lt;72h (7 Days)
               </span>
             </div>
           </div>
@@ -623,23 +623,23 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
 
       {/* Map Legend */}
       <div className="heatmap-legend">
-        <div className="legend-title">PMC Severity SLA Index:</div>
+        <div className="legend-title">PMC Severity SLA Index (Working Days):</div>
         <div className="legend-items">
           <div className="legend-item">
             <span className="legend-dot" style={{ background: SEVERITY_COLORS.CRITICAL }} />
-            <span>Critical (&lt; 12h SLA)</span>
+            <span>Critical (24x7 Emergency / 1 Working Day SLA)</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot" style={{ background: SEVERITY_COLORS.HIGH }} />
-            <span>High (&lt; 24h SLA)</span>
+            <span>High (2 Working Days SLA)</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot" style={{ background: SEVERITY_COLORS.MEDIUM }} />
-            <span>Medium (&lt; 48h SLA)</span>
+            <span>Medium (4 Working Days SLA)</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot" style={{ background: SEVERITY_COLORS.LOW }} />
-            <span>Low (&lt; 72h SLA)</span>
+            <span>Low (7 Working Days SLA)</span>
           </div>
         </div>
         <div className="legend-note">

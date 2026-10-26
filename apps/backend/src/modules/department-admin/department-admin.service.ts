@@ -955,6 +955,39 @@ export async function createDepartmentOfficer(
 
   const existing = await User.findOne({ email });
   if (existing) {
+    // If the account exists as a Citizen or Officer in this department, assign/promote them smoothly
+    if (existing.role === "CITIZEN") {
+      existing.role = "OFFICER";
+      existing.departmentId = deptObjectId;
+      if (fullName) existing.fullName = fullName;
+      if (input.phoneNumber) existing.phoneNumber = input.phoneNumber;
+      await existing.save();
+
+      return {
+        id: existing.id,
+        name: existing.fullName,
+        email: existing.email,
+        phone: existing.phoneNumber,
+        designation: input.designation || "Municipal Field Officer",
+        activeCount: 0,
+        completedCount: 0,
+        availability: "AVAILABLE",
+      };
+    }
+
+    if (existing.role === "OFFICER" && existing.departmentId?.toString() === deptObjectId.toString()) {
+      return {
+        id: existing.id,
+        name: existing.fullName,
+        email: existing.email,
+        phone: existing.phoneNumber,
+        designation: input.designation || "Municipal Field Officer",
+        activeCount: 0,
+        completedCount: 0,
+        availability: "AVAILABLE",
+      };
+    }
+
     throw new AppError("An account with this email address already exists.", 409, "EMAIL_EXISTS");
   }
 

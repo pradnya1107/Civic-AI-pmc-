@@ -510,30 +510,33 @@ export const DepartmentSettingsPage = ({ lastRefreshed, onRefreshNeeded }) => {
           <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 700, color: 'var(--text-primary, #0B1D33)' }}>
             Service Level Agreement (SLA) Targets
           </h3>
+          <p style={{ margin: '-10px 0 16px 0', fontSize: '12px', color: '#64748B' }}>
+            Official Pune Municipal Corporation (PMC) Working-Day SLA Schedule
+          </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
             <div style={{ padding: '12px', borderRadius: '8px', border: '1px solid #FCA5A5', background: '#FEE2E2' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#B91C1C', display: 'block' }}>CRITICAL PRIORITY</span>
-              <strong style={{ fontSize: '18px', color: '#B91C1C' }}>12 Hours</strong>
-              <span style={{ fontSize: '11px', color: '#991B1B', display: 'block', marginTop: '2px' }}>Severe Hazard Target</span>
+              <strong style={{ fontSize: '18px', color: '#B91C1C' }}>1 Working Day</strong>
+              <span style={{ fontSize: '11px', color: '#991B1B', display: 'block', marginTop: '2px' }}>24x7 Emergency Hazard Protocol</span>
             </div>
 
             <div style={{ padding: '12px', borderRadius: '8px', border: '1px solid #FCD34D', background: '#FEF3C7' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#B45309', display: 'block' }}>HIGH PRIORITY</span>
-              <strong style={{ fontSize: '18px', color: '#B45309' }}>24 Hours</strong>
-              <span style={{ fontSize: '11px', color: '#92400E', display: 'block', marginTop: '2px' }}>Major Issue Target</span>
+              <strong style={{ fontSize: '18px', color: '#B45309' }}>2 Working Days</strong>
+              <span style={{ fontSize: '11px', color: '#92400E', display: 'block', marginTop: '2px' }}>Severe Disruption Target</span>
             </div>
 
             <div style={{ padding: '12px', borderRadius: '8px', border: '1px solid #BAE6FD', background: '#E0F2FE' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#0369A1', display: 'block' }}>MEDIUM PRIORITY</span>
-              <strong style={{ fontSize: '18px', color: '#0369A1' }}>48 Hours</strong>
-              <span style={{ fontSize: '11px', color: '#075985', display: 'block', marginTop: '2px' }}>Standard Civic Issue</span>
+              <strong style={{ fontSize: '18px', color: '#0369A1' }}>4 Working Days</strong>
+              <span style={{ fontSize: '11px', color: '#075985', display: 'block', marginTop: '2px' }}>Standard Civic Issue Target</span>
             </div>
 
             <div style={{ padding: '12px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F1F5F9' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block' }}>LOW PRIORITY</span>
-              <strong style={{ fontSize: '18px', color: '#475569' }}>72 Hours</strong>
-              <span style={{ fontSize: '11px', color: '#334155', display: 'block', marginTop: '2px' }}>Routine Maintenance</span>
+              <strong style={{ fontSize: '18px', color: '#475569' }}>7 Working Days</strong>
+              <span style={{ fontSize: '11px', color: '#334155', display: 'block', marginTop: '2px' }}>Minor Routine Maintenance</span>
             </div>
           </div>
         </div>
