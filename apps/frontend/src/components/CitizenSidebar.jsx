@@ -55,7 +55,7 @@ export const CitizenSidebar = ({
 
         {/* Primary Navigation */}
         <nav className="sidebar-nav">
-          <div className="sidebar-section-label">MAIN SERVICES</div>
+          <div className="sidebar-section-label">{t('mainServices', 'MAIN SERVICES')}</div>
 
           <NavLink
             to="/dashboard"

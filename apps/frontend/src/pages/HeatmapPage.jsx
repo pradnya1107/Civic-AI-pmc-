@@ -3,12 +3,14 @@ import { Navbar } from '../components/Navbar';
 import { CitizenLayout } from '../components/CitizenLayout';
 import { CivicHeatmap } from '../components/CivicHeatmap';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
 export const HeatmapPage = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
 
   const heatmapContent = (
@@ -20,10 +22,10 @@ export const HeatmapPage = () => {
             <span className="badge badge-success">Live Geolocation</span>
           </div>
           <h1 className="admin-page-title" style={{ fontSize: '1.75rem' }}>
-            AI Civic Heatmap & Issue Geolocation
+            {t('heatmapTitle', 'AI Civic Heatmap & Issue Geolocation')}
           </h1>
           <p className="admin-page-subtitle">
-            Real-time geospatial intelligence tracking potholes, garbage overflow, waterlogging, and streetlight breakdowns across Pune Municipal Corporation wards.
+            {t('heatmapSubtitle', 'Real-time geospatial intelligence tracking potholes, garbage overflow, waterlogging, and streetlight breakdowns across Pune Municipal Corporation wards.')}
           </p>
         </div>
 
@@ -38,7 +40,7 @@ export const HeatmapPage = () => {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              Report New Issue
+              {t('reportNewIssueBtn', 'Report New Issue')}
             </Link>
           )}
         </div>

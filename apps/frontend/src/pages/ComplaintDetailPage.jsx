@@ -3,6 +3,7 @@ import { useParams, Link, useLocation } from 'react-router-dom';
 import { CitizenLayout } from '../components/CitizenLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { LifecycleStepper } from '../components/LifecycleStepper';
+import { useLanguage } from '../context/LanguageContext';
 import { complaintApi, aiApi } from '../services/api';
 
 /**
@@ -268,6 +269,7 @@ export function formatFullDate(dateStr) {
 export const ComplaintDetailPage = () => {
   const { id } = useParams();
   const location = useLocation();
+  const { t } = useLanguage();
 
   const [complaint, setComplaint] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -381,9 +383,9 @@ export const ComplaintDetailPage = () => {
       <div className="citizen-page-inner">
         {/* Breadcrumb Navigation */}
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-          <Link to="/dashboard" className="breadcrumb-link">Dashboard</Link>
+          <Link to="/dashboard" className="breadcrumb-link">{t('navOverview', 'Dashboard')}</Link>
           <span className="breadcrumb-separator">/</span>
-          <Link to="/complaints" className="breadcrumb-link">My Complaints</Link>
+          <Link to="/complaints" className="breadcrumb-link">{t('navMyComplaints', 'My Complaints')}</Link>
           <span className="breadcrumb-separator">/</span>
           <span className="breadcrumb-current" aria-current="page">
             {isLoading ? 'Loading...' : complaintNo}
