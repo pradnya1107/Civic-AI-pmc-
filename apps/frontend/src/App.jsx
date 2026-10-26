@@ -9,6 +9,7 @@ import { DepartmentProtectedRoute } from './components/DepartmentProtectedRoute'
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Citizen Pages
+import { LandingPage } from './pages/LandingPage';
 import { SplashScreen } from './pages/SplashScreen';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -106,8 +107,10 @@ export const App = () => {
         <LanguageProvider>
           <AuthProvider>
             <Routes>
-              {/* Index Route */}
-              <Route path="/" element={<RootIndexRedirect />} />
+              {/* Public Landing & Marketing Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/about" element={<LandingPage />} />
 
               {/* Public Welcome & Auth Routes */}
               <Route path="/splash" element={<Navigate to="/login" replace />} />
