@@ -4,6 +4,22 @@ import {
   COMPLAINT_STATUSES,
 } from "./complaint.model";
 
+export const PMC_BOUNDARY = {
+  MIN_LATITUDE: 18.30,
+  MAX_LATITUDE: 18.70,
+  MIN_LONGITUDE: 73.65,
+  MAX_LONGITUDE: 74.05,
+} as const;
+
+export function isWithinPmcBoundary(lat: number, lng: number): boolean {
+  return (
+    lat >= PMC_BOUNDARY.MIN_LATITUDE &&
+    lat <= PMC_BOUNDARY.MAX_LATITUDE &&
+    lng >= PMC_BOUNDARY.MIN_LONGITUDE &&
+    lng <= PMC_BOUNDARY.MAX_LONGITUDE
+  );
+}
+
 const locationSchema = z
   .object({
     address: z.string().trim().min(1).max(300),
@@ -17,6 +33,13 @@ const locationSchema = z
       (location.latitude === undefined) ===
       (location.longitude === undefined),
     "Latitude and longitude must be provided together.",
+  )
+  .refine(
+    (location) => {
+      if (location.latitude === undefined || location.longitude === undefined) return true;
+      return isWithinPmcBoundary(location.latitude, location.longitude);
+    },
+    `Coordinates must fall within the Pune Municipal Corporation (PMC) boundary (Lat ${PMC_BOUNDARY.MIN_LATITUDE}-${PMC_BOUNDARY.MAX_LATITUDE}, Lng ${PMC_BOUNDARY.MIN_LONGITUDE}-${PMC_BOUNDARY.MAX_LONGITUDE}).`,
   );
 
 export const createComplaintSchema = z
@@ -31,11 +54,37 @@ export const createComplaintSchema = z
       .object({
         severity: z.string().optional(),
         score: z.number().optional(),
+        confidenceScore: z.number().optional(),
         reasoning: z.string().optional(),
         suggestedDepartment: z.string().optional(),
         detectedIssues: z.array(z.string()).optional(),
+        detectedCivicIssue: z.string().optional(),
+        visibleEvidence: z.string().optional(),
+        manualReviewNeeded: z.boolean().optional(),
+        manualReviewReason: z.string().optional(),
         generatedDescription: z.string().optional(),
+        authenticityAssessment: z
+          .object({
+            possibleAiGenerated: z.boolean().optional(),
+            confidence: z.string().optional(),
+            indicators: z.array(z.string()).optional(),
+            disclaimer: z.string().optional(),
+          })
+          .passthrough()
+          .optional(),
+        isCivicIssue: z.boolean().optional(),
+        isDocumentOrNonCivic: z.boolean().optional(),
+        civicIssue: z
+          .object({
+            isCivicIssue: z.boolean().optional(),
+            confidence: z.number().optional(),
+            reason: z.string().optional(),
+            categoryDetected: z.string().optional(),
+          })
+          .passthrough()
+          .optional(),
       })
+      .passthrough()
       .optional(),
   })
   .strict();
@@ -108,6 +157,8 @@ export const resolveComplaintSchema = z
   .object({
     resolutionImageUrl: z.string().trim().optional(),
     resolutionNotes: z.string().trim().max(2000).optional(),
+    humanReviewed: z.boolean().optional(),
+    forceResolve: z.boolean().optional(),
   })
   .strict();
 

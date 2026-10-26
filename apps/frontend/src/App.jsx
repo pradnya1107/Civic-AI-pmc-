@@ -6,6 +6,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminProtectedRoute } from './components/AdminProtectedRoute';
 import { DepartmentProtectedRoute } from './components/DepartmentProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Citizen Pages
 import { SplashScreen } from './pages/SplashScreen';
@@ -16,6 +17,7 @@ import { ComplaintFormPage } from './pages/ComplaintFormPage';
 import { ComplaintListPage } from './pages/ComplaintListPage';
 import { ComplaintDetailPage } from './pages/ComplaintDetailPage';
 import { HeatmapPage } from './pages/HeatmapPage';
+import { CitizenSettingsPage } from './pages/CitizenSettingsPage';
 
 // Super Admin Components & Pages
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -59,7 +61,7 @@ const RootIndexRedirect = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/splash" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   const role = (user?.role || 'CITIZEN').toUpperCase();
@@ -108,7 +110,7 @@ export const App = () => {
               <Route path="/" element={<RootIndexRedirect />} />
 
               {/* Public Welcome & Auth Routes */}
-              <Route path="/splash" element={<SplashScreen />} />
+              <Route path="/splash" element={<Navigate to="/login" replace />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
@@ -155,7 +157,17 @@ export const App = () => {
                 path="/heatmap"
                 element={
                   <ProtectedRoute>
-                    <HeatmapPage />
+                    <ErrorBoundary>
+                      <HeatmapPage />
+                    </ErrorBoundary>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <CitizenSettingsPage />
                   </ProtectedRoute>
                 }
               />
@@ -247,13 +259,7 @@ export const App = () => {
               />
               <Route
                 path="/department/help"
-                element={
-                  <DepartmentProtectedRoute>
-                    <DepartmentLayout>
-                      <DepartmentHelpPage />
-                    </DepartmentLayout>
-                  </DepartmentProtectedRoute>
-                }
+                element={<Navigate to="/department/dashboard" replace />}
               />
 
               {/* Super Administrative Portal Routes */}

@@ -1,9 +1,10 @@
 import { Types } from "mongoose";
-import type { UserRole } from "../users/user.model";
+import { User, type UserRole } from "../users/user.model";
 import { Department } from "../departments/department.model";
 import { AppError } from "../../utils/app-error";
 import { Complaint, calculateSlaDeadline } from "./complaint.model";
-import { verifyResolution } from "../ai/gemini-ai.service";
+import { getSlaStatusDetails, PMC_PUBLIC_HOLIDAYS } from "./sla-calendar.service";
+import { verifyResolution, isGoogleOrWebSearchUrl } from "../ai/gemini-ai.service";
 import type {
   ComplaintListQuery,
   CreateComplaintInput,
@@ -65,11 +66,197 @@ export async function createComplaint(
   input: CreateComplaintInput,
 ) {
   const priority = input.priority || "MEDIUM";
+
+  // Check AI confidence and authenticity flags
+  const isPossibleAi = Boolean(input.aiAnalysis?.authenticityAssessment?.possibleAiGenerated);
+
+  // Extract calibrated confidence score if supplied by provider (do not invent if not provided)
+  const aiConfidenceScore = typeof input.aiAnalysis?.confidenceScore === "number"
+    ? input.aiAnalysis.confidenceScore
+    : (typeof input.aiAnalysis?.confidence === "number"
+        ? (input.aiAnalysis.confidence <= 1 ? input.aiAnalysis.confidence * 100 : input.aiAnalysis.confidence)
+        : undefined);
+
+  // AI confidence below operational threshold (60%) triggers manual review
+  const isLowConfidence = aiConfidenceScore !== undefined && aiConfidenceScore < 60;
+
+  const manualReviewNeeded = Boolean(
+    input.aiAnalysis?.manualReviewNeeded ||
+    isPossibleAi ||
+    isLowConfidence
+  );
+
+  const manualReviewReason =
+    input.aiAnalysis?.manualReviewReason ||
+    (isPossibleAi
+      ? "Image exhibits cues of possible AI synthesis or digital modification; marked for on-site municipal field verification."
+      : isLowConfidence
+        ? `AI prediction confidence (${Math.round(aiConfidenceScore!)}%) is below operational threshold (60%); flagged for municipal officer manual verification.`
+        : undefined);
+
+  let departmentId: Types.ObjectId | undefined;
+  try {
+    // Authoritative PMC Category-to-Department Matrix
+    const rawCategory =
+      typeof input.aiAnalysis?.suggestedDepartment === "string"
+        ? input.aiAnalysis.suggestedDepartment
+        : typeof input.category === "string"
+          ? input.category
+          : typeof input.aiAnalysis?.category === "string"
+            ? input.aiAnalysis.category
+            : "";
+    const categoryTerm: string = String(rawCategory || "").trim();
+
+    const searchConditions: any[] = [];
+
+    if (/road|pothole|footpath|tar|divider|asphalt|traffic|transport/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "ROADS" },
+        { slug: /road/i },
+        { name: /road/i },
+      );
+    } else if (/waste|garbage|trash|clean|swm|rubbish|dump|litter/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "SWMB" },
+        { slug: /waste|swm/i },
+        { name: /waste|garbage/i },
+      );
+    } else if (/water|leak|pipe|supply|burst/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "WATER" },
+        { slug: /water/i },
+        { name: /water/i },
+      );
+    } else if (/drain|sewer|manhole|gutter/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "DRAINAGE" },
+        { slug: /drain/i },
+        { name: /drain/i },
+      );
+    } else if (/electric|light|pole|wire|street/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "ELECTRICAL" },
+        { slug: /electric/i },
+        { name: /electric|light/i },
+      );
+    } else if (/health|sanitation|hospital|pest|mosquito/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "HEALTH" },
+        { slug: /health/i },
+        { name: /health/i },
+      );
+    } else if (/encroachment|building|unauthorized|hawker/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "ENCROACHMENT" },
+        { slug: /encroach/i },
+        { name: /encroachment/i },
+      );
+    } else if (/garden|tree|park|trim/i.test(categoryTerm)) {
+      searchConditions.push(
+        { code: "GARDEN" },
+        { slug: /garden/i },
+        { name: /garden|tree/i },
+      );
+    }
+
+    if (categoryTerm) {
+      const words = categoryTerm.split(/[ &/-]/).filter((w: string) => w.length > 2);
+      for (const w of words) {
+        searchConditions.push(
+          { name: new RegExp(w, "i") },
+          { slug: new RegExp(w, "i") },
+        );
+      }
+    }
+
+    let matchedDept = null;
+    if (searchConditions.length > 0) {
+      matchedDept = await Department.findOne({
+        $or: searchConditions,
+        isActive: true,
+      });
+    }
+
+    // Fallback: If no direct keyword matched, grab the first active department so it never stays unassigned
+    if (!matchedDept) {
+      matchedDept = await Department.findOne({ isActive: true }).sort({ createdAt: 1 });
+    }
+
+    if (matchedDept) {
+      departmentId = matchedDept._id;
+    }
+  } catch (deptErr) {
+    console.warn("Could not auto-assign department:", deptErr);
+  }
+
+  // Requirement: Strictly reject complaints if image is AI-created OR taken from Google / web
+  let isSyntheticUrl = false;
+  let isGoogleWebUrl = false;
+  if (input.imageUrl && (input.imageUrl.startsWith("http://") || input.imageUrl.startsWith("https://"))) {
+    try {
+      const lower = input.imageUrl.toLowerCase();
+      const urlPath = new URL(input.imageUrl).pathname.toLowerCase();
+      isSyntheticUrl = /ai[-_]?gen|synthetic[-_]?sample|test[-_]?ai|midjourney|dall[-_]?e|stablediffusion|flux|generated/i.test(urlPath);
+      isGoogleWebUrl = isGoogleOrWebSearchUrl(input.imageUrl);
+    } catch {
+      isSyntheticUrl = false;
+      isGoogleWebUrl = false;
+    }
+  }
+
+  const isGoogleWeb = Boolean(input.aiAnalysis?.authenticityAssessment?.isGoogleOrWebImage || isGoogleWebUrl);
+
+  if (isPossibleAi || isSyntheticUrl) {
+    throw new AppError(
+      "Complaint submission rejected: The uploaded photo is an AI-created or synthetic image. Pune Municipal Corporation requires authentic real-world camera photographs.",
+      422,
+      "AI_GENERATED_IMAGE_REJECTED",
+    );
+  }
+
+  if (isGoogleWeb) {
+    throw new AppError(
+      "Complaint submission rejected: The uploaded photo was taken from Google Images or the internet. Complaints must be clicked directly by camera on-site.",
+      422,
+      "GOOGLE_WEB_IMAGE_REJECTED",
+    );
+  }
+
+  // Reject complaints if the AI analysis identified no visible civic issue (non-civic / receipt / invoice / fake complaint)
+  const isNonCivicImage = Boolean(
+    input.aiAnalysis && (
+      input.aiAnalysis.isCivicIssue === false ||
+      input.aiAnalysis.civicIssue?.isCivicIssue === false ||
+      input.aiAnalysis.detectedCivicIssue?.toLowerCase().includes("no visible") ||
+      input.aiAnalysis.detectedCivicIssue?.toLowerCase().includes("non-civic") ||
+      (typeof input.aiAnalysis.confidenceScore === "number" && input.aiAnalysis.confidenceScore === 0) ||
+      (Array.isArray(input.aiAnalysis.safetyHazards) && input.aiAnalysis.safetyHazards.some((h: string) => /non[-_]?civic|invoice|document|receipt/i.test(h)))
+    )
+  );
+
+  if (isNonCivicImage) {
+    throw new AppError(
+      "Complaint submission rejected: The uploaded photo does not contain any recognizable municipal or civic issue (e.g. potholes, garbage, water leaks, drainage, streetlights). Invoices, receipts, documents, and non-civic photos are strictly prohibited.",
+      422,
+      "NON_CIVIC_IMAGE_REJECTED",
+    );
+  }
+
+  const aiAnalysisPayload = input.aiAnalysis
+    ? {
+        ...input.aiAnalysis,
+        manualReviewNeeded,
+        ...(manualReviewReason ? { manualReviewReason } : {}),
+      }
+    : undefined;
+
   const sanitizedInput = {
     ...input,
     title: sanitizeText(input.title),
     description: sanitizeText(input.description),
     priority,
+    ...(aiAnalysisPayload ? { aiAnalysis: aiAnalysisPayload } : {}),
+    ...(departmentId ? { departmentId } : {}),
     slaDeadline: calculateSlaDeadline(priority),
     supporters: [],
     supportCount: 0,
@@ -133,7 +320,9 @@ export async function listComplaints(
 
 export async function getComplaint(actor: RequestActor, id: string) {
   const objectId = requireObjectId(id);
-  const complaint = await Complaint.findById(objectId).lean();
+  const complaint = await Complaint.findById(objectId)
+    .populate("departmentId", "name code category officialEmail contactNumber slug description")
+    .lean();
   if (!complaint) {
     throw notFound();
   }
@@ -142,13 +331,22 @@ export async function getComplaint(actor: RequestActor, id: string) {
     if (complaint.citizenId.toString() !== actor.id) {
       throw notFound();
     }
+    // Omit sensitive internal staff notes from citizen view
+    if (complaint.internalNotes) {
+      delete (complaint as any).internalNotes;
+    }
   } else if (
     (actor.role === "ADMIN" || actor.role === "DEPARTMENT_ADMIN") &&
     actor.departmentId
   ) {
+    const rawDept = complaint.departmentId as any;
+    const complaintDeptId =
+      rawDept && typeof rawDept === "object" && "_id" in rawDept
+        ? rawDept._id?.toString()
+        : rawDept?.toString();
     if (
-      !complaint.departmentId ||
-      complaint.departmentId.toString() !== actor.departmentId
+      !complaintDeptId ||
+      complaintDeptId !== actor.departmentId
     ) {
       throw new AppError(
         "You do not have permission to access complaints belonging to another department.",
@@ -361,7 +559,7 @@ export async function getHeatmapData(filterQuery: {
 
   const points = await Complaint.find(filter)
     .select(
-      "_id complaintNumber title category priority status location imageUrl resolutionImageUrl supportCount createdAt updatedAt slaDeadline aiAnalysis",
+      "_id complaintNumber title category priority status location imageUrl resolutionImageUrl supportCount createdAt updatedAt slaDeadline aiAnalysis citizenId",
     )
     .populate("departmentId", "name slug")
     .sort({ createdAt: -1 })
@@ -377,7 +575,12 @@ export async function getHeatmapData(filterQuery: {
 export async function resolveComplaintWithVerification(
   actor: RequestActor,
   id: string,
-  input: { resolutionImageUrl?: string; resolutionNotes?: string },
+  input: {
+    resolutionImageUrl?: string;
+    resolutionNotes?: string;
+    humanReviewed?: boolean;
+    forceResolve?: boolean;
+  },
 ) {
   if (!isPrivilegedAdmin(actor.role)) {
     throw new AppError("Only administrators can resolve complaints.", 403, "FORBIDDEN");
@@ -386,10 +589,10 @@ export async function resolveComplaintWithVerification(
   if (!complaint) throw notFound();
 
   let aiVerdict: any = undefined;
-  if (complaint.imageUrl && input.resolutionImageUrl) {
+  if (input.resolutionImageUrl) {
     try {
       const verification = await verifyResolution({
-        originalImageUrl: complaint.imageUrl,
+        originalImageUrl: complaint.imageUrl || "",
         resolutionImageUrl: input.resolutionImageUrl,
         title: complaint.title,
         category: complaint.category,
@@ -398,10 +601,75 @@ export async function resolveComplaintWithVerification(
         resolutionVerdict: verification.verdict,
         resolutionConfidence: verification.confidence,
         resolutionAnalysis: verification.analysis,
+        resolutionAuthenticity: verification.authenticityAssessment,
       };
-    } catch (e) {
+
+      // STRICT PROTECTION: If photo is recognized as AI generated or unrelated photo, block submission!
+      if (verification.authenticityAssessment?.isAiGenerated) {
+        throw new AppError(
+          "Resolution rejected: Uploaded photo was recognized by AI as an AI-generated or synthetic image. Officers cannot submit AI-generated photos. Please capture and upload an authentic on-site camera photograph.",
+          422,
+          "AI_GENERATED_IMAGE_REJECTED",
+        );
+      }
+
+    } catch (e: any) {
+      if (
+        e instanceof AppError ||
+        e?.errorCode === "AI_GENERATED_IMAGE_REJECTED" ||
+        e?.errorCode === "UNRELATED_PHOTO_REJECTED" ||
+        e?.statusCode === 422
+      ) {
+        throw e;
+      }
       console.warn("AI verification error:", e);
+      aiVerdict = {
+        resolutionVerdict: "INCONCLUSIVE",
+        resolutionConfidence: 50,
+        resolutionAnalysis: "Automated verification encountered an error; manual inspection required.",
+      };
     }
+  }
+
+  // Verification Safety Check:
+  // If verification returns POTENTIALLY_UNRESOLVED, do NOT mark complaint RESOLVED unless an authorized
+  // administrator has explicitly reviewed and confirmed the resolution (humanReviewed: true).
+  const isPotentiallyUnresolved = aiVerdict?.resolutionVerdict === "POTENTIALLY_UNRESOLVED";
+  const isHumanConfirmed = Boolean(input.humanReviewed || input.forceResolve);
+
+  if (isPotentiallyUnresolved && !isHumanConfirmed) {
+    // Follow safe existing workflow: preserve evidence & analysis, leave in IN_PROGRESS, log audit, and reject unsupported resolution
+    if (input.resolutionImageUrl) complaint.resolutionImageUrl = input.resolutionImageUrl;
+    if (input.resolutionNotes) complaint.resolutionNotes = input.resolutionNotes;
+    if (aiVerdict) {
+      complaint.aiAnalysis = {
+        ...(complaint.aiAnalysis || {}),
+        ...aiVerdict,
+      };
+    }
+    await complaint.save();
+
+    await AuditLog.create({
+      actorRef: requireObjectId(actor.id),
+      action: "RESOLUTION_VERIFICATION_REJECTED",
+      targetRef: complaint._id,
+      targetModel: "Complaint",
+      metadata: {
+        action: "RESOLUTION_VERIFICATION_BLOCKED",
+        previousStatus: complaint.status,
+        newStatus: complaint.status,
+        resolutionVerdict: "POTENTIALLY_UNRESOLVED",
+        analysis: aiVerdict.resolutionAnalysis,
+        complaintNumber: complaint.complaintNumber,
+      },
+    });
+
+    throw new AppError(
+      aiVerdict.resolutionAnalysis ||
+        "Resolution verification failed: visual evidence indicates the civic defect is potentially unresolved. Manual inspection and confirmation are required.",
+      400,
+      "RESOLUTION_VERIFICATION_FAILED",
+    );
   }
 
   complaint.status = "RESOLVED";
@@ -412,7 +680,26 @@ export async function resolveComplaintWithVerification(
       ...(complaint.aiAnalysis || {}),
       ...aiVerdict,
     };
+    if (aiVerdict.resolutionAuthenticity) {
+      complaint.resolutionAuthenticity = aiVerdict.resolutionAuthenticity;
+    }
   }
+
+  // Officer Accountability: Record authenticated officer ID/name and exact resolution timestamp
+  const resolvingUser = await User.findById(requireObjectId(actor.id)).select("fullName email role").lean();
+  const resolutionTimestamp = new Date();
+
+  complaint.resolutionAudit = {
+    resolvedBy: {
+      officerId: requireObjectId(actor.id),
+      officerName: resolvingUser?.fullName || "Municipal Officer",
+      officerEmail: resolvingUser?.email,
+      officerRole: actor.role,
+      timestamp: resolutionTimestamp,
+    },
+    resolvedAt: resolutionTimestamp,
+    isRejectionActive: false,
+  };
 
   await complaint.save();
 
@@ -426,6 +713,14 @@ export async function resolveComplaintWithVerification(
       previousStatus: "IN_PROGRESS",
       newStatus: "RESOLVED",
       resolutionVerdict: aiVerdict?.resolutionVerdict || "MANUAL_VERIFIED",
+      photoAuthenticity: aiVerdict?.resolutionAuthenticity?.assessment || "AUTHENTIC_REAL_PHOTO",
+      officerId: actor.id,
+      officerName: resolvingUser?.fullName || "Municipal Officer",
+      officerEmail: resolvingUser?.email,
+      resolvingOfficerId: actor.id,
+      resolvingOfficerName: resolvingUser?.fullName || "Municipal Officer",
+      resolutionTimestamp,
+      ...(isHumanConfirmed ? { humanReviewConfirmed: true } : {}),
     },
   });
 
@@ -549,13 +844,29 @@ export async function getSlaMonitoringOverview() {
   const compliantCount = Math.max(0, totalOpen - overdueCount);
   const complianceRate = totalOpen > 0 ? Math.round((compliantCount / totalOpen) * 100) : 100;
 
+  const overdueWithDetails = overdueComplaints.map((c: any) => ({
+    ...c,
+    slaDetails: getSlaStatusDetails(c.slaDeadline, c.status, now),
+  }));
+
+  const approachingWithDetails = approachingComplaints.map((c: any) => ({
+    ...c,
+    slaDetails: getSlaStatusDetails(c.slaDeadline, c.status, now),
+  }));
+
   return {
     totalOpen,
     overdueCount,
     approachingCount: approachingComplaints.length,
     resolvedCount,
     complianceRate,
-    overdueComplaints,
-    approachingComplaints,
+    workingCalendar: {
+      standardHours: "09:30 - 18:00 IST (Mon - Fri)",
+      weekendPolicy: "Saturdays & Sundays excluded from non-emergency resolution time",
+      emergencyPolicy: "CRITICAL priority handled under 24x7 continuous emergency response",
+      totalRegisteredHolidays: Object.keys(PMC_PUBLIC_HOLIDAYS).length,
+    },
+    overdueComplaints: overdueWithDetails,
+    approachingComplaints: approachingWithDetails,
   };
 }

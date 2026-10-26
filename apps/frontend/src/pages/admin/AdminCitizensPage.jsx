@@ -7,6 +7,32 @@ export const AdminCitizensPage = () => {
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToastMessage({ message, type });
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
+
+  const handleToggleStatus = async (citizen) => {
+    const isCurrentlyActive = (citizen.accountStatus || 'ACTIVE') === 'ACTIVE';
+    const newStatus = isCurrentlyActive ? 'DISABLED' : 'ACTIVE';
+    setTogglingId(citizen.id);
+    try {
+      await adminApi.updateCitizenStatus(citizen.id, { accountStatus: newStatus });
+      setCitizens((prev) =>
+        prev.map((c) => (c.id === citizen.id ? { ...c, accountStatus: newStatus } : c))
+      );
+      showToast(`Citizen account status updated to ${newStatus}.`);
+    } catch (err) {
+      showToast(err?.message || 'Failed to update citizen status.', 'error');
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   const fetchCitizens = async (page = 1, searchQuery = search) => {
     setIsLoading(true);
@@ -36,6 +62,13 @@ export const AdminCitizensPage = () => {
 
   return (
     <div className="admin-page-container">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className={`admin-toast admin-toast-${toastMessage.type}`} role="alert" style={{ marginBottom: '1rem' }}>
+          <span>{toastMessage.message}</span>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="admin-page-header">
         <div>
@@ -104,11 +137,10 @@ export const AdminCitizensPage = () => {
             <thead>
               <tr>
                 <th scope="col">Citizen Name</th>
-                <th scope="col">Registered Email</th>
-                <th scope="col">Phone Number</th>
                 <th scope="col">Email Verified</th>
                 <th scope="col">Account Status</th>
                 <th scope="col">Joined Date</th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -132,8 +164,6 @@ export const AdminCitizensPage = () => {
                         <span className="font-semibold">{c.fullName}</span>
                       </div>
                     </td>
-                    <td className="font-mono text-sm text-muted">{c.email}</td>
-                    <td className="font-mono text-sm">{c.phoneNumber || 'N/A'}</td>
                     <td>
                       <span className={`dept-status-badge ${c.emailVerified ? 'active' : 'inactive'}`}>
                         {c.emailVerified ? 'Verified' : 'Pending OTP'}
@@ -145,6 +175,18 @@ export const AdminCitizensPage = () => {
                       </span>
                     </td>
                     <td className="text-muted text-sm">{createdStr}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`btn btn-xs ${isAct ? 'btn-outline' : 'btn-primary'}`}
+                        onClick={() => handleToggleStatus(c)}
+                        disabled={togglingId === c.id}
+                        aria-label={`${isAct ? 'Deactivate' : 'Activate'} ${c.fullName}`}
+                        style={isAct ? { borderColor: 'var(--color-danger, #ef4444)', color: 'var(--color-danger, #ef4444)' } : undefined}
+                      >
+                        {togglingId === c.id ? 'Updating...' : isAct ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </td>
                   </tr>
                 );
               })}

@@ -72,12 +72,18 @@ api.interceptors.response.use(
   (error) => {
     // 401 Unauthorized handling: clear credentials and redirect to login
     if (error.response?.status === 401) {
-      removeStoredToken();
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        try {
-          window.location.href = '/login';
-        } catch {
-          // Graceful fallback for non-browser/jsdom environments
+      const isSilentAuth =
+        error.config?.headers?.['X-Silent-Auth'] === 'true' ||
+        Boolean(error.config?._silentAuth);
+
+      if (!isSilentAuth) {
+        removeStoredToken();
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+          try {
+            window.location.href = '/login';
+          } catch {
+            // Graceful fallback for non-browser/jsdom environments
+          }
         }
       }
     }
@@ -134,11 +140,29 @@ export const authApi = {
   },
 
   /**
+   * Refresh current active session JWT
+   * POST /api/v1/auth/refresh
+   */
+  async refreshToken() {
+    const response = await api.post('/api/v1/auth/refresh');
+    return response.data;
+  },
+
+  /**
    * Revoke token and logout
    * POST /api/v1/auth/logout
    */
   async logout() {
     const response = await api.post('/api/v1/auth/logout');
+    return response.data;
+  },
+
+  /**
+   * Change password for authenticated account
+   * POST /api/v1/auth/change-password
+   */
+  async changePassword(data) {
+    const response = await api.post('/api/v1/auth/change-password', data);
     return response.data;
   },
 };
@@ -264,7 +288,7 @@ export const complaintApi = {
 
 export const aiApi = {
   /**
-   * Check Gemini AI connection status
+   * Check AI connection status
    * GET /api/v1/ai/status
    */
   async getAiStatus() {
@@ -282,7 +306,7 @@ export const aiApi = {
   },
 
   /**
-   * Analyze complaint image + text with Gemini Vision
+   * Analyze complaint image + text with Vision AI
    * POST /api/v1/ai/analyze-complaint
    */
   async analyzeComplaint(data) {
@@ -316,6 +340,15 @@ export const departmentApi = {
    */
   async getDepartmentById(id) {
     const response = await api.get(`/api/v1/departments/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Fetch eligible administrator candidates
+   * GET /api/v1/departments/admin-candidates
+   */
+  async getAdminCandidates() {
+    const response = await api.get('/api/v1/departments/admin-candidates');
     return response.data;
   },
 
@@ -385,6 +418,15 @@ export const adminApi = {
   },
 
   /**
+   * Update citizen account status (ACTIVE / DISABLED)
+   * PATCH /api/v1/admin/citizens/:id/status
+   */
+  async updateCitizenStatus(id, data) {
+    const response = await api.patch(`/api/v1/admin/citizens/${id}/status`, data);
+    return response.data;
+  },
+
+  /**
    * Fetch all complaints with filter, sort, and pagination (Admin Portal)
    * GET /api/v1/admin/complaints
    */
@@ -428,6 +470,15 @@ export const adminApi = {
     const response = await api.patch(`/api/v1/admin/complaints/${id}/verify`, data);
     return response.data;
   },
+
+  /**
+   * Super Admin reject resolution evidence and reopen complaint
+   * POST /api/v1/admin/complaints/:id/reject-resolution
+   */
+  async rejectResolution(id, data) {
+    const response = await api.post(`/api/v1/admin/complaints/${id}/reject-resolution`, data);
+    return response.data;
+  },
 };
 
 export const notificationApi = {
@@ -435,8 +486,9 @@ export const notificationApi = {
    * Fetch user/admin notifications
    * GET /api/v1/notifications
    */
-  async getNotifications(params = {}) {
-    const response = await api.get('/api/v1/notifications', { params });
+  async getNotifications(params = {}, config = {}) {
+    const headers = { 'X-Silent-Auth': 'true', ...(config.headers || {}) };
+    const response = await api.get('/api/v1/notifications', { params, ...config, headers });
     return response.data;
   },
 
@@ -515,6 +567,15 @@ export const departmentAdminApi = {
   },
 
   /**
+   * Complete and resolve complaint with resolution repair photo and AI authenticity scan
+   * POST /api/v1/department-admin/complaints/:id/resolve
+   */
+  async resolveComplaint(id, data) {
+    const response = await api.post(`/api/v1/department-admin/complaints/${id}/resolve`, data);
+    return response.data;
+  },
+
+  /**
    * Update complaint priority
    * PATCH /api/v1/department-admin/complaints/:id/priority
    */
@@ -576,6 +637,15 @@ export const departmentAdminApi = {
     const response = await api.get('/api/v1/department-admin/complaints/export', {
       responseType: 'blob',
     });
+    return response.data;
+  },
+
+  /**
+   * Change password for logged-in department admin
+   * POST /api/v1/department-admin/change-password
+   */
+  async changePassword(data) {
+    const response = await api.post('/api/v1/department-admin/change-password', data);
     return response.data;
   },
 };

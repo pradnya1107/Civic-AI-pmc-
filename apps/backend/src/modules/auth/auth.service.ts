@@ -133,8 +133,9 @@ export async function loginCitizen(
     );
   }
 
-  // If regular citizen, require emailVerified
-  if (user.role !== "DEPARTMENT_ADMIN" && !user.emailVerified) {
+  // If regular citizen, require emailVerified in test and production
+  const requireEmailVerified = process.env.NODE_ENV !== "development";
+  if (requireEmailVerified && user.role !== "DEPARTMENT_ADMIN" && !user.emailVerified) {
     throw new AppError(
       "Email or password is incorrect, or the account is not eligible to sign in.",
       401,
@@ -232,10 +233,11 @@ export async function validateToken(token: string) {
   }
 
   const user = await User.findById(decoded.sub).select("+tokenVersion");
+  const requireEmailVerified = process.env.NODE_ENV === "production";
   if (
     !user ||
     user.accountStatus !== "ACTIVE" ||
-    !user.emailVerified ||
+    (requireEmailVerified && !user.emailVerified) ||
     user.tokenVersion !== decoded.tokenVersion
   ) {
     throw new AppError("Authentication is required.", 401, "UNAUTHORIZED");
@@ -257,5 +259,91 @@ export async function revokeUserTokens(userId: string): Promise<void> {
   await User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } });
 }
 
+export async function refreshSessionToken(userId: string) {
+  const user = await User.findById(userId).select("+tokenVersion");
+  if (!user || user.accountStatus !== "ACTIVE") {
+    throw new AppError("Authentication is required.", 401, "UNAUTHORIZED");
+  }
+
+  const expiresIn = getJwtExpiresIn();
+  const accessToken = jwt.sign(
+    { tokenVersion: user.tokenVersion ?? 0, role: user.role, email: user.email },
+    getJwtSecret(),
+    {
+      algorithm: "HS256",
+      subject: user.id,
+      expiresIn,
+    },
+  );
+
+  return {
+    accessToken,
+    token: accessToken,
+    tokenType: "Bearer",
+    expiresIn,
+    user: {
+      id: user.id,
+      name: user.fullName,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      departmentId: user.departmentId?.toString(),
+      emailVerified: user.emailVerified,
+      accountStatus: user.accountStatus,
+    },
+  };
+}
+
 export const register = registerCitizen;
 export const login = loginCitizen;
+
+export async function changeUserPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword?: string
+) {
+  if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+    throw new AppError("New password and confirm password do not match.", 400, "PASSWORD_MISMATCH");
+  }
+
+  const user = await User.findById(userId).select("+passwordHash");
+  if (!user) {
+    throw new AppError("User not found.", 404, "USER_NOT_FOUND");
+  }
+
+  if (!user.passwordHash) {
+    throw new AppError("No password has been set for this account.", 400, "NO_PASSWORD_SET");
+  }
+
+  const isCurrentValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!isCurrentValid) {
+    throw new AppError("Previous password is incorrect.", 400, "INVALID_PREVIOUS_PASSWORD");
+  }
+
+  if (newPassword.length < 8) {
+    throw new AppError("New password must be at least 8 characters long.", 400, "INVALID_PASSWORD_LENGTH");
+  }
+
+  if (!/[A-Z]/.test(newPassword)) {
+    throw new AppError("New password must contain at least 1 uppercase letter.", 400, "INVALID_PASSWORD_UPPERCASE");
+  }
+
+  if (!/[^A-Za-z0-9]/.test(newPassword)) {
+    throw new AppError("New password must contain at least 1 specific symbol.", 400, "INVALID_PASSWORD_SYMBOL");
+  }
+
+  if (currentPassword === newPassword) {
+    throw new AppError("New password cannot be the same as your previous password.", 400, "SAME_PASSWORD");
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  await user.save();
+
+  return {
+    success: true,
+    message: "Password updated successfully.",
+  };
+}
+

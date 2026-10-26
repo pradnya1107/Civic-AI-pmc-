@@ -156,7 +156,10 @@ describe('Citizen Portal Dashboard Component', () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    const helpButtons = screen.getAllByRole('button', { name: /Help & Support/i });
+    const profileTrigger = screen.getByRole('button', { name: /User profile/i });
+    await user.click(profileTrigger);
+
+    const helpButtons = screen.getAllByRole('button', { name: /Help Center & Helplines/i });
     await user.click(helpButtons[0]);
 
     expect(await screen.findByText(/PMC 24x7 Citizen Helpline/i)).toBeInTheDocument();
@@ -167,7 +170,10 @@ describe('Citizen Portal Dashboard Component', () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    const profileButtons = screen.getAllByRole('button', { name: /Profile/i });
+    const profileTrigger = screen.getByRole('button', { name: /User profile/i });
+    await user.click(profileTrigger);
+
+    const profileButtons = screen.getAllByRole('button', { name: /My Profile & Preferences/i });
     await user.click(profileButtons[0]);
 
     expect(await screen.findByDisplayValue('rohan.deshmukh@example.com')).toBeInTheDocument();

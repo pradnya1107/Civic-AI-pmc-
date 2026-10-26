@@ -1,0 +1,278 @@
+{
+  "model": "VGG16-PMC-Transfer",
+  "datasetSize": 20,
+  "overallAccuracy": 0.8,
+  "macroAverages": {
+    "precision": 0.9167,
+    "recall": 0.7778,
+    "f1Score": 0.7944
+  },
+  "perClassMetrics": {
+    "Roads & Potholes": {
+      "truePositives": 4,
+      "falsePositives": 4,
+      "falseNegatives": 0,
+      "support": 4,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1Score": 0.6667
+    },
+    "Solid Waste & Garbage": {
+      "truePositives": 4,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "support": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1Score": 1.0
+    },
+    "Drainage & Sewerage": {
+      "truePositives": 3,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "support": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1Score": 1.0
+    },
+    "Street Lighting & Electrical": {
+      "truePositives": 2,
+      "falsePositives": 0,
+      "falseNegatives": 1,
+      "support": 3,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1Score": 0.8
+    },
+    "Water Supply": {
+      "truePositives": 2,
+      "falsePositives": 0,
+      "falseNegatives": 1,
+      "support": 3,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1Score": 0.8
+    },
+    "Other Civic Grievance": {
+      "truePositives": 1,
+      "falsePositives": 0,
+      "falseNegatives": 2,
+      "support": 3,
+      "precision": 1.0,
+      "recall": 0.3333,
+      "f1Score": 0.5
+    }
+  },
+  "confusionMatrix": {
+    "Roads & Potholes": {
+      "Roads & Potholes": 4,
+      "Solid Waste & Garbage": 0,
+      "Drainage & Sewerage": 0,
+      "Street Lighting & Electrical": 0,
+      "Water Supply": 0,
+      "Other Civic Grievance": 0
+    },
+    "Solid Waste & Garbage": {
+      "Roads & Potholes": 0,
+      "Solid Waste & Garbage": 4,
+      "Drainage & Sewerage": 0,
+      "Street Lighting & Electrical": 0,
+      "Water Supply": 0,
+      "Other Civic Grievance": 0
+    },
+    "Drainage & Sewerage": {
+      "Roads & Potholes": 0,
+      "Solid Waste & Garbage": 0,
+      "Drainage & Sewerage": 3,
+      "Street Lighting & Electrical": 0,
+      "Water Supply": 0,
+      "Other Civic Grievance": 0
+    },
+    "Street Lighting & Electrical": {
+      "Roads & Potholes": 1,
+      "Solid Waste & Garbage": 0,
+      "Drainage & Sewerage": 0,
+      "Street Lighting & Electrical": 2,
+      "Water Supply": 0,
+      "Other Civic Grievance": 0
+    },
+    "Water Supply": {
+      "Roads & Potholes": 1,
+      "Solid Waste & Garbage": 0,
+      "Drainage & Sewerage": 0,
+      "Street Lighting & Electrical": 0,
+      "Water Supply": 2,
+      "Other Civic Grievance": 0
+    },
+    "Other Civic Grievance": {
+      "Roads & Potholes": 2,
+      "Solid Waste & Garbage": 0,
+      "Drainage & Sewerage": 0,
+      "Street Lighting & Electrical": 0,
+      "Water Supply": 0,
+      "Other Civic Grievance": 1
+    }
+  },
+  "sampleEvaluations": [
+    {
+      "id": "EV-01",
+      "image": "pothole_crater_paud_road.jpg",
+      "groundTruth": "Roads & Potholes",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.8323,
+      "correct": true
+    },
+    {
+      "id": "EV-02",
+      "image": "pothole_asphalt_baner.png",
+      "groundTruth": "Roads & Potholes",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.8328,
+      "correct": true
+    },
+    {
+      "id": "EV-03",
+      "image": "uneven_tar_patch_kothrud.jpg",
+      "groundTruth": "Roads & Potholes",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.8324,
+      "correct": true
+    },
+    {
+      "id": "EV-04",
+      "image": "road_cave_in_hadapsar.jpg",
+      "groundTruth": "Roads & Potholes",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.8328,
+      "correct": true
+    },
+    {
+      "id": "EV-05",
+      "image": "overflowing_garbage_bin_shivajinagar.jpg",
+      "groundTruth": "Solid Waste & Garbage",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.8283,
+      "correct": true
+    },
+    {
+      "id": "EV-06",
+      "image": "waste_pile_market_yard.png",
+      "groundTruth": "Solid Waste & Garbage",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.8284,
+      "correct": true
+    },
+    {
+      "id": "EV-07",
+      "image": "uncollected_trash_katraj.jpg",
+      "groundTruth": "Solid Waste & Garbage",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.8286,
+      "correct": true
+    },
+    {
+      "id": "EV-08",
+      "image": "bio_waste_swargate.jpg",
+      "groundTruth": "Solid Waste & Garbage",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.8285,
+      "correct": true
+    },
+    {
+      "id": "EV-09",
+      "image": "overflowing_sewer_manhole_aundh.jpg",
+      "groundTruth": "Drainage & Sewerage",
+      "predicted": "Drainage & Sewerage",
+      "confidence": 0.8305,
+      "correct": true
+    },
+    {
+      "id": "EV-10",
+      "image": "blocked_stormwater_drain_viman_nagar.png",
+      "groundTruth": "Drainage & Sewerage",
+      "predicted": "Drainage & Sewerage",
+      "confidence": 0.8309,
+      "correct": true
+    },
+    {
+      "id": "EV-11",
+      "image": "broken_manhole_cover_yerwada.jpg",
+      "groundTruth": "Drainage & Sewerage",
+      "predicted": "Drainage & Sewerage",
+      "confidence": 0.8312,
+      "correct": true
+    },
+    {
+      "id": "EV-12",
+      "image": "dark_street_light_pole_fc_road.jpg",
+      "groundTruth": "Street Lighting & Electrical",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.8325,
+      "correct": false
+    },
+    {
+      "id": "EV-13",
+      "image": "flickering_led_pole_camp.png",
+      "groundTruth": "Street Lighting & Electrical",
+      "predicted": "Street Lighting & Electrical",
+      "confidence": 0.8305,
+      "correct": true
+    },
+    {
+      "id": "EV-14",
+      "image": "exposed_electric_box_karve_road.jpg",
+      "groundTruth": "Street Lighting & Electrical",
+      "predicted": "Street Lighting & Electrical",
+      "confidence": 0.8301,
+      "correct": true
+    },
+    {
+      "id": "EV-15",
+      "image": "pipeline_leak_burst_sinhagad.jpg",
+      "groundTruth": "Water Supply",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.8322,
+      "correct": false
+    },
+    {
+      "id": "EV-16",
+      "image": "contaminated_tap_water_nagar_road.png",
+      "groundTruth": "Water Supply",
+      "predicted": "Water Supply",
+      "confidence": 0.8294,
+      "correct": true
+    },
+    {
+      "id": "EV-17",
+      "image": "valve_chamber_leak_warje.jpg",
+      "groundTruth": "Water Supply",
+      "predicted": "Water Supply",
+      "confidence": 0.8296,
+      "correct": true
+    },
+    {
+      "id": "EV-18",
+      "image": "fallen_tree_branch_park.jpg",
+      "groundTruth": "Other Civic Grievance",
+      "predicted": "Other Civic Grievance",
+      "confidence": 0.1686,
+      "correct": true
+    },
+    {
+      "id": "EV-19",
+      "image": "illegal_banner_hoarding_peth.png",
+      "groundTruth": "Other Civic Grievance",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.1694,
+      "correct": false
+    },
+    {
+      "id": "EV-20",
+      "image": "stray_cattle_chowk.jpg",
+      "groundTruth": "Other Civic Grievance",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.1689,
+      "correct": false
+    }
+  ]
+}

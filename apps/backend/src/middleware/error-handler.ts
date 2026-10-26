@@ -44,13 +44,32 @@ export const errorHandler: ErrorRequestHandler = (
     return;
   }
 
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    (("type" in error && error.type === "entity.too.large") ||
+      ("status" in error && error.status === 413) ||
+      ("statusCode" in error && error.statusCode === 413))
+  ) {
+    response.status(413).json({
+      success: false,
+      message: "The uploaded image or file is too large. Please select an image under 10MB.",
+      error: { code: "PAYLOAD_TOO_LARGE" },
+    });
+    return;
+  }
+
   const errorName =
     error instanceof Error ? error.name : "UnknownError";
-  console.error(`Unhandled request error (${errorName}).`);
+  console.error(`Unhandled request error (${errorName}):`, error);
 
   response.status(500).json({
     success: false,
-    message: "An unexpected error occurred.",
+    message:
+      error instanceof Error && process.env.NODE_ENV !== "production"
+        ? error.message
+        : "An unexpected error occurred.",
     error: { code: "INTERNAL_SERVER_ERROR" },
   });
 };
+

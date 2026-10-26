@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { complaintApi } from '../services/api';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 // Fix Leaflet default icon issues in bundlers
 delete L.Icon.Default.prototype._getIconUrl;
@@ -12,8 +13,116 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
+// Category symbols for rich UI table and markers
+export const CATEGORY_SYMBOLS = {
+  'Roads & Potholes': '🛣️',
+  'Roads': '🛣️',
+  'Solid Waste Management': '🗑️',
+  'Solid Waste & Garbage': '🗑️',
+  'Garbage': '🗑️',
+  'Waste': '🗑️',
+  'Water Supply & Drainage': '🚰',
+  'Water Supply': '🚰',
+  'Drainage & Sewage': '🌊',
+  'Drainage': '🌊',
+  'Street Lighting': '💡',
+  'Traffic & Encroachment': '🚦',
+  'Public Health & Sanitation': '🏥',
+  'Other': '📋',
+};
+
+// Map Legend Items: issue name, category, emoji, color and SVG icon matching map pins
+export const CIVIC_MAP_LEGEND = [
+  {
+    issue: 'Roads & Potholes',
+    category: 'Roads',
+    emoji: '🛣️',
+    color: '#f97316',
+    svg: <path d="M4 19h16M4 15h16M4 11h16M4 7h16" stroke="white" strokeWidth="2.2" strokeLinecap="round" />,
+  },
+  {
+    issue: 'Water Supply & Leaks',
+    category: 'Water Supply',
+    emoji: '🚰',
+    color: '#3b82f6',
+    svg: <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" stroke="white" strokeWidth="2.2" fill="none" />,
+  },
+  {
+    issue: 'Solid Waste & Garbage',
+    category: 'Waste',
+    emoji: '🗑️',
+    color: '#10b981',
+    svg: <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="white" strokeWidth="2.2" fill="none" />,
+  },
+  {
+    issue: 'Street Lighting Outage',
+    category: 'Lighting',
+    emoji: '💡',
+    color: '#eab308',
+    svg: (
+      <g>
+        <circle cx="12" cy="12" r="5" stroke="white" strokeWidth="2" fill="none" />
+        <line x1="12" y1="1" x2="12" y2="4" stroke="white" strokeWidth="2" />
+        <line x1="12" y1="20" x2="12" y2="23" stroke="white" strokeWidth="2" />
+      </g>
+    ),
+  },
+  {
+    issue: 'Drainage & Sewage',
+    category: 'Drainage',
+    emoji: '🌊',
+    color: '#06b6d4',
+    svg: <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" stroke="white" strokeWidth="2.2" fill="none" />,
+  },
+  {
+    issue: 'Traffic & Encroachment',
+    category: 'Traffic',
+    emoji: '🚦',
+    color: '#ef4444',
+    svg: (
+      <g>
+        <circle cx="12" cy="7" r="2.2" fill="white" />
+        <circle cx="12" cy="12" r="2.2" fill="white" />
+        <circle cx="12" cy="17" r="2.2" fill="white" />
+      </g>
+    ),
+  },
+];
+
+export const getCategorySymbol = (cat = '') => {
+  const match = Object.keys(CATEGORY_SYMBOLS).find(
+    (key) => key.toLowerCase() === cat.toLowerCase()
+  );
+  if (match) return CATEGORY_SYMBOLS[match];
+  const l = cat.toLowerCase();
+  if (l.includes('road') || l.includes('pothole')) return '🛣️';
+  if (l.includes('waste') || l.includes('garbage')) return '🗑️';
+  if (l.includes('water') || l.includes('leak')) return '🚰';
+  if (l.includes('drain') || l.includes('flood') || l.includes('sewag')) return '🌊';
+  if (l.includes('light') || l.includes('lamp') || l.includes('electric')) return '💡';
+  if (l.includes('traffic') || l.includes('encroach')) return '🚦';
+  if (l.includes('health') || l.includes('mosquito')) return '🏥';
+  return '📌';
+};
+
+export const PRIORITY_SYMBOLS = {
+  CRITICAL: { symbol: '🔴', color: '#ef4444', label: 'Critical (< 12h)' },
+  HIGH: { symbol: '🟠', color: '#f97316', label: 'High (< 24h)' },
+  MEDIUM: { symbol: '🟡', color: '#eab308', label: 'Medium (< 48h)' },
+  LOW: { symbol: '🟢', color: '#10b981', label: 'Low (< 72h)' },
+};
+
+export const STATUS_META = {
+  SUBMITTED: { label: 'Submitted', badgeClass: 'badge-secondary', icon: '⏱️' },
+  UNDER_REVIEW: { label: 'Under Review', badgeClass: 'badge-warning', icon: '🔍' },
+  ASSIGNED: { label: 'Assigned', badgeClass: 'badge-info', icon: '👤' },
+  IN_PROGRESS: { label: 'In Progress', badgeClass: 'badge-primary', icon: '⚙️' },
+  RESOLVED: { label: 'Resolved', badgeClass: 'badge-success', icon: '✅' },
+  REJECTED: { label: 'Rejected', badgeClass: 'badge-danger', icon: '❌' },
+};
+
 // Category Icon SVGs
-const getCategoryIconSvg = (category) => {
+export const getCategoryIconSvg = (category) => {
   const cat = (category || '').toLowerCase();
   if (cat.includes('pothole') || cat.includes('road')) {
     return `<path d="M4 19h16M4 15h16M4 11h16M4 7h16" stroke="white" stroke-width="2" stroke-linecap="round"/>`;
@@ -66,6 +175,9 @@ const createMarkerIcon = (severity, category, isPulse = false) => {
 };
 
 export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
+  const { user } = useAuth();
+  const currentUserId = user?.id || user?._id;
+
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
@@ -76,12 +188,16 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Floating Table States
+  const [isTableCollapsed, setIsTableCollapsed] = useState(false);
+  const [selectedPointId, setSelectedPointId] = useState(null);
+  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'MINE'
+
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDensityCircles, setShowDensityCircles] = useState(true);
 
   // Load points from API
   const loadHeatmapData = async () => {
@@ -93,12 +209,48 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
         severity: severityFilter !== 'ALL' ? severityFilter : undefined,
       });
 
-      if (res && res.success) {
-        setPoints(res.data.points || []);
-        setSummary(res.data.summary || null);
-      }
+      const rawPoints = res?.data?.points || res?.points || [];
+      const normalized = (Array.isArray(rawPoints) ? rawPoints : []).map((pt, idx) => {
+        const lat = Number(pt.lat ?? pt.location?.latitude ?? (18.5204 + (idx % 15) * 0.01 - 0.07));
+        const lng = Number(pt.lng ?? pt.location?.longitude ?? (73.8567 + ((idx * 3) % 15) * 0.01 - 0.07));
+        const severity = String(pt.severity || pt.priority || 'MEDIUM').toUpperCase();
+        const status = String(pt.status || 'SUBMITTED').toUpperCase();
+        const title = String(pt.title || 'Civic Issue');
+        const category = String(pt.category || 'Other');
+        const ward = String(pt.ward || pt.location?.ward || 'Pune Municipal Corporation');
+        const id = String(pt.id || pt._id || `pt-${idx}`);
+        const complaintNumber = pt.complaintNumber || `CIV-${id.slice(-6).toUpperCase()}`;
+        const citizenId = pt.citizenId?._id ? String(pt.citizenId._id) : (pt.citizenId ? String(pt.citizenId) : null);
+        return {
+          ...pt,
+          id,
+          complaintNumber,
+          citizenId,
+          lat,
+          lng,
+          severity,
+          status,
+          title,
+          category,
+          ward,
+        };
+      });
+
+      setPoints(normalized);
+
+      // Compute summary metrics if backend doesn't provide them
+      const summaryData = res?.data?.summary || {
+        total: normalized.length,
+        bySeverity: {
+          CRITICAL: normalized.filter((p) => p.severity === 'CRITICAL').length,
+          HIGH: normalized.filter((p) => p.severity === 'HIGH').length,
+          MEDIUM: normalized.filter((p) => p.severity === 'MEDIUM').length,
+          LOW: normalized.filter((p) => p.severity === 'LOW').length,
+        },
+      };
+      setSummary(summaryData);
     } catch (err) {
-      setError(err.message || 'Failed to load civic heatmap data.');
+      setError(err?.message || 'Failed to load civic heatmap data.');
     } finally {
       setLoading(false);
     }
@@ -108,35 +260,49 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
     loadHeatmapData();
   }, [categoryFilter, severityFilter]);
 
-  // Initialize Map
+  // Initialize Map safely (immune to React 18/19 StrictMode double-mount)
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    if (!mapInstanceRef.current) {
-      // Pune Coordinates: 18.5204° N, 73.8567° E
-      const map = L.map(mapContainerRef.current, {
-        center: [18.5204, 73.8567],
-        zoom: 12,
-        scrollWheelZoom: true,
-      });
+    if (mapContainerRef.current && mapContainerRef.current._leaflet_id) {
+      mapContainerRef.current._leaflet_id = null;
+    }
 
-      // CartoDB Voyager or OpenStreetMap Tiles
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a> | PMC Smart City',
-        subdomains: 'abcd',
-        maxZoom: 19,
-      }).addTo(map);
+    if (!mapInstanceRef.current && mapContainerRef.current) {
+      try {
+        // Pune Coordinates: 18.5204° N, 73.8567° E
+        const map = L.map(mapContainerRef.current, {
+          center: [18.5204, 73.8567],
+          zoom: 12,
+          scrollWheelZoom: true,
+        });
 
-      markersLayerRef.current = L.layerGroup().addTo(map);
-      circlesLayerRef.current = L.layerGroup().addTo(map);
-      mapInstanceRef.current = map;
+        // OpenStreetMap standard tiles (Free, open-source, no API key required)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | PMC Smart City',
+          maxZoom: 19,
+        }).addTo(map);
+
+        markersLayerRef.current = L.layerGroup().addTo(map);
+        circlesLayerRef.current = L.layerGroup().addTo(map);
+        mapInstanceRef.current = map;
+      } catch (err) {
+        console.warn('Leaflet map initialization warning:', err);
+      }
     }
 
     return () => {
       // Cleanup on unmount
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+        try {
+          mapInstanceRef.current.remove();
+        } catch {
+          // graceful cleanup ignore
+        }
         mapInstanceRef.current = null;
+      }
+      if (mapContainerRef.current && mapContainerRef.current._leaflet_id) {
+        mapContainerRef.current._leaflet_id = null;
       }
     };
   }, []);
@@ -156,77 +322,115 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
     });
   }, [points, statusFilter, searchQuery]);
 
+  // Complaints filed by currently logged-in citizen
+  const userComplaints = useMemo(() => {
+    if (!currentUserId) return [];
+    return filteredPoints.filter((pt) => {
+      const cid = pt.citizenId?._id ? String(pt.citizenId._id) : (pt.citizenId ? String(pt.citizenId) : '');
+      return cid === String(currentUserId);
+    });
+  }, [filteredPoints, currentUserId]);
+
+  // Complaints list to display in table based on active tab
+  const displayComplaints = useMemo(() => {
+    if (activeTab === 'MINE' && currentUserId && userComplaints.length > 0) {
+      return userComplaints;
+    }
+    return filteredPoints;
+  }, [filteredPoints, activeTab, userComplaints, currentUserId]);
+
+  // Locate & zoom to marker on map
+  const handleLocatePoint = (pt) => {
+    setSelectedPointId(pt.id);
+    if (!mapInstanceRef.current || !pt.lat || !pt.lng) return;
+
+    try {
+      mapInstanceRef.current.flyTo([pt.lat, pt.lng], 15, { duration: 1.0 });
+
+      if (markersLayerRef.current) {
+        markersLayerRef.current.eachLayer((layer) => {
+          if (layer.getLatLng) {
+            const latLng = layer.getLatLng();
+            if (
+              Math.abs(latLng.lat - pt.lat) < 0.0001 &&
+              Math.abs(latLng.lng - pt.lng) < 0.0001
+            ) {
+              layer.openPopup();
+            }
+          }
+        });
+      }
+    } catch {
+      // Graceful fallback
+    }
+  };
+
   // Update map markers when points or filter change
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
 
-    markersLayerRef.current.clearLayers();
-    if (circlesLayerRef.current) circlesLayerRef.current.clearLayers();
+    try {
+      markersLayerRef.current.clearLayers();
+      if (circlesLayerRef.current) circlesLayerRef.current.clearLayers();
 
-    filteredPoints.forEach((pt) => {
-      if (!pt.lat || !pt.lng) return;
+      filteredPoints.forEach((pt) => {
+        if (!pt.lat || !pt.lng || isNaN(pt.lat) || isNaN(pt.lng)) return;
 
-      const marker = L.marker([pt.lat, pt.lng], {
-        icon: createMarkerIcon(pt.severity, pt.category),
-        title: pt.title,
+        const severity = (pt.severity || 'LOW').toUpperCase();
+        const status = (pt.status || 'PENDING').toUpperCase();
+        const marker = L.marker([pt.lat, pt.lng], {
+          icon: createMarkerIcon(severity, pt.category),
+          title: pt.title,
+        });
+
+        // Interactive popup
+        const detailUrl = isAdmin ? `/admin/complaints/${pt.id}` : `/complaints/${pt.id}`;
+        const imageTag = pt.imageUrl
+          ? `<div class="popup-img-wrap"><img src="${pt.imageUrl}" alt="${pt.title}" class="popup-thumb" onerror="this.style.display='none'" /></div>`
+          : '';
+
+        const popupContent = `
+          <div class="civic-popup-card">
+            ${imageTag}
+            <div class="popup-header">
+              <span class="popup-severity-tag severity-${severity.toLowerCase()}">${severity}</span>
+              <span class="popup-status-tag status-${status.toLowerCase().replace(/_/g, '-')}">${status.replace(/_/g, ' ')}</span>
+            </div>
+            <h4 class="popup-title">${pt.title || 'Civic Issue'}</h4>
+            <p class="popup-meta">
+              <strong>Ward:</strong> ${pt.ward || 'Pune Central'} | <strong>Cat:</strong> ${pt.category || 'General'}
+            </p>
+            <div class="popup-stats">
+              <span class="popup-stat-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                ${pt.supportCount || 1} Citizens Impacted
+              </span>
+              ${pt.aiScore ? `<span class="popup-stat-item ai-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> AI Score: ${pt.aiScore}</span>` : ''}
+            </div>
+            <div class="popup-actions">
+              <a href="${detailUrl}" class="popup-link-btn">View Full Grievance &rarr;</a>
+            </div>
+          </div>
+        `;
+
+        marker.bindPopup(popupContent, { maxWidth: 300, minWidth: 260 });
+        marker.on('click', () => {
+          setSelectedPointId(pt.id);
+        });
+        markersLayerRef.current.addLayer(marker);
       });
 
-      // Interactive popup
-      const detailUrl = isAdmin ? `/admin/complaints/${pt.id}` : `/complaints/${pt.id}`;
-      const imageTag = pt.imageUrl
-        ? `<div class="popup-img-wrap"><img src="${pt.imageUrl}" alt="${pt.title}" class="popup-thumb" onerror="this.style.display='none'" /></div>`
-        : '';
-
-      const popupContent = `
-        <div class="civic-popup-card">
-          ${imageTag}
-          <div class="popup-header">
-            <span class="popup-severity-tag severity-${(pt.severity || 'LOW').toLowerCase()}">${pt.severity}</span>
-            <span class="popup-status-tag status-${(pt.status || 'PENDING').toLowerCase().replace('_', '-')}">${pt.status.replace('_', ' ')}</span>
-          </div>
-          <h4 class="popup-title">${pt.title}</h4>
-          <p class="popup-meta">
-            <strong>Ward:</strong> ${pt.ward || 'Pune Central'} | <strong>Cat:</strong> ${pt.category}
-          </p>
-          <div class="popup-stats">
-            <span class="popup-stat-item">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
-              ${pt.supportCount || 1} Citizens Impacted
-            </span>
-            ${pt.aiScore ? `<span class="popup-stat-item ai-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> AI Score: ${pt.aiScore}</span>` : ''}
-          </div>
-          <div class="popup-actions">
-            <a href="${detailUrl}" class="popup-link-btn">View Full Grievance &rarr;</a>
-          </div>
-        </div>
-      `;
-
-      marker.bindPopup(popupContent, { maxWidth: 300, minWidth: 260 });
-      markersLayerRef.current.addLayer(marker);
-
-      // Add density circles if enabled for high/critical issues
-      if (showDensityCircles && circlesLayerRef.current && (pt.severity === 'CRITICAL' || pt.severity === 'HIGH')) {
-        const radius = pt.severity === 'CRITICAL' ? 350 : 200;
-        const color = SEVERITY_COLORS[pt.severity];
-        const circle = L.circle([pt.lat, pt.lng], {
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.12,
-          weight: 1.5,
-          radius: radius,
-        });
-        circlesLayerRef.current.addLayer(circle);
+      // If points exist and map is active, fit bounds if more than 1 point
+      if (filteredPoints.length > 1 && mapInstanceRef.current) {
+        const bounds = L.latLngBounds(filteredPoints.map((p) => [p.lat, p.lng]));
+        if (bounds.isValid()) {
+          mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+        }
       }
-    });
-
-    // If points exist and map is active, fit bounds if more than 1 point
-    if (filteredPoints.length > 1 && mapInstanceRef.current) {
-      const bounds = L.latLngBounds(filteredPoints.map((p) => [p.lat, p.lng]));
-      if (bounds.isValid()) {
-        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-      }
+    } catch (err) {
+      console.warn('Error updating heatmap markers:', err);
     }
-  }, [filteredPoints, showDensityCircles, isAdmin]);
+  }, [filteredPoints, isAdmin]);
 
   return (
     <div className="civic-heatmap-wrapper">
@@ -259,10 +463,10 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
               className="form-select form-select-sm"
             >
               <option value="ALL">All Severities</option>
-              <option value="CRITICAL">Critical (12h SLA)</option>
-              <option value="HIGH">High (24h SLA)</option>
-              <option value="MEDIUM">Medium (48h SLA)</option>
-              <option value="LOW">Low (72h SLA)</option>
+              <option value="CRITICAL">Critical (24x7 / 1 Working Day SLA)</option>
+              <option value="HIGH">High (2 Working Days SLA)</option>
+              <option value="MEDIUM">Medium (4 Working Days SLA)</option>
+              <option value="LOW">Low (7 Working Days SLA)</option>
             </select>
           </div>
 
@@ -294,20 +498,6 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
           </div>
 
           <div className="heatmap-control-actions">
-            <button
-              type="button"
-              className={`btn btn-sm ${showDensityCircles ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setShowDensityCircles(!showDensityCircles)}
-              title="Toggle severity impact circles"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="6" />
-                <circle cx="12" cy="12" r="2" />
-              </svg>
-              {showDensityCircles ? 'Impact Radii: ON' : 'Impact Radii: OFF'}
-            </button>
-
             <button
               type="button"
               className="btn btn-outline btn-sm"
@@ -376,27 +566,80 @@ export const CivicHeatmap = ({ isAdmin = false, height = '600px' }) => {
           </div>
         )}
         <div ref={mapContainerRef} className="leaflet-map-element" style={{ width: '100%', height: '100%' }} />
+
+        {/* Short Map Legend Table in Bottom Right */}
+        <div className="heatmap-compact-legend" aria-label="Map Legend">
+          <div className="compact-legend-header">
+            <span className="compact-legend-title">LEGEND</span>
+          </div>
+          <table className="compact-legend-table">
+            <thead>
+              <tr>
+                <th className="th-issue">Issue</th>
+                <th className="th-symbol">Symbol</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CIVIC_MAP_LEGEND.map((item) => (
+                <tr key={item.issue} className="compact-legend-row">
+                  <td className="td-issue">
+                    <span className="issue-text">{item.issue}</span>
+                  </td>
+                  <td className="td-symbol">
+                    <div className="symbol-cell-content" title={`${item.issue} map symbol`}>
+                      <span className="legend-mini-pin" style={{ background: item.color }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="legend-pin-svg">
+                          {item.svg}
+                        </svg>
+                      </span>
+                      <span className="legend-emoji" aria-hidden="true">{item.emoji}</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Severity Pin Color Sub-legend */}
+          <div className="compact-legend-footer">
+            <div className="legend-footer-title">Severity Pin Color (Working Days SLA):</div>
+            <div className="legend-footer-dots">
+              <span className="legend-dot-pill" title="Critical (24x7 / 1 Working Day SLA)">
+                <span className="dot dot-crit" /> &lt;12h (1 Day)
+              </span>
+              <span className="legend-dot-pill" title="High (2 Working Days SLA)">
+                <span className="dot dot-high" /> &lt;24h (2 Days)
+              </span>
+              <span className="legend-dot-pill" title="Medium (4 Working Days SLA)">
+                <span className="dot dot-med" /> &lt;48h (4 Days)
+              </span>
+              <span className="legend-dot-pill" title="Low (7 Working Days SLA)">
+                <span className="dot dot-low" /> &lt;72h (7 Days)
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Map Legend */}
       <div className="heatmap-legend">
-        <div className="legend-title">PMC Severity SLA Index:</div>
+        <div className="legend-title">PMC Severity SLA Index (Working Days):</div>
         <div className="legend-items">
           <div className="legend-item">
             <span className="legend-dot" style={{ background: SEVERITY_COLORS.CRITICAL }} />
-            <span>Critical (&lt; 12h SLA)</span>
+            <span>Critical (24x7 Emergency / 1 Working Day SLA)</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot" style={{ background: SEVERITY_COLORS.HIGH }} />
-            <span>High (&lt; 24h SLA)</span>
+            <span>High (2 Working Days SLA)</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot" style={{ background: SEVERITY_COLORS.MEDIUM }} />
-            <span>Medium (&lt; 48h SLA)</span>
+            <span>Medium (4 Working Days SLA)</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot" style={{ background: SEVERITY_COLORS.LOW }} />
-            <span>Low (&lt; 72h SLA)</span>
+            <span>Low (7 Working Days SLA)</span>
           </div>
         </div>
         <div className="legend-note">

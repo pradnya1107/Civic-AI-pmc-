@@ -9,6 +9,7 @@ import {
   getDepartmentComplaintsHandler,
   getDepartmentComplaintByIdHandler,
   updateComplaintStatusHandler,
+  resolveDepartmentComplaintHandler,
   updateComplaintPriorityHandler,
   assignOfficerHandler,
   addInternalNoteHandler,
@@ -17,11 +18,15 @@ import {
   createDepartmentOfficerHandler,
   exportComplaintsCsvHandler,
 } from "./department-admin.controller";
+import { changePasswordHandler } from "../auth/auth.controller";
 
 export const departmentAdminRouter = Router();
 
 // Only ADMIN or DEPARTMENT_ADMIN can access their department portal
 departmentAdminRouter.use(authenticate, authorize("ADMIN", "DEPARTMENT_ADMIN"));
+
+// Change password for logged-in department admin
+departmentAdminRouter.post("/change-password", asyncHandler(changePasswordHandler));
 
 // Department admin profile & department info
 departmentAdminRouter.get("/me", asyncHandler(getDepartmentAdminMeHandler));
@@ -47,6 +52,10 @@ departmentAdminRouter.get("/complaints/:id", asyncHandler(getDepartmentComplaint
 
 // Status update with workflow validation
 departmentAdminRouter.patch("/complaints/:id/status", asyncHandler(updateComplaintStatusHandler));
+
+// Complete and resolve complaint with resolution photo and AI authenticity scan
+departmentAdminRouter.post("/complaints/:id/resolve", asyncHandler(resolveDepartmentComplaintHandler));
+departmentAdminRouter.patch("/complaints/:id/resolve", asyncHandler(resolveDepartmentComplaintHandler));
 
 // Priority update & SLA recalculation
 departmentAdminRouter.patch("/complaints/:id/priority", asyncHandler(updateComplaintPriorityHandler));

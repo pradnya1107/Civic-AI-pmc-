@@ -1,0 +1,298 @@
+{
+  "model": "VGG16",
+  "total_test_samples": 24,
+  "correct_predictions": 21,
+  "overall_accuracy": 0.875,
+  "macro_metrics": {
+    "accuracy": 0.875,
+    "precision": 0.9055,
+    "recall": 0.8833,
+    "f1_score": 0.8854
+  },
+  "per_class_metrics": {
+    "Roads & Potholes": {
+      "true_positives": 4,
+      "false_positives": 1,
+      "false_negatives": 1,
+      "support": 5,
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1_score": 0.8
+    },
+    "Solid Waste & Garbage": {
+      "true_positives": 5,
+      "false_positives": 1,
+      "false_negatives": 0,
+      "support": 5,
+      "precision": 0.8333,
+      "recall": 1.0,
+      "f1_score": 0.9091
+    },
+    "Drainage & Sewerage": {
+      "true_positives": 3,
+      "false_positives": 0,
+      "false_negatives": 1,
+      "support": 4,
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1_score": 0.8571
+    },
+    "Street Lighting & Electrical": {
+      "true_positives": 3,
+      "false_positives": 0,
+      "false_negatives": 1,
+      "support": 4,
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1_score": 0.8571
+    },
+    "Water Supply": {
+      "true_positives": 4,
+      "false_positives": 1,
+      "false_negatives": 0,
+      "support": 4,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1_score": 0.8889
+    },
+    "Other Civic Grievance": {
+      "true_positives": 2,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "support": 2,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "Roads & Potholes",
+      "Solid Waste & Garbage",
+      "Drainage & Sewerage",
+      "Street Lighting & Electrical",
+      "Water Supply",
+      "Other Civic Grievance"
+    ],
+    "matrix": [
+      [
+        4,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        3,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        3,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        4,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2
+      ]
+    ]
+  },
+  "predictions": [
+    {
+      "sample_id": "sample-road-01",
+      "actual": "Roads & Potholes",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.9956,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-road-02",
+      "actual": "Roads & Potholes",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.9932,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-road-03",
+      "actual": "Roads & Potholes",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.9893,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-road-04",
+      "actual": "Roads & Potholes",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.945,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-waste-01",
+      "actual": "Solid Waste & Garbage",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.9974,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-waste-02",
+      "actual": "Solid Waste & Garbage",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.9954,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-waste-03",
+      "actual": "Solid Waste & Garbage",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.9901,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-waste-04",
+      "actual": "Solid Waste & Garbage",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.9352,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-drain-01",
+      "actual": "Drainage & Sewerage",
+      "predicted": "Drainage & Sewerage",
+      "confidence": 0.9969,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-drain-02",
+      "actual": "Drainage & Sewerage",
+      "predicted": "Drainage & Sewerage",
+      "confidence": 0.9945,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-drain-03",
+      "actual": "Drainage & Sewerage",
+      "predicted": "Drainage & Sewerage",
+      "confidence": 0.989,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-light-01",
+      "actual": "Street Lighting & Electrical",
+      "predicted": "Street Lighting & Electrical",
+      "confidence": 0.9977,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-light-02",
+      "actual": "Street Lighting & Electrical",
+      "predicted": "Street Lighting & Electrical",
+      "confidence": 0.9965,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-light-03",
+      "actual": "Street Lighting & Electrical",
+      "predicted": "Street Lighting & Electrical",
+      "confidence": 0.9929,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-water-01",
+      "actual": "Water Supply",
+      "predicted": "Water Supply",
+      "confidence": 0.9977,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-water-02",
+      "actual": "Water Supply",
+      "predicted": "Water Supply",
+      "confidence": 0.9962,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-water-03",
+      "actual": "Water Supply",
+      "predicted": "Water Supply",
+      "confidence": 0.9907,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-other-01",
+      "actual": "Other Civic Grievance",
+      "predicted": "Other Civic Grievance",
+      "confidence": 0.4172,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-other-02",
+      "actual": "Other Civic Grievance",
+      "predicted": "Other Civic Grievance",
+      "confidence": 0.4355,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-edge-01",
+      "actual": "Water Supply",
+      "predicted": "Water Supply",
+      "confidence": 0.9575,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-edge-02",
+      "actual": "Solid Waste & Garbage",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.9399,
+      "correct": true
+    },
+    {
+      "sample_id": "sample-edge-03",
+      "actual": "Roads & Potholes",
+      "predicted": "Water Supply",
+      "confidence": 0.9391,
+      "correct": false
+    },
+    {
+      "sample_id": "sample-edge-04",
+      "actual": "Street Lighting & Electrical",
+      "predicted": "Solid Waste & Garbage",
+      "confidence": 0.9501,
+      "correct": false
+    },
+    {
+      "sample_id": "sample-edge-05",
+      "actual": "Drainage & Sewerage",
+      "predicted": "Roads & Potholes",
+      "confidence": 0.7906,
+      "correct": false
+    }
+  ]
+}

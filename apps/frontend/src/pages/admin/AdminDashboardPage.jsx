@@ -237,7 +237,7 @@ export const AdminDashboardPage = () => {
       {/* Header with Title and Overview */}
       <div className="admin-page-header">
         <div>
-          <h1 className="admin-page-title">Admin Complaint Dashboard</h1>
+          <h1 className="admin-page-title">Overview</h1>
           <p className="admin-page-subtitle">
             Central grievance management console. Review, assign departments, and track resolution lifecycles.
           </p>
@@ -284,18 +284,51 @@ export const AdminDashboardPage = () => {
 
       {/* SLA Alert Banner */}
       {slaMonitoring && slaMonitoring.overdueCount > 0 && (
-        <div className="alert-banner alert-banner-warning mb-4 d-flex align-center justify-between" role="alert" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '8px' }}>
-          <div className="d-flex align-center gap-2">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
+        <div
+          className="admin-sla-banner"
+          role="alert"
+          style={{
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            borderLeft: '4px solid #ef4444',
+            color: 'var(--color-text-main)',
+            padding: '0.85rem 1.15rem',
+            borderRadius: 'var(--radius-md, 8px)',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </span>
             <span>
-              <strong>PMC SLA Alert:</strong> {slaMonitoring.overdueCount} active complaint(s) have exceeded citizen SLA deadlines! Overall municipal compliance rate is <strong>{slaMonitoring.complianceRate}%</strong>.
+              <strong style={{ color: '#ef4444' }}>PMC SLA Alert:</strong>{' '}
+              <strong>{slaMonitoring.overdueCount}</strong> active complaint(s) have exceeded municipal SLA resolution deadlines! Current municipal compliance rate is{' '}
+              <strong>{slaMonitoring.complianceRate}%</strong>.
             </span>
           </div>
-          <span className="badge badge-danger">Breached SLA ({slaMonitoring.overdueCount})</span>
+          <span
+            className="badge badge-danger"
+            style={{
+              backgroundColor: '#ef4444',
+              color: '#ffffff',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '9999px',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+            }}
+          >
+            Breached SLA ({slaMonitoring.overdueCount})
+          </span>
         </div>
       )}
 
@@ -536,10 +569,9 @@ export const AdminDashboardPage = () => {
               <tr>
                 <th scope="col">Complaint ID</th>
                 <th scope="col">Title & Location</th>
-                <th scope="col">Citizen</th>
                 <th scope="col">Department</th>
                 <th scope="col">Priority</th>
-                <th scope="col">Status (Inline Update)</th>
+                <th scope="col">Status</th>
                 <th scope="col">Submitted</th>
                 <th scope="col" className="text-right">Action</th>
               </tr>
@@ -552,6 +584,8 @@ export const AdminDashboardPage = () => {
                   departments={departments}
                   onStatusChange={handleStatusChange}
                   onAssignClick={handleOpenAssignModal}
+                  showCitizen={false}
+                  allowManualStatusChange={false}
                 />
               ))}
             </tbody>

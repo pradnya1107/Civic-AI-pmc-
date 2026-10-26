@@ -192,4 +192,34 @@ describe('ComplaintFormPage Component', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('opens live camera viewfinder modal when Take Live Photo button is clicked', async () => {
+    const user = userEvent.setup();
+    const mockTrackStop = vi.fn();
+    const mockMediaStream = {
+      getTracks: () => [{ stop: mockTrackStop, kind: 'video' }],
+    };
+
+    window.HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'mediaDevices', {
+      writable: true,
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue(mockMediaStream),
+        enumerateDevices: vi.fn().mockResolvedValue([]),
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ComplaintFormPage />
+      </MemoryRouter>,
+    );
+
+    const liveCameraBtn = screen.getByRole('button', { name: /Take Live Photo/i });
+    await user.click(liveCameraBtn);
+
+    expect(await screen.findByText(/Live On-Site Camera/i)).toBeInTheDocument();
+    expect(screen.getByText(/PMC On-Site Real Capture/i)).toBeInTheDocument();
+  });
 });

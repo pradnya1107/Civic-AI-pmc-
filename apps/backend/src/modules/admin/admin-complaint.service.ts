@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { AppError } from "../../utils/app-error";
 import { Complaint, type ComplaintStatus, type ComplaintPriority } from "../complaints/complaint.model";
+import { User } from "../users/user.model";
 import { Department } from "../departments/department.model";
 import { AuditLog } from "../audit/auditLog.model";
 import { Notification } from "../notifications/notification.model";
@@ -28,7 +29,7 @@ const VALID_TRANSITIONS: Record<ComplaintStatus, readonly ComplaintStatus[]> = {
   UNDER_REVIEW: ["ASSIGNED", "REJECTED"],
   ASSIGNED: ["IN_PROGRESS", "UNDER_REVIEW"],
   IN_PROGRESS: ["RESOLVED", "UNDER_REVIEW"],
-  RESOLVED: [],
+  RESOLVED: ["IN_PROGRESS", "UNDER_REVIEW"], // Super Admin rejection / reopening of fake/invalid resolutions
   REJECTED: [],
 };
 
@@ -391,6 +392,106 @@ export async function verifyAdminComplaint(
   } catch (err) {
     console.error("Failed to dispatch verify notification:", err);
   }
+
+  return Complaint.findById(objectId)
+    .populate("departmentId", "name slug")
+    .populate("citizenId", "fullName email phoneNumber")
+    .lean();
+}
+
+/**
+ * Super Admin rejects fraudulent or incorrect resolution evidence and reopens complaint
+ */
+export async function rejectComplaintResolution(
+  adminActor: AdminActor,
+  complaintId: string,
+  input: { reason: string; returnedStatus?: "IN_PROGRESS" | "UNDER_REVIEW" },
+) {
+  const objectId = requireObjectId(complaintId);
+  const complaint = await Complaint.findById(objectId);
+  if (!complaint) {
+    throw new AppError("Complaint not found.", 404, "COMPLAINT_NOT_FOUND");
+  }
+
+  if (complaint.status !== "RESOLVED") {
+    throw new AppError(
+      "Only resolved complaints can have their resolution evidence rejected.",
+      400,
+      "INVALID_STATUS_TRANSITION",
+    );
+  }
+
+  const reason = (input.reason || "").trim();
+  if (!reason || reason.length < 10) {
+    throw new AppError(
+      "A detailed rejection reason of at least 10 characters is required.",
+      400,
+      "VALIDATION_ERROR",
+    );
+  }
+
+  const returnedStatus = input.returnedStatus || "IN_PROGRESS";
+  const adminUser = await User.findById(requireObjectId(adminActor.id))
+    .select("fullName email role")
+    .lean();
+
+  const previousResolutionImageUrl = complaint.resolutionImageUrl;
+  const previousResolutionNotes = complaint.resolutionNotes;
+  const resolvingOfficerName =
+    complaint.resolutionAudit?.resolvedBy?.officerName ||
+    complaint.assignedOfficer?.name ||
+    "Field Officer";
+
+  complaint.status = returnedStatus;
+  complaint.resolutionAudit = {
+    ...(complaint.resolutionAudit || {}),
+    isRejectionActive: true,
+    rejectedBy: {
+      adminId: requireObjectId(adminActor.id),
+      adminName: adminUser?.fullName || "Super Admin",
+      adminEmail: adminUser?.email,
+    },
+    rejectionReason: reason,
+    rejectedAt: new Date(),
+    previousResolutionImageUrl,
+    returnedStatus,
+  };
+
+  await complaint.save();
+
+  // Audit Log: Record Super Admin resolution rejection
+  await AuditLog.create({
+    actorRef: requireObjectId(adminActor.id),
+    action: "RESOLUTION_EVIDENCE_REJECTED_BY_ADMIN",
+    targetRef: complaint._id,
+    targetModel: "Complaint",
+    metadata: {
+      action: "SUPER_ADMIN_REJECTED_RESOLUTION",
+      previousStatus: "RESOLVED",
+      newStatus: returnedStatus,
+      rejectionReason: reason,
+      rejectedBy: adminUser?.fullName || "Super Admin",
+      resolvingOfficer: resolvingOfficerName,
+      previousResolutionNotes,
+      previousResolutionImageUrl,
+      complaintNumber: complaint.complaintNumber,
+    },
+  });
+
+  // Notify citizen that complaint resolution was rejected by PMC and returned to active work
+  try {
+    await Notification.create({
+      recipientId: complaint.citizenId,
+      complaintId: complaint._id,
+      type: "COMPLAINT_UPDATED",
+      title: "Resolution Under Re-Investigation",
+      message: `PMC Administration audited complaint ${complaint.complaintNumber}: Previous resolution evidence did not meet municipal standards and has been reopened for proper remediation.`,
+    });
+  } catch (notifErr) {
+    console.error("Failed to notify citizen of resolution rejection:", notifErr);
+  }
+
+  await recordComplaintUpdate(complaint, returnedStatus);
 
   return Complaint.findById(objectId)
     .populate("departmentId", "name slug")

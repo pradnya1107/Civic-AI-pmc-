@@ -4,10 +4,13 @@ import {
   verifyEmailOtp,
 } from "./email-otp.service";
 import {
+  changeUserPassword,
   loginCitizen,
+  refreshSessionToken,
   registerCitizen,
   revokeUserTokens,
 } from "./auth.service";
+import { AppError } from "../../utils/app-error";
 import {
   requestPasswordReset,
   resetPassword,
@@ -164,6 +167,20 @@ export const getCurrentUser: RequestHandler = async (request, response) => {
   });
 };
 
+export const refreshTokenHandler: RequestHandler = async (request, response) => {
+  if (!request.user) {
+    response.status(401).json({ success: false, message: "Unauthorized" });
+    return;
+  }
+  const result = await refreshSessionToken(request.user.id);
+  response.status(200).json({
+    success: true,
+    message: "Session token refreshed successfully.",
+    data: result,
+    ...result,
+  });
+};
+
 export const logout: RequestHandler = async (request, response) => {
   const user = request.user;
   if (!user) {
@@ -194,4 +211,33 @@ export const resetPasswordHandler: RequestHandler = async (
     success: true,
     message: "Password reset successfully. Sign in with your new password.",
   });
+};
+
+export const changePasswordHandler: RequestHandler = async (
+  request,
+  response,
+) => {
+  const user = request.user;
+  if (!user) {
+    throw new AppError("Authentication is required.", 401, "UNAUTHORIZED");
+  }
+
+  const { previousPassword, currentPassword, newPassword, confirmPassword } = request.body;
+  const effectiveCurrentPassword = previousPassword || currentPassword;
+
+  if (!effectiveCurrentPassword) {
+    throw new AppError("Previous password is required.", 400, "MISSING_PREVIOUS_PASSWORD");
+  }
+  if (!newPassword) {
+    throw new AppError("New password is required.", 400, "MISSING_NEW_PASSWORD");
+  }
+
+  const result = await changeUserPassword(
+    user.id,
+    effectiveCurrentPassword,
+    newPassword,
+    confirmPassword
+  );
+
+  response.status(200).json(result);
 };

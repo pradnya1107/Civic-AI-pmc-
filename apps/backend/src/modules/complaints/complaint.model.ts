@@ -26,16 +26,44 @@ export interface ComplaintLocation {
   longitude?: number;
 }
 
+export interface AuthenticityAssessmentRecord {
+  possibleAiGenerated?: boolean;
+  confidence?: string;
+  indicators?: string[];
+  disclaimer?: string;
+}
+
+export interface ResolutionAuthenticityRecord {
+  isAiGenerated?: boolean;
+  possibleAiGenerated?: boolean;
+  isGoogleOrWebImage?: boolean;
+  isCameraCaptured?: boolean;
+  sourceType?: "CAMERA_CAPTURE" | "AI_GENERATED" | "GOOGLE_WEB_DOWNLOAD";
+  isRelevantRepair?: boolean;
+  isAnotherUnrelatedPhoto?: boolean;
+  assessment?: "AUTHENTIC_REAL_PHOTO" | "POSSIBLE_AI_GENERATED" | "GOOGLE_WEB_PHOTO" | "UNRELATED_PHOTO";
+  confidence?: string;
+  indicators?: string[];
+  explanation?: string;
+}
+
 export interface ComplaintAiAnalysis {
   severity?: string;
   score?: number;
+  confidenceScore?: number;
   reasoning?: string;
   suggestedDepartment?: string;
   detectedIssues?: string[];
+  detectedCivicIssue?: string;
+  visibleEvidence?: string;
+  manualReviewNeeded?: boolean;
+  manualReviewReason?: string;
   generatedDescription?: string;
+  authenticityAssessment?: AuthenticityAssessmentRecord;
   resolutionVerdict?: "RESOLVED_VERIFIED" | "POTENTIALLY_UNRESOLVED" | "INCONCLUSIVE";
   resolutionConfidence?: number;
   resolutionAnalysis?: string;
+  resolutionAuthenticity?: ResolutionAuthenticityRecord;
 }
 
 export interface AssignedOfficer {
@@ -54,6 +82,27 @@ export interface CitizenConfirmation {
   disputeReason?: string;
   confirmedAt?: Date;
   disputedAt?: Date;
+}
+
+export interface ResolutionAuditRecord {
+  resolvedBy?: {
+    officerId?: Types.ObjectId;
+    officerName?: string;
+    officerEmail?: string;
+    officerRole?: string;
+    timestamp?: Date;
+  };
+  resolvedAt?: Date;
+  isRejectionActive?: boolean;
+  rejectedBy?: {
+    adminId?: Types.ObjectId;
+    adminName?: string;
+    adminEmail?: string;
+  };
+  rejectionReason?: string;
+  rejectedAt?: Date;
+  previousResolutionImageUrl?: string;
+  returnedStatus?: ComplaintStatus;
 }
 
 export interface InternalNote {
@@ -78,6 +127,8 @@ export interface ComplaintRecord {
   imageUrl?: string;
   resolutionImageUrl?: string;
   resolutionNotes?: string;
+  resolutionAuthenticity?: ResolutionAuthenticityRecord;
+  resolutionAudit?: ResolutionAuditRecord;
   aiAnalysis?: ComplaintAiAnalysis;
   supporters: Types.ObjectId[];
   supportCount: number;
@@ -89,19 +140,9 @@ export interface ComplaintRecord {
   updatedAt: Date;
 }
 
-export function calculateSlaDeadline(
-  priority: ComplaintPriority,
-  fromDate: Date = new Date(),
-): Date {
-  const hoursMap: Record<ComplaintPriority, number> = {
-    CRITICAL: 12,
-    HIGH: 24,
-    MEDIUM: 48,
-    LOW: 72,
-  };
-  const hours = hoursMap[priority] ?? 48;
-  return new Date(fromDate.getTime() + hours * 60 * 60 * 1000);
-}
+// Import and re-export working-day SLA calculation from PMC SLA calendar service
+import { calculateSlaDeadline, calculateWorkingDaySla } from "./sla-calendar.service";
+export { calculateSlaDeadline, calculateWorkingDaySla };
 
 const complaintSchema = new Schema<ComplaintRecord>(
   {
@@ -145,16 +186,63 @@ const complaintSchema = new Schema<ComplaintRecord>(
     aiAnalysis: {
       severity: { type: String, trim: true },
       score: { type: Number, min: 0, max: 100 },
+      confidenceScore: { type: Number, min: 0, max: 100 },
       reasoning: { type: String, trim: true },
       suggestedDepartment: { type: String, trim: true },
       detectedIssues: [{ type: String, trim: true }],
+      detectedCivicIssue: { type: String, trim: true },
+      visibleEvidence: { type: String, trim: true },
+      manualReviewNeeded: { type: Boolean, default: false },
+      manualReviewReason: { type: String, trim: true },
       generatedDescription: { type: String, trim: true },
+      authenticityAssessment: {
+        possibleAiGenerated: { type: Boolean, default: false },
+        confidence: { type: String, trim: true },
+        indicators: [{ type: String, trim: true }],
+        disclaimer: { type: String, trim: true },
+      },
       resolutionVerdict: {
         type: String,
         enum: ["RESOLVED_VERIFIED", "POTENTIALLY_UNRESOLVED", "INCONCLUSIVE"],
       },
       resolutionConfidence: { type: Number, min: 0, max: 100 },
       resolutionAnalysis: { type: String, trim: true },
+      resolutionAuthenticity: {
+        isAiGenerated: { type: Boolean, default: false },
+        possibleAiGenerated: { type: Boolean, default: false },
+        assessment: { type: String, trim: true },
+        confidence: { type: String, trim: true },
+        indicators: [{ type: String, trim: true }],
+        explanation: { type: String, trim: true },
+      },
+    },
+    resolutionAuthenticity: {
+      isAiGenerated: { type: Boolean, default: false },
+      possibleAiGenerated: { type: Boolean, default: false },
+      assessment: { type: String, trim: true },
+      confidence: { type: String, trim: true },
+      indicators: [{ type: String, trim: true }],
+      explanation: { type: String, trim: true },
+    },
+    resolutionAudit: {
+      resolvedBy: {
+        officerId: { type: Schema.Types.ObjectId, ref: "User" },
+        officerName: { type: String, trim: true },
+        officerEmail: { type: String, trim: true },
+        officerRole: { type: String, trim: true },
+        timestamp: { type: Date },
+      },
+      resolvedAt: { type: Date },
+      isRejectionActive: { type: Boolean, default: false },
+      rejectedBy: {
+        adminId: { type: Schema.Types.ObjectId, ref: "User" },
+        adminName: { type: String, trim: true },
+        adminEmail: { type: String, trim: true },
+      },
+      rejectionReason: { type: String, trim: true, maxlength: 2000 },
+      rejectedAt: { type: Date },
+      previousResolutionImageUrl: { type: String, trim: true },
+      returnedStatus: { type: String, enum: COMPLAINT_STATUSES },
     },
     supporters: [{ type: Schema.Types.ObjectId, ref: "User" }],
     supportCount: { type: Number, default: 0, min: 0 },

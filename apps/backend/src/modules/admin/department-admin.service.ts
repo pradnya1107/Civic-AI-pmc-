@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import { User } from "../users/user.model";
 import { Department } from "../departments/department.model";
 import { Complaint } from "../complaints/complaint.model";
+import { AuditLog } from "../audit/auditLog.model";
 import { AppError } from "../../utils/app-error";
 import { generateAndDispatchAdminOtp } from "../auth/department-admin-otp.service";
 
@@ -11,6 +12,8 @@ export interface CreateDepartmentAdminInput {
   departmentId: string;
   fullName: string;
   email: string;
+  password?: string;
+  confirmPassword?: string;
 }
 
 export function isDemoModeEnabled(): boolean {
@@ -69,8 +72,26 @@ export async function createDepartmentAdmin(input: CreateDepartmentAdminInput) {
     );
   }
 
-  const temporaryPassword = generateTemporaryPassword();
-  const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+  let finalPassword = "";
+  if (input.password) {
+    if (input.confirmPassword !== undefined && input.password !== input.confirmPassword) {
+      throw new AppError("Password and confirm password do not match.", 400, "PASSWORD_MISMATCH");
+    }
+    if (input.password.length < 8) {
+      throw new AppError("Password must be at least 8 characters long.", 400, "INVALID_PASSWORD_LENGTH");
+    }
+    if (!/[A-Z]/.test(input.password)) {
+      throw new AppError("Password must contain at least 1 uppercase letter.", 400, "INVALID_PASSWORD_UPPERCASE");
+    }
+    if (!/[^A-Za-z0-9]/.test(input.password)) {
+      throw new AppError("Password must contain at least 1 specific symbol.", 400, "INVALID_PASSWORD_SYMBOL");
+    }
+    finalPassword = input.password;
+  } else {
+    finalPassword = generateTemporaryPassword();
+  }
+
+  const passwordHash = await bcrypt.hash(finalPassword, 12);
 
   const admin = await User.create({
     fullName,
@@ -98,7 +119,7 @@ export async function createDepartmentAdmin(input: CreateDepartmentAdminInput) {
     console.log(`Name:               ${admin.fullName}`);
     console.log(`Department:         ${department.name}`);
     console.log(`Demo Email:         ${admin.email}`);
-    console.log(`Temporary Password: ${temporaryPassword}`);
+    console.log(`Password:           ${finalPassword}`);
     console.log(`Confirmation OTP:   ${confirmationOtp} (Dispatched to Terminal)`);
     console.log(`Account Status:     Active / OTP Ready`);
     console.log(`Login Page:         ${frontendUrl}`);
@@ -119,7 +140,7 @@ export async function createDepartmentAdmin(input: CreateDepartmentAdminInput) {
       accountStatus: admin.accountStatus,
       createdAt: admin.createdAt,
     },
-    ...(demoMode ? { temporaryPassword, confirmationOtp } : {}),
+    ...(demoMode ? { temporaryPassword: finalPassword, confirmationOtp } : {}),
   };
 }
 
@@ -216,6 +237,7 @@ export async function updateDepartmentAdmin(
     departmentId?: string | null;
     accountStatus?: "ACTIVE" | "DISABLED";
   },
+  actorId?: string,
 ) {
   if (!Types.ObjectId.isValid(id)) {
     throw new AppError("Invalid admin ID provided.", 400, "INVALID_INPUT");
@@ -249,14 +271,37 @@ export async function updateDepartmentAdmin(
     }
   }
 
+  const prevStatus = admin.accountStatus;
+  let statusChanged = false;
   if (input.accountStatus !== undefined) {
     if (!["ACTIVE", "DISABLED"].includes(input.accountStatus)) {
       throw new AppError("Invalid account status. Must be ACTIVE or DISABLED.", 400, "INVALID_INPUT");
     }
-    admin.accountStatus = input.accountStatus;
+    if (admin.accountStatus !== input.accountStatus) {
+      admin.accountStatus = input.accountStatus;
+      statusChanged = true;
+      if (input.accountStatus === "DISABLED") {
+        // Immediate token invalidation for disabled administrator accounts
+        admin.tokenVersion = (admin.tokenVersion || 0) + 1;
+      }
+    }
   }
 
   await admin.save();
+
+  if (statusChanged && actorId && Types.ObjectId.isValid(actorId)) {
+    await AuditLog.create({
+      actorRef: new Types.ObjectId(actorId),
+      action: "ADMIN_ACCOUNT_STATUS_UPDATED",
+      targetRef: admin._id,
+      targetModel: "User",
+      metadata: {
+        previousStatus: prevStatus,
+        newStatus: admin.accountStatus,
+        tokensRevoked: admin.accountStatus === "DISABLED",
+      },
+    });
+  }
 
   const populated = await User.findById(admin._id).populate("departmentId", "name slug");
   const dept = populated?.departmentId as any;
@@ -271,6 +316,56 @@ export async function updateDepartmentAdmin(
       : null,
     accountStatus: admin.accountStatus,
     updatedAt: admin.updatedAt,
+  };
+}
+
+export async function updateCitizenAccountStatus(
+  citizenId: string,
+  accountStatus: "ACTIVE" | "DISABLED",
+  actorId?: string,
+) {
+  if (!Types.ObjectId.isValid(citizenId)) {
+    throw new AppError("Invalid citizen ID provided.", 400, "INVALID_INPUT");
+  }
+
+  if (!["ACTIVE", "DISABLED"].includes(accountStatus)) {
+    throw new AppError("Invalid account status. Must be ACTIVE or DISABLED.", 400, "INVALID_INPUT");
+  }
+
+  const citizen = await User.findOne({ _id: citizenId, role: "CITIZEN" });
+  if (!citizen) {
+    throw new AppError("Citizen account not found.", 404, "NOT_FOUND");
+  }
+
+  const previousStatus = citizen.accountStatus;
+  citizen.accountStatus = accountStatus;
+  if (accountStatus === "DISABLED") {
+    // Immediate token invalidation so disabled citizen cannot use existing session
+    citizen.tokenVersion = (citizen.tokenVersion || 0) + 1;
+  }
+
+  await citizen.save();
+
+  if (actorId && Types.ObjectId.isValid(actorId)) {
+    await AuditLog.create({
+      actorRef: new Types.ObjectId(actorId),
+      action: "CITIZEN_ACCOUNT_STATUS_UPDATED",
+      targetRef: citizen._id,
+      targetModel: "User",
+      metadata: {
+        previousStatus,
+        newStatus: accountStatus,
+        tokensRevoked: accountStatus === "DISABLED",
+      },
+    });
+  }
+
+  return {
+    id: citizen.id,
+    fullName: citizen.fullName,
+    email: citizen.email,
+    accountStatus: citizen.accountStatus,
+    updatedAt: citizen.updatedAt,
   };
 }
 

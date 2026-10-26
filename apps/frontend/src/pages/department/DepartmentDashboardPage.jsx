@@ -3,11 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { departmentAdminApi } from '../../services/api';
 
-export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
+export const DepartmentDashboardPage = ({ lastRefreshed, onRefreshNeeded }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
   const [error, setError] = useState(null);
   const [metricsData, setMetricsData] = useState(null);
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -15,6 +17,11 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
   const [officersData, setOfficersData] = useState([]);
 
   const adminName = user?.fullName || user?.name || 'Department Administrator';
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   const loadDashboardData = useCallback(async () => {
     setIsLoading(true);
@@ -39,6 +46,26 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Re-fetch whenever global top navigation refresh is triggered
+  useEffect(() => {
+    if (lastRefreshed) {
+      loadDashboardData();
+    }
+  }, [lastRefreshed]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadDashboardData();
+      if (onRefreshNeeded) onRefreshNeeded();
+      showToast('Dashboard data refreshed successfully.');
+    } catch {
+      showToast('Refresh failed. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleCardClick = (filterType, filterVal) => {
     if (filterType === 'status') {
@@ -118,6 +145,30 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
 
   return (
     <div className="dept-dashboard-container" style={{ maxWidth: '1440px', margin: '0 auto' }}>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            background: '#0B1D33',
+            color: '#FFFFFF',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            zIndex: 9999,
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+        >
+          <span>✓</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <div
         className="dept-hero-banner"
@@ -161,7 +212,7 @@ export const DepartmentDashboardPage = ({ onRefreshNeeded }) => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <Link
             to="/department/complaints"
             className="btn btn-primary"

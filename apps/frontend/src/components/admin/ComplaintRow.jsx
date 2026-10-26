@@ -18,6 +18,8 @@ export const ComplaintRow = ({
   onStatusChange,
   onAssignClick,
   isUpdating = false,
+  showCitizen = true,
+  allowManualStatusChange = true,
 }) => {
   const navigate = useNavigate();
   const [localStatus, setLocalStatus] = useState(complaint.status || 'SUBMITTED');
@@ -96,14 +98,16 @@ export const ComplaintRow = ({
       </td>
 
       {/* Citizen Information */}
-      <td>
-        <div className="citizen-info-cell">
-          <span className="citizen-name text-sm font-medium">{citizenName}</span>
-          {citizenEmail && (
-            <span className="citizen-email text-xs text-muted truncate">{citizenEmail}</span>
-          )}
-        </div>
-      </td>
+      {showCitizen && (
+        <td>
+          <div className="citizen-info-cell">
+            <span className="citizen-name text-sm font-medium">{citizenName}</span>
+            {citizenEmail && (
+              <span className="citizen-email text-xs text-muted truncate">{citizenEmail}</span>
+            )}
+          </div>
+        </td>
+      )}
 
       {/* Department & Quick Assign */}
       <td>
@@ -120,7 +124,7 @@ export const ComplaintRow = ({
             title="Assign or reassign municipal department"
             disabled={isUpdating}
           >
-            Assign
+            {complaint.departmentId ? 'Reassign' : 'Assign'}
           </button>
         </div>
       </td>
@@ -132,27 +136,31 @@ export const ComplaintRow = ({
         </span>
       </td>
 
-      {/* Inline Status Dropdown */}
+      {/* Lifecycle Status */}
       <td>
-        <div className="inline-status-select-wrap">
-          <select
-            className={`inline-status-select status-${localStatus.toLowerCase()}`}
-            value={localStatus}
-            onChange={handleStatusSelect}
-            disabled={isUpdating || isChangingStatus}
-            aria-label={`Update status for ${complaintNumber}`}
-            id={`status-select-${complaintId}`}
-          >
-            {STATUS_CHOICES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          {isChangingStatus && (
-            <span className="inline-status-spinner spinner" aria-label="Updating status..." />
-          )}
-        </div>
+        {allowManualStatusChange ? (
+          <div className="inline-status-select-wrap">
+            <select
+              className={`inline-status-select status-${localStatus.toLowerCase()}`}
+              value={localStatus}
+              onChange={handleStatusSelect}
+              disabled={isUpdating || isChangingStatus}
+              aria-label={`Update status for ${complaintNumber}`}
+              id={`status-select-${complaintId}`}
+            >
+              {STATUS_CHOICES.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {isChangingStatus && (
+              <span className="inline-status-spinner spinner" aria-label="Updating status..." />
+            )}
+          </div>
+        ) : (
+          <StatusBadge status={localStatus} size="sm" />
+        )}
       </td>
 
       {/* Submitted Date */}

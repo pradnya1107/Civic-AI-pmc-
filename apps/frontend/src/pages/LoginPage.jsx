@@ -89,6 +89,8 @@ export const LoginPage = () => {
     } else if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
       navigate('/admin', { replace: true });
     } else {
+      sessionStorage.setItem('civicai_welcome_voice_auto', 'true');
+      sessionStorage.removeItem('civicai_welcome_voice_played');
       navigate('/dashboard', { replace: true });
     }
   };
@@ -155,6 +157,20 @@ export const LoginPage = () => {
     <div className="auth-wrapper">
       <div className="auth-card">
         <div className="brand-header">
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+            <img
+              src="/civicai-logo.jpg"
+              alt="CivicAI PMC"
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '16px',
+                objectFit: 'cover',
+                boxShadow: '0 8px 24px rgba(13, 148, 136, 0.45)',
+                border: '1.5px solid rgba(45, 212, 191, 0.4)',
+              }}
+            />
+          </div>
           <div className="brand-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { notificationApi } from '../../services/api';
+import { NotificationBell } from '../NotificationBell';
 
 export const DepartmentTopNav = ({
   departmentName,
@@ -13,6 +14,7 @@ export const DepartmentTopNav = ({
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -26,6 +28,14 @@ export const DepartmentTopNav = ({
   const displayName = user?.fullName || user?.name || 'Department Admin';
   const deptTitle = departmentName || user?.departmentName || 'Civic Operations';
   const initial = displayName.charAt(0).toUpperCase() || 'D';
+
+  const [isNavSpinning, setIsNavSpinning] = useState(false);
+
+  const handleNavRefresh = () => {
+    setIsNavSpinning(true);
+    setTimeout(() => setIsNavSpinning(false), 800);
+    if (onRefresh) onRefresh();
+  };
 
   const currentDateStr = new Date().toLocaleDateString('en-IN', {
     weekday: 'short',
@@ -41,6 +51,17 @@ export const DepartmentTopNav = ({
         second: '2-digit',
       })
     : 'Just now';
+
+  // Sync search input with URL search param when on complaints page
+  useEffect(() => {
+    if (location.pathname === '/department/complaints') {
+      const sp = new URLSearchParams(location.search);
+      const query = sp.get('search');
+      if (query !== null) {
+        setSearchQuery(query);
+      }
+    }
+  }, [location.pathname, location.search]);
 
   // Fetch notifications
   const loadNotifications = async () => {
@@ -75,10 +96,8 @@ export const DepartmentTopNav = ({
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/department/complaints?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-    }
+    const query = searchQuery.trim();
+    navigate(`/department/complaints${query ? `?search=${encodeURIComponent(query)}` : ''}`);
   };
 
   const handleMarkAsRead = async (notifId) => {
@@ -180,11 +199,24 @@ export const DepartmentTopNav = ({
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            onClick={onRefresh}
+            onClick={handleNavRefresh}
             title="Refresh dashboard data"
             style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                display: 'inline-block',
+                animation: isNavSpinning ? 'spin 0.75s linear' : 'none',
+              }}
+            >
               <polyline points="23 4 23 10 17 10" />
               <polyline points="1 20 1 14 7 14" />
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
@@ -227,93 +259,8 @@ export const DepartmentTopNav = ({
           </div>
         </button>
 
-        {/* Notifications Dropdown */}
-        <div style={{ position: 'relative' }} ref={notifRef}>
-          <button
-            type="button"
-            className="admin-notif-btn"
-            onClick={() => setShowNotificationMenu((prev) => !prev)}
-            aria-label={`Notifications, ${unreadCount} unread`}
-            title="Notifications"
-          >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-            {unreadCount > 0 && (
-              <span className="admin-notif-badge" aria-hidden="true">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </button>
-
-          {showNotificationMenu && (
-            <div
-              className="admin-dropdown-menu"
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 'calc(100% + 8px)',
-                width: '320px',
-                zIndex: 1000,
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  padding: '12px 16px',
-                  borderBottom: '1px solid var(--color-border)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-main)' }}>
-                  Notifications ({unreadCount})
-                </span>
-                <Link
-                  to="/department/notifications"
-                  onClick={() => setShowNotificationMenu(false)}
-                  style={{ fontSize: '12px', color: '#0D9488', textDecoration: 'none', fontWeight: 600 }}
-                >
-                  View All
-                </Link>
-              </div>
-
-              <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                {notifications.length === 0 ? (
-                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: '13px' }}>
-                    No new notifications
-                  </div>
-                ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n._id || n.id}
-                      onClick={() => handleMarkAsRead(n._id || n.id)}
-                      style={{
-                        padding: '10px 14px',
-                        borderBottom: '1px solid var(--color-border)',
-                        background: n.isRead ? 'transparent' : 'rgba(13, 148, 136, 0.08)',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                      }}
-                    >
-                      <div style={{ fontWeight: n.isRead ? 500 : 700, color: 'var(--color-text-main)' }}>
-                        {n.title}
-                      </div>
-                      <div style={{ color: 'var(--color-text-muted)', marginTop: '2px', lineHeight: 1.4 }}>
-                        {n.message}
-                      </div>
-                      <div style={{ fontSize: '10px', color: 'var(--color-text-dim)', marginTop: '4px' }}>
-                        {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Unified CivicAI Notification Bell Component */}
+        <NotificationBell role="DEPARTMENT_ADMIN" className="dept-unified-bell" />
 
         {/* Profile Dropdown */}
         <div className="admin-profile-dropdown-wrap" ref={profileRef}>
@@ -377,20 +324,6 @@ export const DepartmentTopNav = ({
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                 </svg>
                 <span>Profile & Settings</span>
-              </Link>
-
-              <Link
-                to="/department/help"
-                className="admin-dropdown-item"
-                role="menuitem"
-                onClick={() => setShowProfileMenu(false)}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-                <span>Help & Guidelines</span>
               </Link>
 
               <div className="admin-dropdown-divider" />

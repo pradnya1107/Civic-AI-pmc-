@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { complaintApi } from '../services/api';
 import { StatusBadge } from './StatusBadge';
 import { PMC_CATEGORIES } from '../pages/ComplaintFormPage';
+import { CIVIC_MAP_LEGEND, getCategoryIconSvg } from './CivicHeatmap';
 
 // Default Pune coordinates
 const PUNE_CENTER = [18.5204, 73.8567];
@@ -54,17 +55,26 @@ export const NearbyIssuesMap = ({ onSelectComplaint }) => {
         const res = await complaintApi.getComplaints({ limit: 100 });
         const list = res?.data?.complaints || res?.complaints || res?.data || [];
         if (Array.isArray(list) && isMounted) {
-          // Keep complaints that have coordinates or assign default demo coordinates
-          const withCoords = list.map((c, i) => {
-            const lat = c.location?.latitude || (18.50 + (i % 15) * 0.015);
-            const lng = c.location?.longitude || (73.82 + ((i * 3) % 15) * 0.015);
-            return {
+          // Never invent or fabricate fake coordinates: display only genuine grievances with validated PMC coordinates
+          const genuineWithCoords = list
+            .filter((c) => {
+              const lat = Number(c.location?.latitude);
+              const lng = Number(c.location?.longitude);
+              return (
+                !isNaN(lat) &&
+                !isNaN(lng) &&
+                lat >= 18.30 &&
+                lat <= 18.70 &&
+                lng >= 73.65 &&
+                lng <= 74.05
+              );
+            })
+            .map((c) => ({
               ...c,
-              _computedLat: Number(lat),
-              _computedLng: Number(lng),
-            };
-          });
-          setComplaints(withCoords);
+              _computedLat: Number(c.location.latitude),
+              _computedLng: Number(c.location.longitude),
+            }));
+          setComplaints(genuineWithCoords);
         }
       } catch (err) {
         if (isMounted) setMapError('Unable to load nearby complaints. Please check connection.');
@@ -128,29 +138,32 @@ export const NearbyIssuesMap = ({ onSelectComplaint }) => {
       if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
 
       const color = CATEGORY_COLORS[complaint.category] || '#0D9488';
+      const iconSvg = getCategoryIconSvg(complaint.category);
 
-      // Custom pulsing SVG marker
+      // Custom pulsing SVG marker matching map legend
       const customIcon = L.divIcon({
         className: 'custom-civic-marker',
         html: `
           <div style="
             background-color: ${color};
-            width: 24px;
-            height: 24px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             border: 2px solid #ffffff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.45);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: transform 0.2s ease;
           ">
-            <div style="background: #ffffff; width: 6px; height: 6px; border-radius: 50%;"></div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              ${iconSvg}
+            </svg>
           </div>
         `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
       });
 
       const marker = L.marker([lat, lng], { icon: customIcon });
@@ -279,10 +292,65 @@ export const NearbyIssuesMap = ({ onSelectComplaint }) => {
         <div
           ref={mapContainerRef}
           className="nearby-map-canvas"
-          style={{ height: '360px', width: '100%', position: 'relative' }}
+          style={{ height: '420px', width: '100%', position: 'relative' }}
           role="region"
           aria-label="Pune Interactive Civic Map"
         />
+
+        {/* Short Map Legend Table in Bottom Right - same as Explore Map */}
+        {!activeComplaint && (
+          <div className="heatmap-compact-legend" aria-label="Map Legend">
+            <div className="compact-legend-header">
+              <span className="compact-legend-title">LEGEND</span>
+            </div>
+            <table className="compact-legend-table">
+              <thead>
+                <tr>
+                  <th className="th-issue">Issue</th>
+                  <th className="th-symbol">Symbol</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CIVIC_MAP_LEGEND.map((item) => (
+                  <tr key={item.issue} className="compact-legend-row">
+                    <td className="td-issue">
+                      <span className="issue-text">{item.issue}</span>
+                    </td>
+                    <td className="td-symbol">
+                      <div className="symbol-cell-content" title={`${item.issue} map symbol`}>
+                        <span className="legend-mini-pin" style={{ background: item.color }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="legend-pin-svg">
+                            {item.svg}
+                          </svg>
+                        </span>
+                        <span className="legend-emoji" aria-hidden="true">{item.emoji}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Severity Pin Color Sub-legend */}
+            <div className="compact-legend-footer">
+              <div className="legend-footer-title">Severity Pin Color (Working Days SLA):</div>
+              <div className="legend-footer-dots">
+                <span className="legend-dot-pill" title="Critical (24x7 / 1 Working Day SLA)">
+                  <span className="dot dot-crit" /> 1 Day
+                </span>
+                <span className="legend-dot-pill" title="High (2 Working Days SLA)">
+                  <span className="dot dot-high" /> 2 Days
+                </span>
+                <span className="legend-dot-pill" title="Medium (4 Working Days SLA)">
+                  <span className="dot dot-med" /> 4 Days
+                </span>
+                <span className="legend-dot-pill" title="Low (7 Working Days SLA)">
+                  <span className="dot dot-low" /> 7 Days
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Selected Complaint Detail Popover */}
         {activeComplaint && (
@@ -336,7 +404,7 @@ export const NearbyIssuesMap = ({ onSelectComplaint }) => {
       </div>
 
       <div className="nearby-map-footer text-xs text-muted">
-        <span>Click any marker to inspect photos and SLA progress. Red = Potholes, Amber = Waste, Cyan = Water/Drainage.</span>
+        <span>Click any marker to inspect photos and SLA progress. See bottom-right legend for issue symbols and SLA deadlines.</span>
       </div>
     </div>
   );

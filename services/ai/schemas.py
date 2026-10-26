@@ -37,3 +37,8 @@ class AnalyzeResponse(BaseModel):
     summary: str = Field(..., min_length=5, max_length=1000, description="Plain-language summary of the complaint")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score between 0.0 and 1.0")
     modelVersion: str = Field(..., description="Identifier of the AI model or provider version")
+
+class ClassifyImageRequest(BaseModel):
+    imageUrl: Optional[str] = Field(None, description="Image URL or local file path")
+    imageBase64: Optional[str] = Field(None, description="Base64-encoded image string")
+    hint: Optional[str] = Field(None, description="Optional text context or caption")

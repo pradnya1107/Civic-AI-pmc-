@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { departmentAdminApi } from '../../services/api';
 
@@ -20,7 +20,7 @@ const PRIORITY_OPTIONS = [
   { value: 'CRITICAL', label: 'Critical' },
 ];
 
-export const DepartmentComplaintsPage = () => {
+export const DepartmentComplaintsPage = ({ lastRefreshed, onRefreshNeeded }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -69,6 +69,7 @@ export const DepartmentComplaintsPage = () => {
 
   // UI state
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
@@ -87,16 +88,40 @@ export const DepartmentComplaintsPage = () => {
   const [internalNoteText, setInternalNoteText] = useState('');
   const [isSubmittingModal, setIsSubmittingModal] = useState(false);
 
+  const toastTimeoutRef = useRef(null);
+
   const showToast = (msg) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 4000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   const loadOfficers = async () => {
     try {
       const res = await departmentAdminApi.getOfficers();
       const list = res?.data?.officers || [];
-      setOfficers(Array.isArray(list) ? list : []);
+      const nonAdminOfficers = (Array.isArray(list) ? list : [])
+        .filter((off) => {
+          const name = (off.name || '').toLowerCase();
+          const desig = (off.designation || '').toLowerCase();
+          return !(
+            off.role === 'DEPARTMENT_ADMIN' ||
+            desig.includes('lead department officer') ||
+            desig.includes('department admin') ||
+            name.includes('department admin')
+          );
+        })
+        .map((off) => ({
+          ...off,
+          name: (off.name || '').replace(/^Officer\s+/i, '').trim(),
+        }));
+      setOfficers(nonAdminOfficers);
     } catch {
       // Continue even if officers load fails
     }
@@ -105,6 +130,23 @@ export const DepartmentComplaintsPage = () => {
   useEffect(() => {
     loadOfficers();
   }, []);
+
+  // Sync search state with URL parameters (e.g. from TopNav quick search)
+  useEffect(() => {
+    const querySearch = searchParams.get('search');
+    if (querySearch !== null && querySearch !== search) {
+      setSearch(querySearch);
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
+
+  // Re-fetch whenever global refresh is triggered from layout
+  useEffect(() => {
+    if (lastRefreshed) {
+      fetchComplaints();
+      loadOfficers();
+    }
+  }, [lastRefreshed]);
 
   const fetchComplaints = useCallback(async () => {
     setIsLoading(true);
@@ -143,6 +185,19 @@ export const DepartmentComplaintsPage = () => {
   useEffect(() => {
     fetchComplaints();
   }, [fetchComplaints]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([fetchComplaints(), loadOfficers()]);
+      if (onRefreshNeeded) onRefreshNeeded();
+      showToast('Complaints data refreshed successfully.');
+    } catch {
+      showToast('Refresh failed. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Tab switching
   const handleTabChange = (tab) => {
@@ -362,18 +417,7 @@ export const DepartmentComplaintsPage = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={fetchComplaints}
-            title="Refresh Complaints List"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <span>🔄</span>
-            <span>Refresh</span>
-          </button>
-
+        <div>
           <button
             type="button"
             className="btn btn-secondary"
@@ -445,14 +489,63 @@ export const DepartmentComplaintsPage = () => {
             <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted, #64748B)', display: 'block', marginBottom: '4px' }}>
               SEARCH KEYWORD
             </label>
-            <input
-              type="text"
-              placeholder="ID, Title, Category, Location..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="form-input"
-              style={{ height: '36px', fontSize: '13px' }}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="ID, Title, Category, Location..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setCurrentPage(1);
+                    fetchComplaints();
+                  }
+                }}
+                className="form-input"
+                style={{
+                  height: '40px',
+                  padding: '6px 30px 6px 12px',
+                  fontSize: '13px',
+                  lineHeight: '26px',
+                  boxSizing: 'border-box',
+                  borderRadius: '8px',
+                  width: '100%',
+                }}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setCurrentPage(1);
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev);
+                      next.delete('search');
+                      return next;
+                    });
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    padding: '2px 4px',
+                  }}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Status Filter */}
@@ -467,7 +560,15 @@ export const DepartmentComplaintsPage = () => {
                 setCurrentPage(1);
               }}
               className="form-input"
-              style={{ height: '36px', fontSize: '13px' }}
+              style={{
+                height: '40px',
+                padding: '6px 12px',
+                fontSize: '13px',
+                lineHeight: '26px',
+                boxSizing: 'border-box',
+                borderRadius: '8px',
+                width: '100%',
+              }}
             >
               {STATUS_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -489,7 +590,15 @@ export const DepartmentComplaintsPage = () => {
                 setCurrentPage(1);
               }}
               className="form-input"
-              style={{ height: '36px', fontSize: '13px' }}
+              style={{
+                height: '40px',
+                padding: '6px 12px',
+                fontSize: '13px',
+                lineHeight: '26px',
+                boxSizing: 'border-box',
+                borderRadius: '8px',
+                width: '100%',
+              }}
             >
               {PRIORITY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -511,12 +620,20 @@ export const DepartmentComplaintsPage = () => {
                 setCurrentPage(1);
               }}
               className="form-input"
-              style={{ height: '36px', fontSize: '13px' }}
+              style={{
+                height: '40px',
+                padding: '6px 12px',
+                fontSize: '13px',
+                lineHeight: '26px',
+                boxSizing: 'border-box',
+                borderRadius: '8px',
+                width: '100%',
+              }}
             >
               <option value="ALL">All Officers</option>
               {officers.map((off) => (
                 <option key={off.id} value={off.id}>
-                  {off.name}
+                  {(off.name || '').replace(/^Officer\s+/i, '').trim()}
                 </option>
               ))}
             </select>
@@ -531,7 +648,15 @@ export const DepartmentComplaintsPage = () => {
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="form-input"
-              style={{ height: '36px', fontSize: '13px' }}
+              style={{
+                height: '40px',
+                padding: '6px 12px',
+                fontSize: '13px',
+                lineHeight: '26px',
+                boxSizing: 'border-box',
+                borderRadius: '8px',
+                width: '100%',
+              }}
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -735,7 +860,7 @@ export const DepartmentComplaintsPage = () => {
                         {c.assignedOfficer?.name ? (
                           <div>
                             <span style={{ fontWeight: 600, color: 'var(--text-primary, #0B1D33)' }}>
-                              {c.assignedOfficer.name}
+                              {(c.assignedOfficer.name || '').replace(/^Officer\s+/i, '').trim()}
                             </span>
                             <div style={{ fontSize: '11px', color: '#64748B' }}>
                               {c.assignedOfficer.designation || 'Field Officer'}
@@ -958,21 +1083,41 @@ export const DepartmentComplaintsPage = () => {
 
             <form onSubmit={handleAssignOfficerSubmit}>
               <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label className="form-label" style={{ fontSize: '13px', fontWeight: 600 }}>
+                <label htmlFor="assign-field-officer-select" className="form-label" style={{ fontSize: '13px', fontWeight: 600 }}>
                   Select Field Officer
                 </label>
                 <select
+                  id="assign-field-officer-select"
                   className="form-input"
                   value={selectedOfficerId}
                   onChange={(e) => setSelectedOfficerId(e.target.value)}
+                  style={{
+                    height: '42px',
+                    padding: '8px 12px',
+                    fontSize: '13px',
+                    lineHeight: '26px',
+                    boxSizing: 'border-box',
+                    borderRadius: '8px',
+                  }}
                   required
                 >
                   <option value="">-- Choose Officer --</option>
-                  {officers.map((off) => (
-                    <option key={off.id} value={off.id}>
-                      {off.name} ({off.designation} - {off.availability}, {off.activeCount} active tasks)
-                    </option>
-                  ))}
+                  {officers
+                    .filter((off) => {
+                      const name = (off.name || '').toLowerCase();
+                      const desig = (off.designation || '').toLowerCase();
+                      const isDeptAdmin =
+                        off.role === 'DEPARTMENT_ADMIN' ||
+                        desig.includes('lead department officer') ||
+                        desig.includes('department admin') ||
+                        name.includes('department admin');
+                      return !isDeptAdmin;
+                    })
+                    .map((off) => (
+                      <option key={off.id} value={off.id}>
+                        {(off.name || '').replace(/^Officer\s+/i, '').trim()} ({off.designation || 'Field Officer'})
+                      </option>
+                    ))}
                 </select>
               </div>
 

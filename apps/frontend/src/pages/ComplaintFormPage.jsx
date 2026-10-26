@@ -1,40 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Navbar } from '../components/Navbar';
+import { CitizenLayout } from '../components/CitizenLayout';
+import { LocationPickerMap } from '../components/LocationPickerMap';
+import { CameraCaptureModal } from '../components/CameraCaptureModal';
+import { useLanguage } from '../context/LanguageContext';
 import { complaintApi, aiApi } from '../services/api';
-
-export const PMC_CATEGORIES = [
-  { value: '', label: 'Select a Category *', disabled: true },
-  { value: 'Roads & Potholes', label: 'Roads & Potholes (खड्डे आणि रस्ते)' },
-  { value: 'Water Supply', label: 'Water Supply (पाणी पुरवठा)' },
-  { value: 'Drainage & Sewerage', label: 'Drainage & Sewerage (ड्रेनेज आणि सांडपाणी)' },
-  { value: 'Solid Waste & Garbage', label: 'Solid Waste & Garbage (कचरा व्यवस्थापन)' },
-  { value: 'Street Lighting & Electrical', label: 'Street Lighting & Electrical (पथदिवे)' },
-  { value: 'Health & Sanitation', label: 'Health & Sanitation (आरोग्य आणि स्वच्छता)' },
-  { value: 'Garden & Tree Trimming', label: 'Garden & Tree Trimming (उद्यान आणि झाडे)' },
-  { value: 'Encroachment', label: 'Encroachment (अतिक्रमण)' },
-  { value: 'Traffic & Signage', label: 'Traffic & Signage (वाहतूक आणि फलक)' },
-  { value: 'Other Civic Grievance', label: 'Other Civic Grievance (इतर नागरी तक्रार)' },
-];
-
-export const PMC_WARDS = [
-  { value: '', label: 'Select PMC Ward (Optional)' },
-  { value: 'Ward 1 - Shivajinagar / Ghole Road', label: 'Ward 1 - Shivajinagar / Ghole Road' },
-  { value: 'Ward 2 - Kothrud / Bavdhan', label: 'Ward 2 - Kothrud / Bavdhan' },
-  { value: 'Ward 3 - Dhankawadi / Sahakarnagar', label: 'Ward 3 - Dhankawadi / Sahakarnagar' },
-  { value: 'Ward 4 - Sinhagad Road / Vadgaon', label: 'Ward 4 - Sinhagad Road / Vadgaon' },
-  { value: 'Ward 5 - Warje / Karvenagar', label: 'Ward 5 - Warje / Karvenagar' },
-  { value: 'Ward 6 - Kasba / Vishrambaug Wada', label: 'Ward 6 - Kasba / Vishrambaug Wada' },
-  { value: 'Ward 7 - Bhavani Peth', label: 'Ward 7 - Bhavani Peth' },
-  { value: 'Ward 8 - Bibwewadi', label: 'Ward 8 - Bibwewadi' },
-  { value: 'Ward 9 - Hadapsar / Mundhwa', label: 'Ward 9 - Hadapsar / Mundhwa' },
-  { value: 'Ward 10 - Wanowrie / Ramtekdi', label: 'Ward 10 - Wanowrie / Ramtekdi' },
-  { value: 'Ward 11 - Kondhwa / Yewalewadi', label: 'Ward 11 - Kondhwa / Yewalewadi' },
-  { value: 'Ward 12 - Ahmednagar Road / Vadgaonsheri', label: 'Ward 12 - Ahmednagar Road / Vadgaonsheri' },
-  { value: 'Ward 13 - Yerwada / Kalas / Dhanori', label: 'Ward 13 - Yerwada / Kalas / Dhanori' },
-  { value: 'Ward 14 - Dhole Patil Road', label: 'Ward 14 - Dhole Patil Road' },
-  { value: 'Ward 15 - Aundh / Baner / Pashan', label: 'Ward 15 - Aundh / Baner / Pashan' },
-];
+import { PMC_CATEGORIES, PMC_WARDS } from '../constants/pmcData';
+export { PMC_CATEGORIES, PMC_WARDS };
 
 // Sample civic images for quick demo selection
 const DEMO_PRESETS = [
@@ -80,9 +52,33 @@ const DEMO_PRESETS = [
   },
 ];
 
+/**
+ * Strips the [AI Visible Evidence] block from a complaint description,
+ * preserving only the citizen's manually entered text.
+ */
+export function extractManualDescription(fullDescription) {
+  if (!fullDescription || typeof fullDescription !== 'string') return '';
+  return fullDescription.replace(/\n*\s*\[AI Visible Evidence\]:[\s\S]*$/i, '').trim();
+}
+
+/**
+ * Combines citizen manual text with an AI visible evidence block.
+ * Replaces any existing AI block rather than accumulating duplicates.
+ */
+export function mergeDescriptionWithAiEvidence(currentDescription, aiEvidenceText) {
+  const manual = extractManualDescription(currentDescription);
+  const evidence = (aiEvidenceText || '').trim();
+  if (!evidence) return manual;
+  if (!manual) return `[AI Visible Evidence]: ${evidence}`;
+  return `${manual}\n\n[AI Visible Evidence]: ${evidence}`;
+}
+
 export const ComplaintFormPage = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const activeScanIdRef = useRef(0);
 
   // Controlled form state
   const [formData, setFormData] = useState({
@@ -115,6 +111,46 @@ export const ComplaintFormPage = () => {
   const [geoNotice, setGeoNotice] = useState('');
   const [step7Completed, setStep7Completed] = useState(false);
   const [createdComplaintData, setCreatedComplaintData] = useState(null);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+
+  /**
+   * Snaps a photo directly from the live camera stream
+   */
+  const handleCameraCapture = (capturedDataUrl) => {
+    invalidateImageAnalysis();
+    setImagePreview(capturedDataUrl);
+    setImageBase64(capturedDataUrl);
+    setFormData((prev) => ({
+      ...prev,
+      imageUrl: capturedDataUrl,
+      description: extractManualDescription(prev.description),
+    }));
+  };
+
+  /**
+   * Opens live in-app camera viewfinder when available, or falls back to file picker
+   */
+  const handleOpenLiveCamera = () => {
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+      setIsCameraModalOpen(true);
+    } else {
+      cameraInputRef.current?.click();
+    }
+  };
+
+  /**
+   * Invalidates existing AI result and strips previous AI evidence
+   * whenever the user replaces or clears the complaint image.
+   */
+  const invalidateImageAnalysis = () => {
+    activeScanIdRef.current += 1;
+    setIsAiScanning(false);
+    setAiResult(null);
+    setFormData((prev) => ({
+      ...prev,
+      description: extractManualDescription(prev.description),
+    }));
+  };
 
   // Handle input change
   const handleChange = (e) => {
@@ -180,8 +216,43 @@ export const ComplaintFormPage = () => {
     }
   };
 
+// Client-side image compression to optimize speed and avoid oversized payloads
+const compressImageFile = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1600;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.85);
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+};
+
   // Handle local file selection
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -190,66 +261,145 @@ export const ComplaintFormPage = () => {
       return;
     }
 
+    setServerError('');
+    // Invalidate stale AI analysis immediately when replacing image
+    invalidateImageAnalysis();
+
+    try {
+      const compressedDataUrl = await compressImageFile(file);
+      if (compressedDataUrl) {
+        setImagePreview(compressedDataUrl);
+        setImageBase64(compressedDataUrl);
+        setFormData((prev) => ({
+          ...prev,
+          imageUrl: compressedDataUrl,
+          description: extractManualDescription(prev.description),
+        }));
+        return;
+      }
+    } catch {
+      // Fallback to normal FileReader below
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       setImagePreview(reader.result);
       setImageBase64(reader.result);
-      setFormData((prev) => ({ ...prev, imageUrl: reader.result }));
+      setFormData((prev) => ({
+        ...prev,
+        imageUrl: reader.result,
+        description: extractManualDescription(prev.description),
+      }));
     };
     reader.readAsDataURL(file);
   };
 
   // Select demo preset
   const handleSelectPreset = (preset) => {
+    // Invalidate stale AI analysis and strip previous AI evidence
+    invalidateImageAnalysis();
     setImagePreview(preset.url);
     setImageBase64('');
-    setFormData((prev) => ({
-      ...prev,
-      imageUrl: preset.url,
-      category: preset.category,
-      address: preset.address,
-      ward: preset.ward,
-      latitude: preset.lat,
-      longitude: preset.lng,
-      description: prev.description || preset.hint,
-    }));
+    setFormData((prev) => {
+      const manualDesc = extractManualDescription(prev.description);
+      return {
+        ...prev,
+        imageUrl: preset.url,
+        category: preset.category,
+        address: preset.address,
+        ward: preset.ward,
+        latitude: preset.lat,
+        longitude: preset.lng,
+        description: manualDesc || preset.hint,
+      };
+    });
   };
 
-  // Trigger Gemini AI Vision Scan
+  // Trigger AI Vision Scan
   const handleAiScan = async () => {
     if (!formData.imageUrl && !imageBase64) {
       setServerError('Please upload or select an issue photo first to run AI Severity Analysis.');
       return;
     }
 
+    const scanId = ++activeScanIdRef.current;
+
     try {
       setIsAiScanning(true);
       setServerError('');
+      const isHttp = typeof formData.imageUrl === 'string' && formData.imageUrl.startsWith('http');
+      const isBase64 = (typeof formData.imageUrl === 'string' && formData.imageUrl.startsWith('data:image/')) || Boolean(imageBase64);
+
+      // Pass only the citizen's manual description as hint, not stale AI evidence
+      const manualDesc = extractManualDescription(formData.description);
+
       const res = await aiApi.analyzeComplaint({
-        imageUrl: formData.imageUrl,
-        imageBase64: imageBase64 || undefined,
-        descriptionHint: formData.description || formData.title,
+        imageUrl: isHttp ? formData.imageUrl : undefined,
+        imageBase64: isBase64 ? (imageBase64 || formData.imageUrl) : undefined,
+        descriptionHint: manualDesc || formData.title,
         category: formData.category,
       });
+
+      // Ignore older asynchronous responses if the image was replaced during scan
+      if (scanId !== activeScanIdRef.current) {
+        return;
+      }
 
       if (res && res.success && res.data) {
         const ai = res.data;
         setAiResult(ai);
 
+        const isNonCivic = Boolean(
+          ai.isCivicIssue === false ||
+          ai.civicIssue?.isCivicIssue === false ||
+          ai.detectedCivicIssue?.toLowerCase().includes('no visible') ||
+          ai.detectedCivicIssue?.toLowerCase().includes('non-civic') ||
+          ai.confidenceScore === 0 ||
+          (Array.isArray(ai.safetyHazards) && ai.safetyHazards.some(h => /non[-_]?civic|invoice|document|receipt/i.test(h)))
+        );
+
+        if (isNonCivic) {
+          // Revert description AI block and do not auto-fill fake grievance info
+          setFormData((prev) => ({
+            ...prev,
+            description: extractManualDescription(prev.description),
+          }));
+          setToastMessage('');
+          setServerError('🛑 Non-Civic Image Detected! No municipal defect found in photo. Form progression and complaint submission are blocked.');
+          return;
+        }
+
+        const aiTitle = ai.suggestedTitle || ai.title || 'Reported Civic Issue';
+        const aiDesc = ai.visibleEvidence || ai.description || ai.generatedDescription || ai.reasoning || '';
+        const aiCategory = ai.category || 'Roads & Potholes';
+        const aiPriority = ai.priority || ai.severity || 'HIGH';
+
         setFormData((prev) => ({
           ...prev,
-          title: prev.title || ai.suggestedTitle || 'Reported Civic Issue',
-          description: prev.description ? `${prev.description}\n\n[AI Analysis]: ${ai.description}` : ai.description,
-          category: ai.category || prev.category || 'Roads & Potholes',
-          priority: ai.priority || prev.priority || 'HIGH',
+          title: prev.title.trim() ? prev.title : aiTitle,
+          description: mergeDescriptionWithAiEvidence(prev.description, aiDesc),
+          category: prev.category || aiCategory,
+          priority: aiPriority,
         }));
 
-        setToastMessage(`AI Scan Complete: Severity ${ai.severity} (${ai.severityScore}/100) - Assigned to ${ai.department}`);
+        const isAiGen = Boolean(ai.authenticityAssessment?.possibleAiGenerated);
+        if (isAiGen) {
+          setToastMessage('🛑 AI-Created Image Detected! Complaint submission blocked. Authentic camera photo required.');
+        } else {
+          setToastMessage(`AI Scan Complete: Authentic Real Photo Verified! Status will automatically advance to UNDER_REVIEW on submission.`);
+        }
       }
     } catch (err) {
+      if (scanId !== activeScanIdRef.current) {
+        return;
+      }
+      // On failure, clear stale result to avoid showing invalid information
+      setAiResult(null);
       setServerError(err.message || 'AI analysis failed. You can continue filling the form manually.');
     } finally {
-      setIsAiScanning(false);
+      if (scanId === activeScanIdRef.current) {
+        setIsAiScanning(false);
+      }
     }
   };
 
@@ -290,11 +440,17 @@ export const ComplaintFormPage = () => {
       newErrors.address = 'Address cannot exceed 300 characters.';
     }
 
-    // Latitude & Longitude pairing validation
+    // Latitude & Longitude pairing and PMC boundary validation
     const hasLat = formData.latitude !== '' && formData.latitude !== null && formData.latitude !== undefined;
     const hasLng = formData.longitude !== '' && formData.longitude !== null && formData.longitude !== undefined;
     if (hasLat !== hasLng) {
       newErrors.location = 'Latitude and longitude must both be provided together or left blank.';
+    } else if (hasLat && hasLng) {
+      const latNum = Number(formData.latitude);
+      const lngNum = Number(formData.longitude);
+      if (latNum < 18.30 || latNum > 18.70 || lngNum < 73.65 || lngNum > 74.05) {
+        newErrors.location = 'Coordinates must fall within the Pune Municipal Corporation (PMC) boundary (Lat 18.30-18.70, Lng 73.65-74.05).';
+      }
     }
 
     return newErrors;
@@ -331,6 +487,19 @@ export const ComplaintFormPage = () => {
     );
   };
 
+  const isNonCivicIssue = Boolean(
+    aiResult && (
+      aiResult.isCivicIssue === false ||
+      aiResult.civicIssue?.isCivicIssue === false ||
+      aiResult.detectedCivicIssue?.toLowerCase().includes('no visible') ||
+      aiResult.detectedCivicIssue?.toLowerCase().includes('non-civic') ||
+      aiResult.confidenceScore === 0 ||
+      (Array.isArray(aiResult.safetyHazards) && aiResult.safetyHazards.some((h) => /non[-_]?civic|invoice|document|receipt/i.test(h)))
+    )
+  );
+
+  const isAiGeneratedImage = Boolean(aiResult?.authenticityAssessment?.possibleAiGenerated);
+
   // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -342,6 +511,20 @@ export const ComplaintFormPage = () => {
       const firstErrorField = Object.keys(validationErrors)[0];
       const el = document.getElementById(`complaint-${firstErrorField}`);
       if (el) el.focus();
+      return;
+    }
+
+    if (isNonCivicIssue) {
+      setServerError('Complaint submission blocked: Uploaded photo does not depict an authentic municipal or civic issue (e.g. potholes, garbage, water leaks, drainage, streetlights). Fake, document, or non-civic images cannot be submitted.');
+      const panel = document.getElementById('ai-civic-issue-panel');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (isAiGeneratedImage) {
+      setServerError('Complaint submission blocked: Uploaded photo is detected as AI-created / synthetic. CivicAI strictly requires authentic physical camera photographs.');
+      const panel = document.getElementById('ai-authenticity-panel');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
@@ -393,17 +576,15 @@ export const ComplaintFormPage = () => {
   };
 
   return (
-    <div className="app-container">
-      <Navbar />
-
-      <main className="dashboard-main" id="main-content">
+    <CitizenLayout>
+      <div className="citizen-page-inner">
         {/* Breadcrumb Navigation */}
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-          <Link to="/dashboard" className="breadcrumb-link">Dashboard</Link>
+          <Link to="/dashboard" className="breadcrumb-link">{t('navOverview', 'Dashboard')}</Link>
           <span className="breadcrumb-separator">/</span>
-          <Link to="/complaints" className="breadcrumb-link">My Complaints</Link>
+          <Link to="/complaints" className="breadcrumb-link">{t('navMyComplaints', 'My Complaints')}</Link>
           <span className="breadcrumb-separator">/</span>
-          <span className="breadcrumb-current" aria-current="page">Report an Issue</span>
+          <span className="breadcrumb-current" aria-current="page">{t('navReportIssue', 'Report an Issue')}</span>
         </nav>
 
         {/* Page Header */}
@@ -413,13 +594,13 @@ export const ComplaintFormPage = () => {
               <span className="badge badge-primary">AI Civic Intelligence</span>
               <span className="badge badge-success">Smart City PMC</span>
             </div>
-            <h1 className="page-title">Report a Civic Grievance</h1>
+            <h1 className="page-title">{t('reportGrievanceTitle', 'Report a Civic Grievance')}</h1>
             <p className="page-subtitle">
-              Upload photo evidence for automated AI severity detection, instant duplicate prevention, and guaranteed SLA resolution.
+              {t('reportGrievanceSubtitle', 'Upload photo evidence for automated AI severity detection, instant duplicate prevention, and guaranteed SLA resolution.')}
             </p>
           </div>
           <Link to="/complaints" className="btn btn-outline btn-sm">
-            Cancel & Back
+            {t('cancelAndBackBtn', 'Cancel & Back')}
           </Link>
         </header>
 
@@ -518,7 +699,7 @@ export const ComplaintFormPage = () => {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <div>
-              <strong>Submission Error:</strong> {serverError}
+              <strong>Notice:</strong> {serverError}
             </div>
           </div>
         )}
@@ -583,18 +764,18 @@ export const ComplaintFormPage = () => {
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                   <circle cx="12" cy="13" r="4" />
                 </svg>
-                <h3 className="scanner-title">Photo Attachment & Gemini AI Scanner</h3>
+                <h3 className="scanner-title">{t('aiPhotoScannerTitle', 'Photo Attachment & AI Scanner')}</h3>
               </div>
               <span className="scanner-tag">Multimodal AI 1.5</span>
             </div>
 
             <p className="scanner-intro">
-              Upload a picture of the civic problem. Our Gemini AI engine will analyze image patterns, estimate hazard severity, recommend the municipal department, and auto-populate your grievance.
+              {t('aiPhotoScannerIntro', 'Upload a picture of the civic problem. Our AI engine will analyze image patterns, estimate hazard severity, recommend the municipal department, and auto-populate your grievance.')}
             </p>
 
             {/* Quick Demo Presets */}
             <div className="demo-presets-row">
-              <span className="presets-label">Sample Photos:</span>
+              <span className="presets-label">{t('samplePhotosLabel', 'Sample Photos:')}</span>
               <div className="preset-buttons">
                 {DEMO_PRESETS.map((p, idx) => (
                   <button
@@ -612,6 +793,16 @@ export const ComplaintFormPage = () => {
             {/* Upload & Preview */}
             <div className="scanner-body-grid">
               <div className="scanner-upload-box">
+                {/* Dedicated camera-only input */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  ref={cameraInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                />
+                {/* Standard file/gallery input */}
                 <input
                   type="file"
                   accept="image/*"
@@ -619,19 +810,39 @@ export const ComplaintFormPage = () => {
                   style={{ display: 'none' }}
                   onChange={handleFileSelect}
                 />
-                <button
-                  type="button"
-                  className="btn btn-outline scanner-pick-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isAiScanning}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                  Choose Image File
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary scanner-pick-btn"
+                    onClick={handleOpenLiveCamera}
+                    disabled={isAiScanning}
+                    style={{ background: '#0284C7', borderColor: '#0369A1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    <span>📷 {t('cameraCaptureBtn', 'Take Photo with Camera')}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-outline scanner-pick-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isAiScanning}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <span>🖼️ {t('browsePhotoBtn', 'Choose from Gallery / Files')}</span>
+                  </button>
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '6px', textAlign: 'center' }}>
+                  * Camera capture required on-site. AI-generated images &amp; Google downloads are blocked.
+                </div>
 
                 <div className="form-group mt-2">
                   <label htmlFor="complaint-image-url" className="form-label text-xs">Or paste image URL:</label>
@@ -645,6 +856,8 @@ export const ComplaintFormPage = () => {
                     onChange={(e) => {
                       handleChange(e);
                       setImagePreview(e.target.value);
+                      setImageBase64('');
+                      invalidateImageAnalysis();
                     }}
                   />
                 </div>
@@ -664,7 +877,7 @@ export const ComplaintFormPage = () => {
                       {isAiScanning ? (
                         <>
                           <span className="spinner" style={{ width: '0.9rem', height: '0.9rem' }} />
-                          <span>Gemini AI Analyzing...</span>
+                          <span>AI Analyzing...</span>
                         </>
                       ) : (
                         <>
@@ -689,27 +902,284 @@ export const ComplaintFormPage = () => {
               </div>
             </div>
 
-            {/* AI Result Card */}
+            {/* AI Result Dual-Assessment Panels */}
             {aiResult && (
-              <div className="ai-insights-card">
-                <div className="ai-insights-header">
-                  <div className="ai-badge-group">
-                    <span className="badge badge-primary">Gemini Verified</span>
-                    <span className={`badge badge-${aiResult.severity?.toLowerCase()}`}>
-                      {aiResult.severity} Severity ({aiResult.severityScore}/100)
-                    </span>
+              <div className="ai-dual-panel-wrapper">
+                <div className="ai-dual-panel-container">
+                  {/* Panel A: Civic Issue Recognition */}
+                  <div
+                    className={`ai-panel ${isNonCivicIssue ? 'ai-panel--civic-danger' : 'ai-panel--civic'}`}
+                    id="ai-civic-issue-panel"
+                    style={isNonCivicIssue ? { border: '2px solid #EF4444', background: '#FEF2F2' } : {}}
+                  >
+                    <div className="ai-panel-header">
+                      <div className="ai-panel-title">
+                        <span>{isNonCivicIssue ? '🚫' : '🔍'}</span>
+                        <strong style={isNonCivicIssue ? { color: '#991B1B' } : {}}>
+                          {isNonCivicIssue ? 'No Civic Issue Detected' : 'Civic Issue Recognition'}
+                        </strong>
+                      </div>
+                      <span className={`badge badge-${isNonCivicIssue ? 'critical' : (aiResult.severity || 'medium').toLowerCase()}`} style={isNonCivicIssue ? { background: '#DC2626', color: '#fff' } : {}}>
+                        {isNonCivicIssue ? 'No Civic Defect (0/100)' : `${aiResult.severity || 'Medium'} Severity (${aiResult.severityScore ?? aiResult.score ?? 70}/100)`}
+                      </span>
+                    </div>
+                    <div className="ai-panel-body">
+                      <div>
+                        <strong>Detected Civic Issue:</strong>{' '}
+                        <span style={isNonCivicIssue ? { color: '#B91C1C', fontWeight: 600 } : {}}>
+                          {aiResult.detectedCivicIssue || aiResult.civicIssue?.detectedCivicIssue || 'Civic Grievance'}
+                        </span>
+                      </div>
+                      <div>
+                        <strong>Category:</strong> {aiResult.category || 'Roads & Potholes'}
+                      </div>
+                      <div>
+                        <strong>Visible Evidence:</strong>{' '}
+                        <span>{aiResult.visibleEvidence || aiResult.evidenceDescription || aiResult.description || aiResult.reasoning}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <strong>AI Confidence:</strong>
+                        <span className={`badge badge-sm ${isNonCivicIssue ? 'badge-critical' : 'badge-primary'}`} style={isNonCivicIssue ? { background: '#DC2626', color: '#fff' } : {}}>
+                          {Math.round(aiResult.confidenceScore ?? aiResult.confidence ?? 85)}% Match
+                        </span>
+                      </div>
+                      <div>
+                        <strong>Assigned Department:</strong>{' '}
+                        {aiResult.department || aiResult.suggestedDepartment || 'Municipal Operations'}
+                        <span className="ai-sla-pill" style={{ marginLeft: '8px' }}>
+                          SLA: {formData.priority === 'CRITICAL' ? '1 Working Day (24x7)' : formData.priority === 'HIGH' ? '2 Working Days' : formData.priority === 'MEDIUM' ? '4 Working Days' : '7 Working Days'}
+                        </span>
+                      </div>
+                      {((aiResult.safetyHazards && aiResult.safetyHazards.length > 0) || (aiResult.detectedIssues && aiResult.detectedIssues.length > 0)) && (
+                        <div className="ai-hazards">
+                          <strong>Identified Hazards:</strong> {(aiResult.safetyHazards || aiResult.detectedIssues).join(', ')}
+                        </div>
+                      )}
+                      {isNonCivicIssue && (
+                        <div
+                          style={{
+                            background: '#DC2626',
+                            color: '#FFFFFF',
+                            borderRadius: '6px',
+                            padding: '8px 12px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            marginTop: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <span>🚫</span>
+                          <span>NON-CIVIC IMAGE: No municipal infrastructure defect identified. Grievance submission is blocked.</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <span className="ai-sla-pill">Guaranteed SLA: {aiResult.estimatedHours || 24} Hours</span>
-                </div>
-                <div className="ai-insights-body">
-                  <p><strong>Department Assigned:</strong> {aiResult.department}</p>
-                  <p><strong>AI Assessment:</strong> {aiResult.description}</p>
-                  {aiResult.safetyHazards?.length > 0 && (
-                    <p className="ai-hazards">
-                      <strong>Identified Hazards:</strong> {aiResult.safetyHazards.join(', ')}
-                    </p>
+
+                  {/* Panel B: Image Authenticity Assessment */}
+                  {isAiGeneratedImage ? (
+                    <div
+                      className="ai-panel ai-panel--auth-danger"
+                      id="ai-authenticity-panel"
+                      style={{
+                        border: '2px solid #EF4444',
+                        background: '#FEF2F2',
+                        borderRadius: '8px',
+                        padding: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '22px' }}>🛑</span>
+                          <strong style={{ fontSize: '15px', color: '#991B1B' }}>
+                            AI-Created / Synthetic Image Detected
+                          </strong>
+                        </div>
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            background: '#FEE2E2',
+                            color: '#991B1B',
+                            border: '1px solid #FCA5A5',
+                          }}
+                        >
+                          Confidence: {aiResult.authenticityAssessment?.confidence || 'HIGH'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#B91C1C', lineHeight: 1.5 }}>
+                        CivicAI forensic inspection determined that this photograph exhibits generative AI synthesis characteristics (Midjourney, DALL-E, Stable Diffusion, or digital modification).
+                      </p>
+                      {aiResult.authenticityAssessment?.indicators?.length > 0 && (
+                        <div style={{ marginBottom: '12px' }}>
+                          <strong style={{ fontSize: '12px', color: '#7F1D1D' }}>Observable AI Indicators:</strong>
+                          <ul style={{ margin: '4px 0 0 18px', padding: 0, color: '#991B1B', fontSize: '12px' }}>
+                            {aiResult.authenticityAssessment.indicators.map((ind, idx) => (
+                              <li key={idx} style={{ marginBottom: '2px' }}>{ind}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          background: '#DC2626',
+                          color: '#FFFFFF',
+                          borderRadius: '6px',
+                          padding: '10px 14px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <span>🚫</span>
+                        <span>COMPLAINT SUBMISSION BLOCKED: AI-created images are strictly prohibited. You must upload an authentic physical camera photograph.</span>
+                      </div>
+                    </div>
+                  ) : isNonCivicIssue ? (
+                    <div
+                      className="ai-panel ai-panel--auth-danger"
+                      id="ai-authenticity-panel"
+                      style={{
+                        border: '2px solid #F59E0B',
+                        background: '#FFFBEB',
+                        borderRadius: '8px',
+                        padding: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '20px' }}>⚠️</span>
+                          <strong style={{ fontSize: '15px', color: '#B45309' }}>
+                            Non-Civic Media / Document Detected
+                          </strong>
+                        </div>
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            background: '#FEF3C7',
+                            color: '#B45309',
+                            border: '1px solid #FCD34D',
+                          }}
+                        >
+                          Status: INELIGIBLE
+                        </span>
+                      </div>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#92400E', lineHeight: 1.5 }}>
+                        AI audit identified this photo as a receipt, invoice, document, or non-municipal media. Even if captured with a camera or downloaded via WhatsApp, it does not depict a municipal defect.
+                      </p>
+                      <div
+                        style={{
+                          background: '#D97706',
+                          color: '#FFFFFF',
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span>🚫</span>
+                        <span>Ineligible for grievance submission. Authentic photo of a civic issue required.</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="ai-panel ai-panel--auth"
+                      id="ai-authenticity-panel"
+                      style={{
+                        border: '2px solid #22C55E',
+                        background: '#F0FDF4',
+                        borderRadius: '8px',
+                        padding: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '20px' }}>✅</span>
+                          <strong style={{ fontSize: '15px', color: '#166534' }}>
+                            Authentic Real Camera Photo Verified
+                          </strong>
+                        </div>
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            background: '#DCFCE7',
+                            color: '#166534',
+                            border: '1px solid #86EFAC',
+                          }}
+                        >
+                          Confidence: {aiResult.authenticityAssessment?.confidence || 'HIGH'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#15803D', lineHeight: 1.5 }}>
+                        AI forensic audit confirms authentic physical camera capture with natural optical sensor noise, organic wear, and real-world lighting.
+                      </p>
+                      {aiResult.vgg16 && (
+                        <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#166534' }}>
+                          <span style={{ background: '#DCFCE7', padding: '2px 8px', borderRadius: '4px', border: '1px solid #86EFAC', fontWeight: 700 }}>
+                            🧠 VGG-16 CNN Verified
+                          </span>
+                          <span>Detected Defect: <strong>{aiResult.vgg16.detectedClass}</strong> ({aiResult.vgg16.confidenceScore}% Match)</span>
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          background: '#16A34A',
+                          color: '#FFFFFF',
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span>✓</span>
+                        <span>Verified authentic physical camera evidence. Status will automatically be set to UNDER_REVIEW upon submission!</span>
+                      </div>
+                    </div>
                   )}
                 </div>
+
+                {/* Citizen Review & Edit Notice Banner */}
+                {isNonCivicIssue ? (
+                  <div
+                    className="ai-review-banner"
+                    style={{
+                      background: '#FEF2F2',
+                      borderColor: '#FCA5A5',
+                      color: '#991B1B',
+                    }}
+                    role="alert"
+                  >
+                    <span className="ai-review-banner-icon">🚫</span>
+                    <div className="ai-review-banner-text">
+                      <strong>Issue Verification Failed:</strong> The uploaded image does not contain any visible municipal issue. Further steps and complaint submission are blocked. Please attach an authentic photograph of a civic problem (pothole, garbage, drainage, street light, etc.).
+                    </div>
+                  </div>
+                ) : (
+                  <div className="ai-review-banner" role="status" aria-live="polite">
+                    <span className="ai-review-banner-icon">✏️</span>
+                    <div className="ai-review-banner-text">
+                      <strong>Citizen Review & Edit:</strong> The AI has analyzed your image and pre-filled the complaint form below.
+                      You can freely review, edit, or customize any of the fields (Title, Category, Description, and Priority) before submitting.
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -719,7 +1189,7 @@ export const ComplaintFormPage = () => {
             <div className={`form-group ${errors.title ? 'has-error' : ''}`}>
               <div className="form-label-row">
                 <label htmlFor="complaint-title" className="form-label">
-                  Complaint Title <span className="required-star">*</span>
+                  {t('complaintTitleLabel', 'Complaint Title')} <span className="required-star">*</span>
                 </label>
                 <span className="char-count" aria-hidden="true">
                   {formData.title.length}/200
@@ -730,7 +1200,7 @@ export const ComplaintFormPage = () => {
                 id="complaint-title"
                 name="title"
                 className="form-input"
-                placeholder="Brief summary (e.g. Major pothole near Swargate Bus Stand)"
+                placeholder={t('complaintTitlePlaceholder', 'Brief summary (e.g. Major pothole near Swargate Bus Stand)')}
                 value={formData.title}
                 onChange={handleChange}
                 maxLength={200}
@@ -754,7 +1224,7 @@ export const ComplaintFormPage = () => {
             {/* Category selection */}
             <div className={`form-group ${errors.category ? 'has-error' : ''}`}>
               <label htmlFor="complaint-category" className="form-label">
-                Department / Grievance Category <span className="required-star">*</span>
+                {t('categoryLabel', 'Department / Grievance Category')} <span className="required-star">*</span>
               </label>
               <select
                 id="complaint-category"
@@ -788,7 +1258,7 @@ export const ComplaintFormPage = () => {
             {/* Priority selection */}
             <div className="form-group">
               <label htmlFor="complaint-priority" className="form-label">
-                Priority & SLA Timeline
+                {t('priorityLabel', 'Priority & SLA Timeline (Working Days)')}
               </label>
               <select
                 id="complaint-priority"
@@ -798,18 +1268,21 @@ export const ComplaintFormPage = () => {
                 onChange={handleChange}
                 disabled={isSubmitting}
               >
-                <option value="CRITICAL">Critical (12 Hours SLA - Immediate Hazard)</option>
-                <option value="HIGH">High (24 Hours SLA - Severe Disruption)</option>
-                <option value="MEDIUM">Medium (48 Hours SLA - Standard Civic Issue)</option>
-                <option value="LOW">Low (72 Hours SLA - Minor Maintenance)</option>
+                <option value="CRITICAL">Critical (24x7 Emergency / 1 Working Day - Immediate Hazard)</option>
+                <option value="HIGH">High (2 Working Days SLA - Severe Disruption)</option>
+                <option value="MEDIUM">Medium (4 Working Days SLA - Standard Civic Issue)</option>
+                <option value="LOW">Low (7 Working Days SLA - Minor Maintenance)</option>
               </select>
+              <p className="form-input-hint" style={{ marginTop: '6px', fontSize: '0.8rem', color: '#64748b' }}>
+                🗓️ <strong>Official Working Days:</strong> Issues are resolved during official municipal working days (Mon–Fri, excluding gazetted public holidays). Life-safety emergencies operate on a 24x7 protocol.
+              </p>
             </div>
 
             {/* Description field */}
             <div className={`form-group ${errors.description ? 'has-error' : ''}`}>
               <div className="form-label-row">
                 <label htmlFor="complaint-description" className="form-label">
-                  Detailed Description <span className="required-star">*</span>
+                  {t('descriptionLabel', 'Detailed Description')} <span className="required-star">*</span>
                 </label>
                 <span className="char-count" aria-hidden="true">
                   {formData.description.length}/5000
@@ -820,7 +1293,7 @@ export const ComplaintFormPage = () => {
                 name="description"
                 className="form-input form-textarea"
                 rows={5}
-                placeholder="Describe the issue, landmarks, severity, hazards, and how long it has persisted..."
+                placeholder={t('descriptionPlaceholder', 'Describe the issue, landmarks, severity, hazards, and how long it has persisted...')}
                 value={formData.description}
                 onChange={handleChange}
                 maxLength={5000}
@@ -842,52 +1315,75 @@ export const ComplaintFormPage = () => {
             </div>
 
             {/* Location Section */}
-            <fieldset className="form-fieldset">
-              <legend className="form-legend">
-                <span>Location Details</span>
+            <div className="location-details-box">
+              <div className="location-details-box__header">
+                <div className="location-details-box__title-wrap">
+                  <div className="location-pin-badge" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="location-box-title">{t('locationDetailsTitle', 'Location Details')}</h3>
+                    <p className="location-box-subtitle">
+                      {t('locationDetailsSubtitle', 'Specify street address or auto-detect with Pune GPS')}
+                    </p>
+                  </div>
+                </div>
+
                 <button
                   type="button"
-                  className="btn btn-outline btn-sm geo-btn"
+                  className="btn btn-primary btn-sm geo-gps-btn"
                   onClick={handleGetLocation}
                   disabled={geoLoading || isSubmitting}
                   aria-label="Use device GPS location"
+                  id="gps-autodetect-btn"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="2" x2="12" y2="6" />
                     <line x1="12" y1="18" x2="12" y2="22" />
                     <line x1="2" y1="12" x2="6" y2="12" />
                     <line x1="18" y1="12" x2="22" y2="12" />
                   </svg>
-                  <span>{geoLoading ? 'Detecting GPS...' : 'Use My Current Location'}</span>
+                  <span>{geoLoading ? t('detectingGps', 'Detecting GPS...') : t('useCurrentLocationBtn', 'Use My Current Location')}</span>
                 </button>
-              </legend>
+              </div>
 
               {geoNotice && (
-                <p className="geo-notice" role="status">
-                  {geoNotice}
-                </p>
+                <div className="geo-notice-alert" role="status">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <span>{geoNotice}</span>
+                </div>
               )}
 
               {/* Address input */}
               <div className={`form-group ${errors.address ? 'has-error' : ''}`}>
                 <label htmlFor="complaint-address" className="form-label">
-                  Street Address / Landmark <span className="required-star">*</span>
+                  {t('streetAddressLabel', 'Street Address / Landmark')} <span className="required-star">*</span>
                 </label>
-                <input
-                  type="text"
-                  id="complaint-address"
-                  name="address"
-                  className="form-input"
-                  placeholder="e.g. Near Ganpati Mandir, FC Road, Pune 411004"
-                  value={formData.address}
-                  onChange={handleChange}
-                  maxLength={300}
-                  aria-required="true"
-                  aria-invalid={!!errors.address}
-                  aria-describedby={errors.address ? 'complaint-address-error' : undefined}
-                  disabled={isSubmitting}
-                />
+                <div className="input-with-icon">
+                  <span className="input-icon" aria-hidden="true">📍</span>
+                  <input
+                    type="text"
+                    id="complaint-address"
+                    name="address"
+                    className="form-input input-has-icon"
+                    placeholder={t('streetAddressPlaceholder', 'e.g. Near Ganpati Mandir, FC Road, Pune 411004')}
+                    value={formData.address}
+                    onChange={handleChange}
+                    maxLength={300}
+                    aria-required="true"
+                    aria-invalid={!!errors.address}
+                    aria-describedby={errors.address ? 'complaint-address-error' : undefined}
+                    disabled={isSubmitting}
+                  />
+                </div>
                 {errors.address && (
                   <div id="complaint-address-error" className="field-error" role="alert">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -903,23 +1399,41 @@ export const ComplaintFormPage = () => {
               {/* Ward dropdown */}
               <div className="form-group">
                 <label htmlFor="complaint-ward" className="form-label">
-                  PMC Ward Office (Administrative Zone)
+                  {t('wardOfficeLabel', 'PMC Ward Office (Administrative Zone)')}
                 </label>
-                <select
-                  id="complaint-ward"
-                  name="ward"
-                  className="form-input form-select"
-                  value={formData.ward}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                >
-                  {PMC_WARDS.map((ward) => (
-                    <option key={ward.value} value={ward.value}>
-                      {ward.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="input-with-icon">
+                  <span className="input-icon" aria-hidden="true">🏢</span>
+                  <select
+                    id="complaint-ward"
+                    name="ward"
+                    className="form-input form-select input-has-icon"
+                    value={formData.ward}
+                    onChange={handleChange}
+                    disabled={isSubmitting}
+                  >
+                    {PMC_WARDS.map((ward) => (
+                      <option key={ward.value} value={ward.value}>
+                        {ward.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              {/* Interactive Pune Municipal Corporation Location Picker Map */}
+              <LocationPickerMap
+                latitude={formData.latitude}
+                longitude={formData.longitude}
+                onLocationChange={({ latitude, longitude, addressHint }) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    latitude: latitude !== '' ? latitude : '',
+                    longitude: longitude !== '' ? longitude : '',
+                    address: prev.address || addressHint || prev.address,
+                  }));
+                }}
+                disabled={isSubmitting}
+              />
 
               {/* Coordinates (optional) */}
               <div className="form-row-2">
@@ -966,40 +1480,93 @@ export const ComplaintFormPage = () => {
                   <span>{errors.location}</span>
                 </div>
               )}
-            </fieldset>
+            </div>
 
             {/* Form Actions */}
             <div className="form-actions">
               <Link to="/complaints" className="btn btn-outline" tabIndex={isSubmitting ? -1 : 0}>
-                Cancel
+                {t('cancelBtn', 'Cancel')}
               </Link>
 
-              <button
-                type="submit"
-                className="btn btn-primary btn-submit"
-                id="submit-complaint-button"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="spinner" style={{ width: '1rem', height: '1rem' }} aria-hidden="true" />
-                    <span>Submitting Grievance...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                    <span>Submit Grievance</span>
-                  </>
-                )}
-              </button>
+              {isAiGeneratedImage ? (
+                <button
+                  type="button"
+                  className="btn btn-submit"
+                  id="submit-complaint-button"
+                  disabled={true}
+                  style={{
+                    background: '#DC2626',
+                    borderColor: '#B91C1C',
+                    color: '#FFFFFF',
+                    cursor: 'not-allowed',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                  }}
+                  title="Submission is blocked because the attached photo is an AI-created image."
+                >
+                  <span>🚫</span>
+                  <span>Submission Blocked (AI Photo Detected)</span>
+                </button>
+              ) : isNonCivicIssue ? (
+                <button
+                  type="button"
+                  className="btn btn-submit"
+                  id="submit-complaint-button"
+                  disabled={true}
+                  style={{
+                    background: '#DC2626',
+                    borderColor: '#B91C1C',
+                    color: '#FFFFFF',
+                    cursor: 'not-allowed',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                  }}
+                  title="Submission is blocked because no visible civic issue was detected in the uploaded image."
+                >
+                  <span>🚫</span>
+                  <span>Submission Blocked (No Civic Issue Detected)</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-submit"
+                  id="submit-complaint-button"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="spinner" style={{ width: '1rem', height: '1rem' }} aria-hidden="true" />
+                      <span>{t('submittingComplaintBtn', 'Submitting Grievance...')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                      </svg>
+                      <span>{t('submitComplaintBtn', 'Submit Grievance')}</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </form>
         </section>
-      </main>
-    </div>
+      </div>
+
+      <CameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCapture={handleCameraCapture}
+        onFallbackToFile={() => fileInputRef.current?.click()}
+      />
+    </CitizenLayout>
   );
 };
 

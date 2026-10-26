@@ -21,7 +21,11 @@ export const DepartmentAdminsPage = () => {
     fullName: '',
     email: '',
     departmentId: '',
+    password: '',
+    confirmPassword: '',
   });
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showAdminConfirmPassword, setShowAdminConfirmPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -64,7 +68,11 @@ export const DepartmentAdminsPage = () => {
       fullName: '',
       email: '',
       departmentId: departments[0]?.id || departments[0]?._id || '',
+      password: '',
+      confirmPassword: '',
     });
+    setShowAdminPassword(false);
+    setShowAdminConfirmPassword(false);
     setFormErrors({});
     setIsAddOpen(true);
   };
@@ -101,6 +109,24 @@ export const DepartmentAdminsPage = () => {
       errors.departmentId = 'Department assignment is required.';
     }
 
+    if (formData.password || formData.confirmPassword) {
+      if (!formData.password) {
+        errors.password = 'Password is required.';
+      } else if (formData.password.length < 8) {
+        errors.password = 'Password must be at least 8 characters long.';
+      } else if (!/[A-Z]/.test(formData.password)) {
+        errors.password = 'Password must contain at least 1 uppercase letter.';
+      } else if (!/[^A-Za-z0-9]/.test(formData.password)) {
+        errors.password = 'Password must contain at least 1 specific symbol (e.g. !@#$%^&*).';
+      }
+
+      if (!formData.confirmPassword) {
+        errors.confirmPassword = 'Confirm password is required.';
+      } else if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = 'Passwords do not match.';
+      }
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -112,11 +138,16 @@ export const DepartmentAdminsPage = () => {
 
     setIsSubmitting(true);
     try {
-      const res = await adminApi.createDepartmentAdmin({
+      const payload = {
         fullName: formData.fullName.trim(),
         email: formData.email.trim().toLowerCase(),
         departmentId: formData.departmentId,
-      });
+      };
+      if (formData.password) {
+        payload.password = formData.password;
+        payload.confirmPassword = formData.confirmPassword;
+      }
+      const res = await adminApi.createDepartmentAdmin(payload);
 
       const responseData = res?.data || res;
       setIsAddOpen(false);
@@ -223,7 +254,7 @@ export const DepartmentAdminsPage = () => {
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          <span>+ Add Department Admin</span>
+          <span>Add Department Admin</span>
         </button>
       </div>
 
@@ -479,6 +510,142 @@ export const DepartmentAdminsPage = () => {
                   </select>
                   {formErrors.departmentId && <span className="field-error-text">{formErrors.departmentId}</span>}
                 </div>
+
+                {/* Password & Confirm Password Inputs */}
+                <div className="form-grid-2">
+                  <div className="form-group mb-0">
+                    <label htmlFor="modal-admin-password" className="form-label">
+                      Password (Optional)
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        id="modal-admin-password"
+                        type={showAdminPassword ? 'text' : 'password'}
+                        className={`form-input ${formErrors.password ? 'input-error' : ''}`}
+                        placeholder="e.g. PuneAdmin@2026"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        disabled={isSubmitting}
+                        style={{ paddingRight: '40px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        tabIndex={-1}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          color: '#64748B',
+                          fontSize: '14px',
+                        }}
+                        aria-label={showAdminPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showAdminPassword ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                    {formErrors.password && <span className="field-error-text">{formErrors.password}</span>}
+                  </div>
+
+                  <div className="form-group mb-0">
+                    <label htmlFor="modal-admin-confirm-password" className="form-label">
+                      Confirm Password
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        id="modal-admin-confirm-password"
+                        type={showAdminConfirmPassword ? 'text' : 'password'}
+                        className={`form-input ${formErrors.confirmPassword ? 'input-error' : ''}`}
+                        placeholder="Re-enter password"
+                        value={formData.confirmPassword}
+                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                        disabled={isSubmitting}
+                        style={{ paddingRight: '40px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminConfirmPassword(!showAdminConfirmPassword)}
+                        tabIndex={-1}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          color: '#64748B',
+                          fontSize: '14px',
+                        }}
+                        aria-label={showAdminConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                      >
+                        {showAdminConfirmPassword ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                    {formErrors.confirmPassword && <span className="field-error-text">{formErrors.confirmPassword}</span>}
+                  </div>
+                </div>
+
+                {formData.password && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        background: formData.password.length >= 8 ? '#DEF7EC' : '#F3F4F6',
+                        color: formData.password.length >= 8 ? '#03543F' : '#6B7280',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {formData.password.length >= 8 ? '✓' : '•'} 8+ Characters
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        background: /[A-Z]/.test(formData.password) ? '#DEF7EC' : '#F3F4F6',
+                        color: /[A-Z]/.test(formData.password) ? '#03543F' : '#6B7280',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {/[A-Z]/.test(formData.password) ? '✓' : '•'} 1 Uppercase Letter
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        background: /[^A-Za-z0-9]/.test(formData.password) ? '#DEF7EC' : '#F3F4F6',
+                        color: /[^A-Za-z0-9]/.test(formData.password) ? '#03543F' : '#6B7280',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {/[^A-Za-z0-9]/.test(formData.password) ? '✓' : '•'} 1 Specific Symbol
+                    </span>
+                    {formData.confirmPassword && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          background: formData.password === formData.confirmPassword ? '#DEF7EC' : '#FDE8E8',
+                          color: formData.password === formData.confirmPassword ? '#03543F' : '#9B1C1C',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {formData.password === formData.confirmPassword ? '✓ Passwords Match' : '✕ Passwords Mismatch'}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label className="form-label">Role</label>
