@@ -1,0 +1,86 @@
+version: "3.8"
+
+services:
+  # Database Service
+  mongo:
+    image: mongo:7.0
+    container_name: civicai-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: civicai_prod
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - civicai-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: civicai-backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/civicai_prod}
+      JWT_SECRET: ${JWT_SECRET:-change_in_production_jwt_secret_min_32_chars_long!}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      OTP_HASH_SECRET: ${OTP_HASH_SECRET:-change_in_production_otp_secret_min_32_chars!}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-"CivicAI PMC <noreply@pmc.gov.in>"}
+    networks:
+      - civicai-network
+    expose:
+      - "5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Frontend Web / Reverse Proxy Service
+  web:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    container_name: civicai-web
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    networks:
+      - civicai-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  civicai-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+    driver: local

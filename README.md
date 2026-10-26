@@ -109,6 +109,25 @@ Civic-AI-pmc-/
 
 ---
 
+## 🐳 Production Docker Deployment
+
+Deploy the complete stack (Backend API, Nginx Web Frontend, and MongoDB) with Docker:
+
+```bash
+# Build and start all services in production mode
+docker compose -f docker-compose.prod.yml up --build -d
+
+# Verify health
+curl http://localhost:5000/api/v1/health
+curl http://localhost/healthz
+```
+
+For complete cloud deployment (Railway, Render, Fly.io), environment secrets configuration, and CI/CD pipelines, see [Docs/DEPLOYMENT.md](./Docs/DEPLOYMENT.md).
+
+---
+
 ## 📋 10-Day Delivery Roadmap
 
 Refer to [Docs/Issues/README.md](./Docs/Issues/README.md) and the [GitHub Milestone](https://github.com/pradnya1107/Civic-AI-pmc-/milestone/1) for all daily task checklists.
+- **Day 10 Sign-off:** Automated tests, end-to-end integration test (`tests/integration/flow.test.ts`), Docker containerization (`docker-compose.prod.yml`), and CD deploy pipeline (`.github/workflows/deploy.yml`).
+
