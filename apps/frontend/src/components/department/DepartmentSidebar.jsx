@@ -102,8 +102,18 @@ export const DepartmentSidebar = ({
         {/* Brand / Department Header */}
         <div className="admin-sidebar-header">
           <Link to="/department/dashboard" className="admin-brand-link" title="CivicAI Operations Center">
-            <div className="admin-brand-logo-wrap" style={{ background: '#0D9488' }} aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="admin-brand-logo-wrap" style={{ background: '#0D9488', overflow: 'hidden' }} aria-hidden="true">
+              <img
+                src="/civicai-logo.jpg"
+                alt="CivicAI PMC"
+                className="sidebar-brand-logo-img"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'block';
+                }}
+              />
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'none' }}>
                 <path d="M3 21h18" />
                 <path d="M5 21V7l7-4 7 4v14" />
                 <path d="M9 10a2 2 0 0 1 4 0v11" />

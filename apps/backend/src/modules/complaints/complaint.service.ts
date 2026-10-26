@@ -154,6 +154,26 @@ export async function createComplaint(
     );
   }
 
+  // Reject complaints if the AI analysis identified no visible civic issue (non-civic / receipt / invoice / fake complaint)
+  const isNonCivicImage = Boolean(
+    input.aiAnalysis && (
+      input.aiAnalysis.isCivicIssue === false ||
+      input.aiAnalysis.civicIssue?.isCivicIssue === false ||
+      input.aiAnalysis.detectedCivicIssue?.toLowerCase().includes("no visible") ||
+      input.aiAnalysis.detectedCivicIssue?.toLowerCase().includes("non-civic") ||
+      (typeof input.aiAnalysis.confidenceScore === "number" && input.aiAnalysis.confidenceScore === 0) ||
+      (Array.isArray(input.aiAnalysis.safetyHazards) && input.aiAnalysis.safetyHazards.some((h: string) => /non[-_]?civic|invoice|document|receipt/i.test(h)))
+    )
+  );
+
+  if (isNonCivicImage) {
+    throw new AppError(
+      "Complaint submission rejected: The uploaded photo does not contain any recognizable municipal or civic issue (e.g. potholes, garbage, water leaks, drainage, streetlights). Invoices, receipts, documents, and non-civic photos are strictly prohibited.",
+      422,
+      "NON_CIVIC_IMAGE_REJECTED",
+    );
+  }
+
   const aiAnalysisPayload = input.aiAnalysis
     ? {
         ...input.aiAnalysis,

@@ -6410,15 +6410,27 @@ html.light .legend-dot-pill {
 }
 
 .sidebar-brand-logo {
-  width: 38px;
-  height: 38px;
-  background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
-  border-radius: var(--radius-md);
+  width: 40px;
+  height: 40px;
+  background: #061122;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.45);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  overflow: hidden;
+  flex-shrink: 0;
+  padding: 1px;
+}
+
+.sidebar-brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
 }
 
 .sidebar-brand-text {

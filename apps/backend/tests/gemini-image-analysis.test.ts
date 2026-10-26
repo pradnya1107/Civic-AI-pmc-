@@ -267,9 +267,87 @@ describe("CivicAI Multimodal Gemini Image Analysis Feature", () => {
       expect(result.category).toBe("Other Civic Grievance");
       expect(result.manualReviewNeeded).toBe(true);
       expect(result.confidenceScore).toBeLessThan(40);
+      expect(result.isCivicIssue).toBe(false);
       expect(result.authenticityAssessment.disclaimer).toContain(
         "Visual appearance alone cannot definitively prove an image's origin",
       );
+    });
+
+    it("strictly blocks and rejects complaint creation when image is non-civic (receipt/invoice)", async () => {
+      const mockGeminiResponse = {
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    civicIssue: {
+                      isCivicIssue: false,
+                      rejectionReason: "Uploaded image contains a blank paper receipt with no municipal defect.",
+                      detectedCivicIssue: "No Visible Civic Issue",
+                      category: "Other Civic Grievance",
+                      suggestedTitle: "No Visible Civic Issue",
+                      visibleEvidence: "The image displays a blank paper receipt or cash sale invoice book page with no civic infrastructure defects.",
+                      severity: "LOW",
+                      confidenceScore: 0,
+                      suggestedDepartment: "General Administration",
+                      detectedIssues: ["Non-civic image", "Invoice document"],
+                    },
+                    authenticityAssessment: {
+                      possibleAiGenerated: false,
+                      isDocumentOrNonCivic: true,
+                      confidence: "HIGH",
+                      indicators: ["Image depicts a paper invoice book"],
+                      disclaimer: "Visual appearance alone cannot definitively prove an image's origin; this assessment is an automated heuristic and should be verified independently if questioned.",
+                    },
+                    manualReviewNeeded: true,
+                    manualReviewReason: "No evident civic issue identified in image; grievance submission blocked.",
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      };
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockGeminiResponse,
+      });
+
+      const citizen = await createVerifiedCitizen("receipt-block-test@example.com");
+      const token = await signIn(citizen.email);
+
+      // Analyze receipt
+      const analyzeRes = await request(app)
+        .post("/api/v1/ai/analyze-complaint")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ imageBase64: JPEG_IMAGE_DATA_URL });
+
+      expect(analyzeRes.status).toBe(200);
+      const aiData = analyzeRes.body.data;
+      expect(aiData.isCivicIssue).toBe(false);
+      expect(aiData.detectedCivicIssue).toBe("No Visible Civic Issue");
+
+      // Attempt to submit complaint with this non-civic receipt
+      const complaintRes = await request(app)
+        .post("/api/v1/complaints")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          title: "Fake complaint with receipt",
+          description: "This is an invoice receipt test description",
+          category: "Other Civic Grievance",
+          priority: "LOW",
+          imageUrl: JPEG_IMAGE_DATA_URL,
+          location: { address: "Shivajinagar, Pune" },
+          aiAnalysis: aiData,
+        });
+
+      expect(complaintRes.status).toBe(422);
+      expect(complaintRes.body.success).toBe(false);
+      expect(complaintRes.body.error.code).toBe("NON_CIVIC_IMAGE_REJECTED");
+      expect(complaintRes.body.message).toContain("does not contain any recognizable municipal or civic issue");
     });
   });
 

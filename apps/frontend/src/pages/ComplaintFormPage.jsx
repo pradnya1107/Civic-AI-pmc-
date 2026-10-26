@@ -322,6 +322,26 @@ const compressImageFile = (file) => {
         const ai = res.data;
         setAiResult(ai);
 
+        const isNonCivic = Boolean(
+          ai.isCivicIssue === false ||
+          ai.civicIssue?.isCivicIssue === false ||
+          ai.detectedCivicIssue?.toLowerCase().includes('no visible') ||
+          ai.detectedCivicIssue?.toLowerCase().includes('non-civic') ||
+          ai.confidenceScore === 0 ||
+          (Array.isArray(ai.safetyHazards) && ai.safetyHazards.some(h => /non[-_]?civic|invoice|document|receipt/i.test(h)))
+        );
+
+        if (isNonCivic) {
+          // Revert description AI block and do not auto-fill fake grievance info
+          setFormData((prev) => ({
+            ...prev,
+            description: extractManualDescription(prev.description),
+          }));
+          setToastMessage('');
+          setServerError('🛑 Non-Civic Image Detected! No municipal defect found in photo. Form progression and complaint submission are blocked.');
+          return;
+        }
+
         const aiTitle = ai.suggestedTitle || ai.title || 'Reported Civic Issue';
         const aiDesc = ai.visibleEvidence || ai.description || ai.generatedDescription || ai.reasoning || '';
         const aiCategory = ai.category || 'Roads & Potholes';
@@ -336,8 +356,6 @@ const compressImageFile = (file) => {
         }));
 
         const isAiGen = Boolean(ai.authenticityAssessment?.possibleAiGenerated);
-        const deptName = ai.department || ai.suggestedDepartment || 'Municipal Operations';
-        const detectedName = ai.detectedCivicIssue || ai.category || 'Civic Issue';
         if (isAiGen) {
           setToastMessage('🛑 AI-Created Image Detected! Complaint submission blocked. Authentic camera photo required.');
         } else {
@@ -442,6 +460,19 @@ const compressImageFile = (file) => {
     );
   };
 
+  const isNonCivicIssue = Boolean(
+    aiResult && (
+      aiResult.isCivicIssue === false ||
+      aiResult.civicIssue?.isCivicIssue === false ||
+      aiResult.detectedCivicIssue?.toLowerCase().includes('no visible') ||
+      aiResult.detectedCivicIssue?.toLowerCase().includes('non-civic') ||
+      aiResult.confidenceScore === 0 ||
+      (Array.isArray(aiResult.safetyHazards) && aiResult.safetyHazards.some((h) => /non[-_]?civic|invoice|document|receipt/i.test(h)))
+    )
+  );
+
+  const isAiGeneratedImage = Boolean(aiResult?.authenticityAssessment?.possibleAiGenerated);
+
   // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -456,7 +487,14 @@ const compressImageFile = (file) => {
       return;
     }
 
-    if (aiResult?.authenticityAssessment?.possibleAiGenerated) {
+    if (isNonCivicIssue) {
+      setServerError('Complaint submission blocked: Uploaded photo does not depict an authentic municipal or civic issue (e.g. potholes, garbage, water leaks, drainage, streetlights). Fake, document, or non-civic images cannot be submitted.');
+      const panel = document.getElementById('ai-civic-issue-panel');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (isAiGeneratedImage) {
       setServerError('Complaint submission blocked: Uploaded photo is detected as AI-created / synthetic. CivicAI strictly requires authentic physical camera photographs.');
       const panel = document.getElementById('ai-authenticity-panel');
       if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -842,20 +880,28 @@ const compressImageFile = (file) => {
               <div className="ai-dual-panel-wrapper">
                 <div className="ai-dual-panel-container">
                   {/* Panel A: Civic Issue Recognition */}
-                  <div className="ai-panel ai-panel--civic" id="ai-civic-issue-panel">
+                  <div
+                    className={`ai-panel ${isNonCivicIssue ? 'ai-panel--civic-danger' : 'ai-panel--civic'}`}
+                    id="ai-civic-issue-panel"
+                    style={isNonCivicIssue ? { border: '2px solid #EF4444', background: '#FEF2F2' } : {}}
+                  >
                     <div className="ai-panel-header">
                       <div className="ai-panel-title">
-                        <span>🔍</span>
-                        <strong>Civic Issue Recognition</strong>
+                        <span>{isNonCivicIssue ? '🚫' : '🔍'}</span>
+                        <strong style={isNonCivicIssue ? { color: '#991B1B' } : {}}>
+                          {isNonCivicIssue ? 'No Civic Issue Detected' : 'Civic Issue Recognition'}
+                        </strong>
                       </div>
-                      <span className={`badge badge-${(aiResult.severity || 'medium').toLowerCase()}`}>
-                        {aiResult.severity || 'Medium'} Severity ({aiResult.severityScore ?? aiResult.score ?? 70}/100)
+                      <span className={`badge badge-${isNonCivicIssue ? 'critical' : (aiResult.severity || 'medium').toLowerCase()}`} style={isNonCivicIssue ? { background: '#DC2626', color: '#fff' } : {}}>
+                        {isNonCivicIssue ? 'No Civic Defect (0/100)' : `${aiResult.severity || 'Medium'} Severity (${aiResult.severityScore ?? aiResult.score ?? 70}/100)`}
                       </span>
                     </div>
                     <div className="ai-panel-body">
                       <div>
                         <strong>Detected Civic Issue:</strong>{' '}
-                        <span>{aiResult.detectedCivicIssue || aiResult.civicIssue?.detectedCivicIssue || 'Civic Grievance'}</span>
+                        <span style={isNonCivicIssue ? { color: '#B91C1C', fontWeight: 600 } : {}}>
+                          {aiResult.detectedCivicIssue || aiResult.civicIssue?.detectedCivicIssue || 'Civic Grievance'}
+                        </span>
                       </div>
                       <div>
                         <strong>Category:</strong> {aiResult.category || 'Roads & Potholes'}
@@ -866,7 +912,7 @@ const compressImageFile = (file) => {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <strong>AI Confidence:</strong>
-                        <span className="badge badge-sm badge-primary">
+                        <span className={`badge badge-sm ${isNonCivicIssue ? 'badge-critical' : 'badge-primary'}`} style={isNonCivicIssue ? { background: '#DC2626', color: '#fff' } : {}}>
                           {Math.round(aiResult.confidenceScore ?? aiResult.confidence ?? 85)}% Match
                         </span>
                       </div>
@@ -874,7 +920,7 @@ const compressImageFile = (file) => {
                         <strong>Assigned Department:</strong>{' '}
                         {aiResult.department || aiResult.suggestedDepartment || 'Municipal Operations'}
                         <span className="ai-sla-pill" style={{ marginLeft: '8px' }}>
-                          SLA: {aiResult.estimatedHours || 24}h
+                          SLA: {formData.priority === 'CRITICAL' ? '1 Working Day (24x7)' : formData.priority === 'HIGH' ? '2 Working Days' : formData.priority === 'MEDIUM' ? '4 Working Days' : '7 Working Days'}
                         </span>
                       </div>
                       {((aiResult.safetyHazards && aiResult.safetyHazards.length > 0) || (aiResult.detectedIssues && aiResult.detectedIssues.length > 0)) && (
@@ -882,11 +928,30 @@ const compressImageFile = (file) => {
                           <strong>Identified Hazards:</strong> {(aiResult.safetyHazards || aiResult.detectedIssues).join(', ')}
                         </div>
                       )}
+                      {isNonCivicIssue && (
+                        <div
+                          style={{
+                            background: '#DC2626',
+                            color: '#FFFFFF',
+                            borderRadius: '6px',
+                            padding: '8px 12px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            marginTop: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <span>🚫</span>
+                          <span>NON-CIVIC IMAGE: No municipal infrastructure defect identified. Grievance submission is blocked.</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Panel B: Image Authenticity Assessment */}
-                  {aiResult.authenticityAssessment?.possibleAiGenerated ? (
+                  {isAiGeneratedImage ? (
                     <div
                       className="ai-panel ai-panel--auth-danger"
                       id="ai-authenticity-panel"
@@ -948,6 +1013,58 @@ const compressImageFile = (file) => {
                         <span>COMPLAINT SUBMISSION BLOCKED: AI-created images are strictly prohibited. You must upload an authentic physical camera photograph.</span>
                       </div>
                     </div>
+                  ) : isNonCivicIssue ? (
+                    <div
+                      className="ai-panel ai-panel--auth-danger"
+                      id="ai-authenticity-panel"
+                      style={{
+                        border: '2px solid #F59E0B',
+                        background: '#FFFBEB',
+                        borderRadius: '8px',
+                        padding: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '20px' }}>⚠️</span>
+                          <strong style={{ fontSize: '15px', color: '#B45309' }}>
+                            Non-Civic Media / Document Detected
+                          </strong>
+                        </div>
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            background: '#FEF3C7',
+                            color: '#B45309',
+                            border: '1px solid #FCD34D',
+                          }}
+                        >
+                          Status: INELIGIBLE
+                        </span>
+                      </div>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#92400E', lineHeight: 1.5 }}>
+                        AI audit identified this photo as a receipt, invoice, document, or non-municipal media. Even if captured with a camera or downloaded via WhatsApp, it does not depict a municipal defect.
+                      </p>
+                      <div
+                        style={{
+                          background: '#D97706',
+                          color: '#FFFFFF',
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span>🚫</span>
+                        <span>Ineligible for grievance submission. Authentic photo of a civic issue required.</span>
+                      </div>
+                    </div>
                   ) : (
                     <div
                       className="ai-panel ai-panel--auth"
@@ -1004,13 +1121,30 @@ const compressImageFile = (file) => {
                 </div>
 
                 {/* Citizen Review & Edit Notice Banner */}
-                <div className="ai-review-banner" role="status" aria-live="polite">
-                  <span className="ai-review-banner-icon">✏️</span>
-                  <div className="ai-review-banner-text">
-                    <strong>Citizen Review & Edit:</strong> The AI has analyzed your image and pre-filled the complaint form below.
-                    You can freely review, edit, or customize any of the fields (Title, Category, Description, and Priority) before submitting.
+                {isNonCivicIssue ? (
+                  <div
+                    className="ai-review-banner"
+                    style={{
+                      background: '#FEF2F2',
+                      borderColor: '#FCA5A5',
+                      color: '#991B1B',
+                    }}
+                    role="alert"
+                  >
+                    <span className="ai-review-banner-icon">🚫</span>
+                    <div className="ai-review-banner-text">
+                      <strong>Issue Verification Failed:</strong> The uploaded image does not contain any visible municipal issue. Further steps and complaint submission are blocked. Please attach an authentic photograph of a civic problem (pothole, garbage, drainage, street light, etc.).
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="ai-review-banner" role="status" aria-live="polite">
+                    <span className="ai-review-banner-icon">✏️</span>
+                    <div className="ai-review-banner-text">
+                      <strong>Citizen Review & Edit:</strong> The AI has analyzed your image and pre-filled the complaint form below.
+                      You can freely review, edit, or customize any of the fields (Title, Category, Description, and Priority) before submitting.
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1089,7 +1223,7 @@ const compressImageFile = (file) => {
             {/* Priority selection */}
             <div className="form-group">
               <label htmlFor="complaint-priority" className="form-label">
-                {t('priorityLabel', 'Priority & SLA Timeline')}
+                {t('priorityLabel', 'Priority & SLA Timeline (Working Days)')}
               </label>
               <select
                 id="complaint-priority"
@@ -1099,11 +1233,14 @@ const compressImageFile = (file) => {
                 onChange={handleChange}
                 disabled={isSubmitting}
               >
-                <option value="CRITICAL">Critical (12 Hours SLA - Immediate Hazard)</option>
-                <option value="HIGH">High (24 Hours SLA - Severe Disruption)</option>
-                <option value="MEDIUM">Medium (48 Hours SLA - Standard Civic Issue)</option>
-                <option value="LOW">Low (72 Hours SLA - Minor Maintenance)</option>
+                <option value="CRITICAL">Critical (24x7 Emergency / 1 Working Day - Immediate Hazard)</option>
+                <option value="HIGH">High (2 Working Days SLA - Severe Disruption)</option>
+                <option value="MEDIUM">Medium (4 Working Days SLA - Standard Civic Issue)</option>
+                <option value="LOW">Low (7 Working Days SLA - Minor Maintenance)</option>
               </select>
+              <p className="form-input-hint" style={{ marginTop: '6px', fontSize: '0.8rem', color: '#64748b' }}>
+                🗓️ <strong>Official Working Days:</strong> Issues are resolved during official municipal working days (Mon–Fri, excluding gazetted public holidays). Life-safety emergencies operate on a 24x7 protocol.
+              </p>
             </div>
 
             {/* Description field */}
@@ -1316,7 +1453,7 @@ const compressImageFile = (file) => {
                 {t('cancelBtn', 'Cancel')}
               </Link>
 
-              {aiResult?.authenticityAssessment?.possibleAiGenerated ? (
+              {isAiGeneratedImage ? (
                 <button
                   type="button"
                   className="btn btn-submit"
@@ -1337,6 +1474,28 @@ const compressImageFile = (file) => {
                 >
                   <span>🚫</span>
                   <span>Submission Blocked (AI Photo Detected)</span>
+                </button>
+              ) : isNonCivicIssue ? (
+                <button
+                  type="button"
+                  className="btn btn-submit"
+                  id="submit-complaint-button"
+                  disabled={true}
+                  style={{
+                    background: '#DC2626',
+                    borderColor: '#B91C1C',
+                    color: '#FFFFFF',
+                    cursor: 'not-allowed',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                  }}
+                  title="Submission is blocked because no visible civic issue was detected in the uploaded image."
+                >
+                  <span>🚫</span>
+                  <span>Submission Blocked (No Civic Issue Detected)</span>
                 </button>
               ) : (
                 <button
