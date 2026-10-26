@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { departmentAdminApi } from '../../services/api';
 
@@ -88,10 +88,19 @@ export const DepartmentComplaintsPage = ({ lastRefreshed, onRefreshNeeded }) => 
   const [internalNoteText, setInternalNoteText] = useState('');
   const [isSubmittingModal, setIsSubmittingModal] = useState(false);
 
+  const toastTimeoutRef = useRef(null);
+
   const showToast = (msg) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 4000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   const loadOfficers = async () => {
     try {
