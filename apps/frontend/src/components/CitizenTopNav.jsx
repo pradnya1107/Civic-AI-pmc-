@@ -162,7 +162,7 @@ export const CitizenTopNav = ({
               {searchResults.length > 0 ? (
                 <>
                   <div className="search-results-header">
-                    Matching Grievances ({searchResults.length})
+                    {t('matchingGrievances', 'Matching Grievances')} ({searchResults.length})
                   </div>
                   {searchResults.map((item) => (
                     <div
@@ -329,7 +329,7 @@ export const CitizenTopNav = ({
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
-                  <span>My Profile & Preferences</span>
+                  <span>{t('myProfileAndPreferences', 'My Profile & Preferences')}</span>
                 </button>
 
                 <button
@@ -345,7 +345,7 @@ export const CitizenTopNav = ({
                     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                     <line x1="12" y1="17" x2="12.01" y2="17" />
                   </svg>
-                  <span>Help Center & Helplines</span>
+                  <span>{t('helpCenterAndHelplines', 'Help Center & Helplines')}</span>
                 </button>
 
                 <div className="profile-dropdown-divider" />
@@ -354,14 +354,14 @@ export const CitizenTopNav = ({
                   type="button"
                   className="nav-dropdown-item text-danger"
                   onClick={handleLogout}
-                  aria-label="Sign out of Citizen Portal"
+                  aria-label={t('signOutLabel', 'Sign out of Citizen Portal')}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                     <polyline points="16 17 21 12 16 7" />
                     <line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
-                  <span>Sign Out</span>
+                  <span>{t('navSignOut', 'Sign Out')}</span>
                 </button>
               </div>
             )}

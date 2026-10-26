@@ -117,11 +117,11 @@ export const CitizenSettingsPage = () => {
         <header className="page-header mb-4">
           <div>
             <div className="d-flex align-center gap-2 mb-1">
-              <span className="badge badge-primary text-xs">CITIZEN ACCOUNT & SECURITY</span>
+              <span className="badge badge-primary text-xs">{t('settingsAccountSecurityBadge', 'CITIZEN ACCOUNT & SECURITY')}</span>
             </div>
             <h1 className="page-title">{t('portalSettings', 'Account Settings & Security')}</h1>
             <p className="page-subtitle">
-              Manage your registered Pune Municipal Corporation citizen profile, preferred ward, and password credentials.
+              {t('settingsSubtitle', 'Manage your registered Pune Municipal Corporation citizen profile, preferred ward, and password credentials.')}
             </p>
           </div>
         </header>
@@ -136,10 +136,10 @@ export const CitizenSettingsPage = () => {
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
-                <span>Profile & Ward Preferences</span>
+                <span>{t('settingsProfilePreferences', 'Profile & Ward Preferences')}</span>
               </h2>
               <p className="citizen-settings-card__subtitle">
-                Your authenticated citizen identity and notification settings
+                {t('settingsProfileSubtitle', 'Your authenticated citizen identity and notification settings')}
               </p>
             </div>
 
@@ -150,7 +150,7 @@ export const CitizenSettingsPage = () => {
                 <div className="text-muted text-xs font-mono">{displayEmail}</div>
                 <div className="d-flex gap-2 mt-1">
                   <span className="badge badge-primary text-xs">{displayRole}</span>
-                  {isVerified && <span className="badge badge-success text-xs">Verified Citizen</span>}
+                  {isVerified && <span className="badge badge-success text-xs">{t('verifiedCitizen', 'Verified Citizen')}</span>}
                 </div>
               </div>
             </div>
@@ -158,12 +158,12 @@ export const CitizenSettingsPage = () => {
             <form onSubmit={handleProfileSave}>
               {isProfileSaved && (
                 <div className="alert-banner alert-banner--success mb-3" role="status">
-                  ✓ Profile preferences saved successfully!
+                  ✓ {t('settingsProfileSaved', 'Profile preferences saved successfully!')}
                 </div>
               )}
 
               <div className="form-group mb-3">
-                <label htmlFor="settings-name" className="form-label text-xs">Full Legal Name</label>
+                <label htmlFor="settings-name" className="form-label text-xs">{t('fullNameLabel', 'Full Legal Name')}</label>
                 <input
                   id="settings-name"
                   type="text"
@@ -172,11 +172,11 @@ export const CitizenSettingsPage = () => {
                   readOnly
                   disabled
                 />
-                <span className="text-muted text-xs mt-1 d-block">Official PMC voter/aadhaar verified name</span>
+                <span className="text-muted text-xs mt-1 d-block">{t('officialPmcNameHint', 'Official PMC voter/aadhaar verified name')}</span>
               </div>
 
               <div className="form-group mb-3">
-                <label htmlFor="settings-email" className="form-label text-xs">Registered Email Address</label>
+                <label htmlFor="settings-email" className="form-label text-xs">{t('registeredEmailLabel', 'Registered Email Address')}</label>
                 <input
                   id="settings-email"
                   type="email"
@@ -188,7 +188,7 @@ export const CitizenSettingsPage = () => {
               </div>
 
               <div className="form-group mb-3">
-                <label htmlFor="settings-phone" className="form-label text-xs">Contact Phone (for SMS updates)</label>
+                <label htmlFor="settings-phone" className="form-label text-xs">{t('contactPhoneLabel', 'Contact Phone (for SMS updates)')}</label>
                 <input
                   id="settings-phone"
                   type="tel"
@@ -200,7 +200,7 @@ export const CitizenSettingsPage = () => {
               </div>
 
               <div className="form-group mb-3">
-                <label htmlFor="settings-ward" className="form-label text-xs">Primary Pune Municipal Ward</label>
+                <label htmlFor="settings-ward" className="form-label text-xs">{t('primaryWardLabel', 'Primary Pune Municipal Ward')}</label>
                 <select
                   id="settings-ward"
                   className="form-select"
@@ -208,14 +208,16 @@ export const CitizenSettingsPage = () => {
                   onChange={(e) => setPreferredWard(e.target.value)}
                 >
                   {PMC_WARDS.map((w) => (
-                    <option key={w.value} value={w.value}>{w.label}</option>
+                    <option key={w.value} value={w.value}>
+                      {w.value === '' ? t('selectWardOptional', 'Select PMC Ward (Optional)') : w.label}
+                    </option>
                   ))}
                 </select>
-                <span className="text-muted text-xs mt-1 d-block">Used to prioritize local ward alerts and neighborhood issues</span>
+                <span className="text-muted text-xs mt-1 d-block">{t('wardAlertsHint', 'Used to prioritize local ward alerts and neighborhood issues')}</span>
               </div>
 
               <button type="submit" className="btn btn-primary btn-sm mt-2">
-                Save Preferences
+                {t('savePreferencesBtn', 'Save Preferences')}
               </button>
             </form>
           </section>
@@ -228,10 +230,10 @@ export const CitizenSettingsPage = () => {
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
-                <span>Reset Password</span>
+                <span>{t('resetPassword', 'Reset Password')}</span>
               </h2>
               <p className="citizen-settings-card__subtitle">
-                Ensure your account is protected with a secure password meeting PMC standards
+                {t('resetPasswordSubtitle', 'Ensure your account is protected with a secure password meeting PMC standards')}
               </p>
             </div>
 
@@ -264,14 +266,14 @@ export const CitizenSettingsPage = () => {
               {/* Previous Password */}
               <div className="form-group mb-3">
                 <label htmlFor="settings-previous-password" className="form-label text-xs">
-                  <span>Current / Previous Password <span className="text-danger">*</span></span>
+                  <span>{t('currentPasswordLabel', 'Current / Previous Password')} <span className="text-danger">*</span></span>
                 </label>
                 <div className="input-container">
                   <input
                     id="settings-previous-password"
                     name="previousPassword"
                     type={showPreviousPassword ? 'text' : 'password'}
-                    placeholder="Enter your current password"
+                    placeholder={t('currentPasswordPlaceholder', 'Enter your current password')}
                     value={passwordForm.previousPassword}
                     onChange={(e) => {
                       setPasswordForm({ ...passwordForm, previousPassword: e.target.value });
@@ -314,14 +316,14 @@ export const CitizenSettingsPage = () => {
               {/* New Password */}
               <div className="form-group mb-3">
                 <label htmlFor="settings-new-password" className="form-label text-xs">
-                  <span>New Password <span className="text-danger">*</span></span>
+                  <span>{t('newPasswordLabel', 'New Password')} <span className="text-danger">*</span></span>
                 </label>
                 <div className="input-container">
                   <input
                     id="settings-new-password"
                     name="newPassword"
                     type={showNewPassword ? 'text' : 'password'}
-                    placeholder="Min. 8 chars, 1 uppercase, 1 symbol"
+                    placeholder={t('newPasswordPlaceholder', 'Min. 8 chars, 1 uppercase, 1 symbol')}
                     value={passwordForm.newPassword}
                     onChange={(e) => {
                       setPasswordForm({ ...passwordForm, newPassword: e.target.value });
@@ -361,18 +363,22 @@ export const CitizenSettingsPage = () => {
                 )}
 
                 {/* Password Rules Checklist */}
-                <div id="settings-new-pwd-rules" className="password-rules-box mt-2">
+                <div id="settings-new-pwd-rules" className="password-rules-box mt-2" aria-live="polite">
                   <div className={`password-rule-item ${passwordForm.newPassword.length >= 8 ? 'valid' : ''}`}>
-                    {passwordForm.newPassword.length >= 8 ? '✓' : '•'} At least 8 characters
+                    <span className="password-rule-bullet" aria-hidden="true">{passwordForm.newPassword.length >= 8 ? '✓' : '•'}</span>
+                    <span>{t('ruleMinLength', 'At least 8 characters')}</span>
                   </div>
                   <div className={`password-rule-item ${/[A-Z]/.test(passwordForm.newPassword) ? 'valid' : ''}`}>
-                    {/[A-Z]/.test(passwordForm.newPassword) ? '✓' : '•'} At least 1 uppercase letter (A-Z)
+                    <span className="password-rule-bullet" aria-hidden="true">{/[A-Z]/.test(passwordForm.newPassword) ? '✓' : '•'}</span>
+                    <span>{t('ruleUppercase', 'At least 1 uppercase letter (A-Z)')}</span>
                   </div>
                   <div className={`password-rule-item ${/[^A-Za-z0-9]/.test(passwordForm.newPassword) ? 'valid' : ''}`}>
-                    {/[^A-Za-z0-9]/.test(passwordForm.newPassword) ? '✓' : '•'} At least 1 special character or symbol (!@#$%^&*)
+                    <span className="password-rule-bullet" aria-hidden="true">{/[^A-Za-z0-9]/.test(passwordForm.newPassword) ? '✓' : '•'}</span>
+                    <span>{t('ruleSpecialChar', 'At least 1 special character or symbol (!@#$%^&*)')}</span>
                   </div>
                   <div className={`password-rule-item ${passwordForm.newPassword && passwordForm.previousPassword && passwordForm.newPassword !== passwordForm.previousPassword ? 'valid' : ''}`}>
-                    {passwordForm.newPassword && passwordForm.previousPassword && passwordForm.newPassword !== passwordForm.previousPassword ? '✓' : '•'} Different from current password
+                    <span className="password-rule-bullet" aria-hidden="true">{passwordForm.newPassword && passwordForm.previousPassword && passwordForm.newPassword !== passwordForm.previousPassword ? '✓' : '•'}</span>
+                    <span>{t('ruleDifferent', 'Different from current password')}</span>
                   </div>
                 </div>
               </div>
@@ -380,14 +386,14 @@ export const CitizenSettingsPage = () => {
               {/* Confirm Password */}
               <div className="form-group mb-3">
                 <label htmlFor="settings-confirm-password" className="form-label text-xs">
-                  <span>Confirm New Password <span className="text-danger">*</span></span>
+                  <span>{t('confirmNewPasswordLabel', 'Confirm New Password')} <span className="text-danger">*</span></span>
                 </label>
                 <div className="input-container">
                   <input
                     id="settings-confirm-password"
                     name="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="Re-enter your new password"
+                    placeholder={t('confirmNewPasswordPlaceholder', 'Re-enter your new password')}
                     value={passwordForm.confirmPassword}
                     onChange={(e) => {
                       setPasswordForm({ ...passwordForm, confirmPassword: e.target.value });
@@ -433,7 +439,7 @@ export const CitizenSettingsPage = () => {
                   className="btn btn-primary btn-sm"
                   disabled={isChangingPassword}
                 >
-                  {isChangingPassword ? 'Updating Password...' : 'Reset Password'}
+                  {isChangingPassword ? t('resetPasswordSubmitting', 'Updating Password...') : t('resetPasswordBtn', 'Reset Password')}
                 </button>
               </div>
             </form>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CitizenLayout } from '../components/CitizenLayout';
 import { LocationPickerMap } from '../components/LocationPickerMap';
+import { useLanguage } from '../context/LanguageContext';
 import { complaintApi, aiApi } from '../services/api';
 import { PMC_CATEGORIES, PMC_WARDS } from '../constants/pmcData';
 export { PMC_CATEGORIES, PMC_WARDS };
@@ -73,6 +74,7 @@ export function mergeDescriptionWithAiEvidence(currentDescription, aiEvidenceTex
 
 export const ComplaintFormPage = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const activeScanIdRef = useRef(0);
@@ -551,11 +553,11 @@ const compressImageFile = (file) => {
       <div className="citizen-page-inner">
         {/* Breadcrumb Navigation */}
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-          <Link to="/dashboard" className="breadcrumb-link">Dashboard</Link>
+          <Link to="/dashboard" className="breadcrumb-link">{t('navOverview', 'Dashboard')}</Link>
           <span className="breadcrumb-separator">/</span>
-          <Link to="/complaints" className="breadcrumb-link">My Complaints</Link>
+          <Link to="/complaints" className="breadcrumb-link">{t('navMyComplaints', 'My Complaints')}</Link>
           <span className="breadcrumb-separator">/</span>
-          <span className="breadcrumb-current" aria-current="page">Report an Issue</span>
+          <span className="breadcrumb-current" aria-current="page">{t('navReportIssue', 'Report an Issue')}</span>
         </nav>
 
         {/* Page Header */}
@@ -565,13 +567,13 @@ const compressImageFile = (file) => {
               <span className="badge badge-primary">AI Civic Intelligence</span>
               <span className="badge badge-success">Smart City PMC</span>
             </div>
-            <h1 className="page-title">Report a Civic Grievance</h1>
+            <h1 className="page-title">{t('reportGrievanceTitle', 'Report a Civic Grievance')}</h1>
             <p className="page-subtitle">
-              Upload photo evidence for automated AI severity detection, instant duplicate prevention, and guaranteed SLA resolution.
+              {t('reportGrievanceSubtitle', 'Upload photo evidence for automated AI severity detection, instant duplicate prevention, and guaranteed SLA resolution.')}
             </p>
           </div>
           <Link to="/complaints" className="btn btn-outline btn-sm">
-            Cancel & Back
+            {t('cancelAndBackBtn', 'Cancel & Back')}
           </Link>
         </header>
 
@@ -735,18 +737,18 @@ const compressImageFile = (file) => {
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                   <circle cx="12" cy="13" r="4" />
                 </svg>
-                <h3 className="scanner-title">Photo Attachment & AI Scanner</h3>
+                <h3 className="scanner-title">{t('aiPhotoScannerTitle', 'Photo Attachment & AI Scanner')}</h3>
               </div>
               <span className="scanner-tag">Multimodal AI 1.5</span>
             </div>
 
             <p className="scanner-intro">
-              Upload a picture of the civic problem. Our AI engine will analyze image patterns, estimate hazard severity, recommend the municipal department, and auto-populate your grievance.
+              {t('aiPhotoScannerIntro', 'Upload a picture of the civic problem. Our AI engine will analyze image patterns, estimate hazard severity, recommend the municipal department, and auto-populate your grievance.')}
             </p>
 
             {/* Quick Demo Presets */}
             <div className="demo-presets-row">
-              <span className="presets-label">Sample Photos:</span>
+              <span className="presets-label">{t('samplePhotosLabel', 'Sample Photos:')}</span>
               <div className="preset-buttons">
                 {DEMO_PRESETS.map((p, idx) => (
                   <button
@@ -793,7 +795,7 @@ const compressImageFile = (file) => {
                       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                       <circle cx="12" cy="13" r="4" />
                     </svg>
-                    <span>📷 Take Photo with Camera</span>
+                    <span>📷 {t('cameraCaptureBtn', 'Take Photo with Camera')}</span>
                   </button>
 
                   <button
@@ -808,7 +810,7 @@ const compressImageFile = (file) => {
                       <circle cx="8.5" cy="8.5" r="1.5" />
                       <polyline points="21 15 16 10 5 21" />
                     </svg>
-                    <span>🖼️ Choose from Gallery / Files</span>
+                    <span>🖼️ {t('browsePhotoBtn', 'Choose from Gallery / Files')}</span>
                   </button>
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748B', marginTop: '6px', textAlign: 'center' }}>
@@ -1152,7 +1154,7 @@ const compressImageFile = (file) => {
             <div className={`form-group ${errors.title ? 'has-error' : ''}`}>
               <div className="form-label-row">
                 <label htmlFor="complaint-title" className="form-label">
-                  Complaint Title <span className="required-star">*</span>
+                  {t('complaintTitleLabel', 'Complaint Title')} <span className="required-star">*</span>
                 </label>
                 <span className="char-count" aria-hidden="true">
                   {formData.title.length}/200
@@ -1163,7 +1165,7 @@ const compressImageFile = (file) => {
                 id="complaint-title"
                 name="title"
                 className="form-input"
-                placeholder="Brief summary (e.g. Major pothole near Swargate Bus Stand)"
+                placeholder={t('complaintTitlePlaceholder', 'Brief summary (e.g. Major pothole near Swargate Bus Stand)')}
                 value={formData.title}
                 onChange={handleChange}
                 maxLength={200}
@@ -1187,7 +1189,7 @@ const compressImageFile = (file) => {
             {/* Category selection */}
             <div className={`form-group ${errors.category ? 'has-error' : ''}`}>
               <label htmlFor="complaint-category" className="form-label">
-                Department / Grievance Category <span className="required-star">*</span>
+                {t('categoryLabel', 'Department / Grievance Category')} <span className="required-star">*</span>
               </label>
               <select
                 id="complaint-category"
@@ -1221,7 +1223,7 @@ const compressImageFile = (file) => {
             {/* Priority selection */}
             <div className="form-group">
               <label htmlFor="complaint-priority" className="form-label">
-                Priority & SLA Timeline (Working Days)
+                {t('priorityLabel', 'Priority & SLA Timeline (Working Days)')}
               </label>
               <select
                 id="complaint-priority"
@@ -1245,7 +1247,7 @@ const compressImageFile = (file) => {
             <div className={`form-group ${errors.description ? 'has-error' : ''}`}>
               <div className="form-label-row">
                 <label htmlFor="complaint-description" className="form-label">
-                  Detailed Description <span className="required-star">*</span>
+                  {t('descriptionLabel', 'Detailed Description')} <span className="required-star">*</span>
                 </label>
                 <span className="char-count" aria-hidden="true">
                   {formData.description.length}/5000
@@ -1256,7 +1258,7 @@ const compressImageFile = (file) => {
                 name="description"
                 className="form-input form-textarea"
                 rows={5}
-                placeholder="Describe the issue, landmarks, severity, hazards, and how long it has persisted..."
+                placeholder={t('descriptionPlaceholder', 'Describe the issue, landmarks, severity, hazards, and how long it has persisted...')}
                 value={formData.description}
                 onChange={handleChange}
                 maxLength={5000}
@@ -1288,9 +1290,9 @@ const compressImageFile = (file) => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="location-box-title">Location Details</h3>
+                    <h3 className="location-box-title">{t('locationDetailsTitle', 'Location Details')}</h3>
                     <p className="location-box-subtitle">
-                      Specify street address or auto-detect with Pune GPS
+                      {t('locationDetailsSubtitle', 'Specify street address or auto-detect with Pune GPS')}
                     </p>
                   </div>
                 </div>
@@ -1310,7 +1312,7 @@ const compressImageFile = (file) => {
                     <line x1="2" y1="12" x2="6" y2="12" />
                     <line x1="18" y1="12" x2="22" y2="12" />
                   </svg>
-                  <span>{geoLoading ? 'Detecting GPS...' : 'Use My Current Location'}</span>
+                  <span>{geoLoading ? t('detectingGps', 'Detecting GPS...') : t('useCurrentLocationBtn', 'Use My Current Location')}</span>
                 </button>
               </div>
 
@@ -1328,7 +1330,7 @@ const compressImageFile = (file) => {
               {/* Address input */}
               <div className={`form-group ${errors.address ? 'has-error' : ''}`}>
                 <label htmlFor="complaint-address" className="form-label">
-                  Street Address / Landmark <span className="required-star">*</span>
+                  {t('streetAddressLabel', 'Street Address / Landmark')} <span className="required-star">*</span>
                 </label>
                 <div className="input-with-icon">
                   <span className="input-icon" aria-hidden="true">📍</span>
@@ -1337,7 +1339,7 @@ const compressImageFile = (file) => {
                     id="complaint-address"
                     name="address"
                     className="form-input input-has-icon"
-                    placeholder="e.g. Near Ganpati Mandir, FC Road, Pune 411004"
+                    placeholder={t('streetAddressPlaceholder', 'e.g. Near Ganpati Mandir, FC Road, Pune 411004')}
                     value={formData.address}
                     onChange={handleChange}
                     maxLength={300}
@@ -1362,7 +1364,7 @@ const compressImageFile = (file) => {
               {/* Ward dropdown */}
               <div className="form-group">
                 <label htmlFor="complaint-ward" className="form-label">
-                  PMC Ward Office (Administrative Zone)
+                  {t('wardOfficeLabel', 'PMC Ward Office (Administrative Zone)')}
                 </label>
                 <div className="input-with-icon">
                   <span className="input-icon" aria-hidden="true">🏢</span>
@@ -1448,7 +1450,7 @@ const compressImageFile = (file) => {
             {/* Form Actions */}
             <div className="form-actions">
               <Link to="/complaints" className="btn btn-outline" tabIndex={isSubmitting ? -1 : 0}>
-                Cancel
+                {t('cancelBtn', 'Cancel')}
               </Link>
 
               {isAiGeneratedImage ? (
@@ -1505,7 +1507,7 @@ const compressImageFile = (file) => {
                   {isSubmitting ? (
                     <>
                       <span className="spinner" style={{ width: '1rem', height: '1rem' }} aria-hidden="true" />
-                      <span>Submitting Grievance...</span>
+                      <span>{t('submittingComplaintBtn', 'Submitting Grievance...')}</span>
                     </>
                   ) : (
                     <>
@@ -1513,7 +1515,7 @@ const compressImageFile = (file) => {
                         <line x1="22" y1="2" x2="11" y2="13" />
                         <polygon points="22 2 15 22 11 13 2 9 22 2" />
                       </svg>
-                      <span>Submit Grievance</span>
+                      <span>{t('submitComplaintBtn', 'Submit Grievance')}</span>
                     </>
                   )}
                 </button>

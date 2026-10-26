@@ -355,25 +355,79 @@ a:hover {
 
 /* Password Requirements Checklist */
 .password-rules-box {
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--color-bg-surface-hover);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: 0.75rem;
+  padding: 0.75rem 0.9rem;
   margin-top: 0.5rem;
-  font-size: 0.785rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .password-rule-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  color: var(--color-text-dim);
-  margin-bottom: 0.2rem;
-  transition: color var(--transition-fast);
+  gap: 0.45rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  transition: color var(--transition-fast), font-weight var(--transition-fast);
+}
+
+.password-rule-item:last-child {
+  margin-bottom: 0;
+}
+
+.password-rule-bullet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .password-rule-item.valid {
   color: var(--color-success);
+  font-weight: 600;
+}
+
+/* Light Theme High-Contrast Overrides */
+[data-theme="light"] .password-rules-box,
+html.light .password-rules-box {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .password-rule-item,
+html.light .password-rule-item {
+  color: #334155;
+}
+
+[data-theme="light"] .password-rule-item.valid,
+html.light .password-rule-item.valid {
+  color: #15803d;
+}
+
+/* Dark Theme Overrides */
+[data-theme="dark"] .password-rules-box,
+html.dark .password-rules-box {
+  background: rgba(15, 23, 42, 0.75);
+  border-color: #334155;
+}
+
+[data-theme="dark"] .password-rule-item,
+html.dark .password-rule-item {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .password-rule-item.valid,
+html.dark .password-rule-item.valid {
+  color: #34d399;
 }
 
 /* =========================================================

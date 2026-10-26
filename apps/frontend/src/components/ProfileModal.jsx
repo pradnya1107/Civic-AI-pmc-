@@ -135,7 +135,7 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
               <h2 id="profile-modal-title" className="modal-title">{displayName}</h2>
               <div className="d-flex align-center gap-1 mt-1">
                 <span className="badge badge-primary">{displayRole}</span>
-                {isVerified && <span className="badge badge-success">Verified Citizen</span>}
+                {isVerified && <span className="badge badge-success">{t('verifiedCitizen', 'Verified Citizen')}</span>}
               </div>
             </div>
           </div>
@@ -143,7 +143,7 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
             type="button"
             className="modal-close-btn"
             onClick={onClose}
-            aria-label="Close profile"
+            aria-label={t('modalClose', 'Close')}
           >
             &times;
           </button>
@@ -164,7 +164,7 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            <span>Profile & Preferences</span>
+            <span>{t('tabProfile', 'Profile & Preferences')}</span>
           </button>
           <button
             type="button"
@@ -179,7 +179,7 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            <span>Reset Password</span>
+            <span>{t('resetPassword', 'Reset Password')}</span>
           </button>
         </div>
 
@@ -188,13 +188,13 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
           <form onSubmit={handleSave} className="modal-body" id="panel-profile" role="tabpanel" aria-labelledby="tab-profile">
             {isSaved && (
               <div className="alert-banner alert-banner--success mb-3" role="status">
-                Profile preferences updated successfully!
+                ✓ {t('settingsProfileSaved', 'Profile preferences updated successfully!')}
               </div>
             )}
 
             <div className="profile-grid">
               <div className="form-group mb-2">
-                <label className="form-label text-xs">Full Legal Name</label>
+                <label className="form-label text-xs">{t('fullNameLabel', 'Full Legal Name')}</label>
                 <input
                   type="text"
                   className="form-input"
@@ -202,11 +202,11 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
                   readOnly
                   disabled
                 />
-                <span className="text-muted text-xs">Registered identity authenticated with PMC</span>
+                <span className="text-muted text-xs">{t('officialPmcNameHint', 'Registered identity authenticated with PMC')}</span>
               </div>
 
               <div className="form-group mb-2">
-                <label className="form-label text-xs">Registered Email</label>
+                <label className="form-label text-xs">{t('registeredEmailLabel', 'Registered Email')}</label>
                 <input
                   type="email"
                   className="form-input"
@@ -217,7 +217,7 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
               </div>
 
               <div className="form-group mb-2">
-                <label className="form-label text-xs">Contact Phone (for SMS updates)</label>
+                <label className="form-label text-xs">{t('contactPhoneLabel', 'Contact Phone (for SMS updates)')}</label>
                 <input
                   type="tel"
                   className="form-input"
@@ -228,14 +228,16 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
               </div>
 
               <div className="form-group mb-2">
-                <label className="form-label text-xs">Primary Pune Municipal Ward</label>
+                <label className="form-label text-xs">{t('primaryWardLabel', 'Primary Pune Municipal Ward')}</label>
                 <select
                   className="form-select"
                   value={preferredWard}
                   onChange={(e) => setPreferredWard(e.target.value)}
                 >
                   {PMC_WARDS.map((w) => (
-                    <option key={w.value} value={w.value}>{w.label}</option>
+                    <option key={w.value} value={w.value}>
+                      {w.value === '' ? t('selectWardOptional', 'Select PMC Ward (Optional)') : w.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -245,8 +247,8 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
             <div className="profile-security-callout mt-3 mb-2">
               <div className="d-flex align-center justify-between gap-2">
                 <div>
-                  <strong className="text-xs">Account Password & Security</strong>
-                  <p className="text-muted text-xs mt-1 mb-0">Need to change your login credentials? Update your password anytime.</p>
+                  <strong className="text-xs">{t('portalSettings', 'Account Password & Security')}</strong>
+                  <p className="text-muted text-xs mt-1 mb-0">{t('resetPasswordSubtitle', 'Need to change your login credentials? Update your password anytime.')}</p>
                 </div>
                 <button
                   type="button"
@@ -254,7 +256,7 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
                   onClick={() => setActiveTab('password')}
                   style={{ whiteSpace: 'nowrap' }}
                 >
-                  Reset Password &rarr;
+                  {t('resetPassword', 'Reset Password')} &rarr;
                 </button>
               </div>
             </div>
@@ -264,19 +266,19 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                <strong>Data Privacy & Government Compliance</strong>
+                <strong>{t('settingsAccountSecurityBadge', 'Data Privacy & Government Compliance')}</strong>
               </div>
               <p className="text-muted text-xs mt-1 mb-0">
-                Your contact details are encrypted and utilized solely for municipal grievance tracking, SLA alerts, and resolution feedback.
+                {t('wardAlertsHint', 'Your contact details are encrypted and utilized solely for municipal grievance tracking, SLA alerts, and resolution feedback.')}
               </p>
             </div>
 
             <div className="modal-footer d-flex justify-end gap-2 mt-3">
               <button type="button" className="btn btn-outline btn-sm" onClick={onClose}>
-                Cancel
+                {t('cancelBtn', 'Cancel')}
               </button>
               <button type="submit" className="btn btn-primary btn-sm">
-                Save Preferences
+                {t('savePreferencesBtn', 'Save Preferences')}
               </button>
             </div>
           </form>
@@ -320,14 +322,14 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
             {/* Current Password */}
             <div className="form-group mb-3">
               <label htmlFor="modal-previous-password" className="form-label text-xs">
-                Current / Previous Password <span className="text-danger">*</span>
+                <span>{t('currentPasswordLabel', 'Current / Previous Password')} <span className="text-danger">*</span></span>
               </label>
               <div className="input-container">
                 <input
                   id="modal-previous-password"
                   name="previousPassword"
                   type={showPreviousPassword ? 'text' : 'password'}
-                  placeholder="Enter your current password"
+                  placeholder={t('currentPasswordPlaceholder', 'Enter your current password')}
                   value={passwordForm.previousPassword}
                   onChange={(e) => {
                     setPasswordForm({ ...passwordForm, previousPassword: e.target.value });
@@ -367,14 +369,14 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
             {/* New Password */}
             <div className="form-group mb-3">
               <label htmlFor="modal-new-password" className="form-label text-xs">
-                New Password <span className="text-danger">*</span>
+                <span>{t('newPasswordLabel', 'New Password')} <span className="text-danger">*</span></span>
               </label>
               <div className="input-container">
                 <input
                   id="modal-new-password"
                   name="newPassword"
                   type={showNewPassword ? 'text' : 'password'}
-                  placeholder="Min. 8 characters with upper & symbol"
+                  placeholder={t('newPasswordPlaceholder', 'Min. 8 characters with upper & symbol')}
                   value={passwordForm.newPassword}
                   onChange={(e) => {
                     setPasswordForm({ ...passwordForm, newPassword: e.target.value });
@@ -411,18 +413,22 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
               )}
 
               {/* Password Rules Checklist */}
-              <div className="password-rules-box mt-2">
+              <div className="password-rules-box mt-2" aria-live="polite">
                 <div className={`password-rule-item ${passwordForm.newPassword.length >= 8 ? 'valid' : ''}`}>
-                  {passwordForm.newPassword.length >= 8 ? '✓' : '•'} At least 8 characters
+                  <span className="password-rule-bullet" aria-hidden="true">{passwordForm.newPassword.length >= 8 ? '✓' : '•'}</span>
+                  <span>{t('ruleMinLength', 'At least 8 characters')}</span>
                 </div>
                 <div className={`password-rule-item ${/[A-Z]/.test(passwordForm.newPassword) ? 'valid' : ''}`}>
-                  {/[A-Z]/.test(passwordForm.newPassword) ? '✓' : '•'} At least 1 uppercase letter (A-Z)
+                  <span className="password-rule-bullet" aria-hidden="true">{/[A-Z]/.test(passwordForm.newPassword) ? '✓' : '•'}</span>
+                  <span>{t('ruleUppercase', 'At least 1 uppercase letter (A-Z)')}</span>
                 </div>
                 <div className={`password-rule-item ${/[^A-Za-z0-9]/.test(passwordForm.newPassword) ? 'valid' : ''}`}>
-                  {/[^A-Za-z0-9]/.test(passwordForm.newPassword) ? '✓' : '•'} At least 1 special character or symbol (!@#$%^&*)
+                  <span className="password-rule-bullet" aria-hidden="true">{/[^A-Za-z0-9]/.test(passwordForm.newPassword) ? '✓' : '•'}</span>
+                  <span>{t('ruleSpecialChar', 'At least 1 special character or symbol (!@#$%^&*)')}</span>
                 </div>
                 <div className={`password-rule-item ${passwordForm.newPassword && passwordForm.previousPassword && passwordForm.newPassword !== passwordForm.previousPassword ? 'valid' : ''}`}>
-                  {passwordForm.newPassword && passwordForm.previousPassword && passwordForm.newPassword !== passwordForm.previousPassword ? '✓' : '•'} Different from current password
+                  <span className="password-rule-bullet" aria-hidden="true">{passwordForm.newPassword && passwordForm.previousPassword && passwordForm.newPassword !== passwordForm.previousPassword ? '✓' : '•'}</span>
+                  <span>{t('ruleDifferent', 'Different from current password')}</span>
                 </div>
               </div>
             </div>
@@ -430,14 +436,14 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
             {/* Confirm New Password */}
             <div className="form-group mb-3">
               <label htmlFor="modal-confirm-password" className="form-label text-xs">
-                Confirm New Password <span className="text-danger">*</span>
+                <span>{t('confirmNewPasswordLabel', 'Confirm New Password')} <span className="text-danger">*</span></span>
               </label>
               <div className="input-container">
                 <input
                   id="modal-confirm-password"
                   name="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Re-enter your new password"
+                  placeholder={t('confirmNewPasswordPlaceholder', 'Re-enter your new password')}
                   value={passwordForm.confirmPassword}
                   onChange={(e) => {
                     setPasswordForm({ ...passwordForm, confirmPassword: e.target.value });
@@ -486,14 +492,14 @@ export const ProfileModal = ({ isOpen, onClose, initialTab = 'profile' }) => {
                 }}
                 disabled={isChangingPassword}
               >
-                Cancel
+                {t('cancelBtn', 'Cancel')}
               </button>
               <button
                 type="submit"
                 className="btn btn-primary btn-sm"
                 disabled={isChangingPassword}
               >
-                {isChangingPassword ? 'Updating Password...' : 'Reset Password'}
+                {isChangingPassword ? t('resetPasswordSubmitting', 'Updating Password...') : t('resetPasswordBtn', 'Reset Password')}
               </button>
             </div>
           </form>

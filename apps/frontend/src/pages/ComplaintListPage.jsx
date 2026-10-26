@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CitizenLayout } from '../components/CitizenLayout';
 import { StatusBadge } from '../components/StatusBadge';
+import { useLanguage } from '../context/LanguageContext';
 import { complaintApi } from '../services/api';
 
 /**
@@ -26,6 +27,7 @@ function formatDate(dateStr) {
 
 export const ComplaintListPage = () => {
   const location = useLocation();
+  const { t } = useLanguage();
   const [complaints, setComplaints] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -88,9 +90,9 @@ export const ComplaintListPage = () => {
       <div className="citizen-page-inner">
         {/* Breadcrumb Navigation */}
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-          <Link to="/dashboard" className="breadcrumb-link">Dashboard</Link>
+          <Link to="/dashboard" className="breadcrumb-link">{t('navOverview', 'Dashboard')}</Link>
           <span className="breadcrumb-separator">/</span>
-          <span className="breadcrumb-current" aria-current="page">My Complaints</span>
+          <span className="breadcrumb-current" aria-current="page">{t('navMyComplaints', 'My Complaints')}</span>
         </nav>
 
         {/* Temporary Banner Notice (e.g. redirected after submit) */}
@@ -115,9 +117,9 @@ export const ComplaintListPage = () => {
         {/* Page Header */}
         <header className="page-header">
           <div>
-            <h1 className="page-title">My Grievances & Complaints</h1>
+            <h1 className="page-title">{t('myComplaintsTitle', 'My Grievances & Complaints')}</h1>
             <p className="page-subtitle">
-              Track the progress, departmental routing, and on-ground resolution of your submitted PMC issues.
+              {t('myComplaintsSubtitle', 'Track the progress, departmental routing, and on-ground resolution of your submitted PMC issues.')}
             </p>
           </div>
           <div className="page-header__actions">
@@ -143,7 +145,7 @@ export const ComplaintListPage = () => {
                 <path d="M1 20v-6h6" />
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
               </svg>
-              <span>Refresh</span>
+              <span>{t('refreshBtn', 'Refresh')}</span>
             </button>
 
             <Link
@@ -155,7 +157,7 @@ export const ComplaintListPage = () => {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span>Report an Issue</span>
+              <span>{t('reportAnIssueBtn', 'Report an Issue')}</span>
             </Link>
           </div>
         </header>
@@ -170,7 +172,7 @@ export const ComplaintListPage = () => {
             <input
               type="search"
               className="form-input search-input"
-              placeholder="Search by title, ticket #, ward, category..."
+              placeholder={t('complaintsSearchPlaceholder', 'Search by title, ticket #, ward, category...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Search complaints"
@@ -191,12 +193,12 @@ export const ComplaintListPage = () => {
           {/* Status Filter Buttons */}
           <div className="status-filter-group" role="group" aria-label="Filter complaints by status">
             {[
-              { id: 'ALL', label: 'All' },
-              { id: 'SUBMITTED', label: 'Submitted' },
-              { id: 'VERIFIED', label: 'Verified' },
-              { id: 'IN_PROGRESS', label: 'In Progress' },
-              { id: 'RESOLVED', label: 'Resolved' },
-              { id: 'CLOSED', label: 'Closed' },
+              { id: 'ALL', label: t('filterAll', 'All') },
+              { id: 'SUBMITTED', label: t('filterSubmitted', 'Submitted') },
+              { id: 'VERIFIED', label: t('filterVerified', 'Verified') },
+              { id: 'IN_PROGRESS', label: t('filterInProgress', 'In Progress') },
+              { id: 'RESOLVED', label: t('filterResolved', 'Resolved') },
+              { id: 'CLOSED', label: t('filterClosed', 'Closed') },
             ].map((st) => (
               <button
                 key={st.id}
@@ -254,9 +256,9 @@ export const ComplaintListPage = () => {
                 <line x1="10" y1="9" x2="8" y2="9" />
               </svg>
             </div>
-            <h2 className="empty-state-title">No complaints found</h2>
+            <h2 className="empty-state-title">{t('noComplaintsFound', 'No complaints found')}</h2>
             <p className="empty-state-desc">
-              You haven't submitted any civic grievances yet. Notice a pothole, water leak, or uncollected waste in your area? Report it to PMC now.
+              {t('noComplaintsDesc', "You haven't submitted any civic grievances yet. Notice a pothole, water leak, or uncollected waste in your area? Report it to PMC now.")}
             </p>
             <Link
               to="/complaints/new"
@@ -267,7 +269,7 @@ export const ComplaintListPage = () => {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span>Report an Issue</span>
+              <span>{t('reportAnIssueBtn', 'Report an Issue')}</span>
             </Link>
           </section>
         )}
@@ -281,9 +283,9 @@ export const ComplaintListPage = () => {
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </div>
-            <h2 className="empty-state-title">No matching complaints</h2>
+            <h2 className="empty-state-title">{t('noMatchingComplaints', 'No matching complaints')}</h2>
             <p className="empty-state-desc">
-              No grievances match your current search query or status filter. Try clearing filters.
+              {t('noMatchingComplaintsDesc', 'No grievances match your current search query or status filter. Try clearing filters.')}
             </p>
             <button
               type="button"
@@ -293,7 +295,7 @@ export const ComplaintListPage = () => {
                 setSelectedStatus('ALL');
               }}
             >
-              Reset Filters
+              {t('resetFiltersBtn', 'Reset Filters')}
             </button>
           </section>
         )}
@@ -365,7 +367,7 @@ export const ComplaintListPage = () => {
                       className="btn btn-outline btn-sm card-action-btn"
                       aria-label={`View full details for ticket ${complaintNo}`}
                     >
-                      <span>Track Status</span>
+                      <span>{t('trackStatusBtn', 'Track Status')}</span>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <line x1="5" y1="12" x2="19" y2="12" />
                         <polyline points="12 5 19 12 12 19" />
