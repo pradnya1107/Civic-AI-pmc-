@@ -21,7 +21,8 @@ app.use(helmet());
 app.use(
   cors({
     origin(requestOrigin, callback) {
-      const allowedOrigin = process.env.FRONTEND_URL ?? "http://localhost:5173";
+      const rawFrontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const allowedOrigins = rawFrontendUrl.split(",").map((o) => o.trim().replace(/\/$/, ""));
 
       // In development, allow any localhost/127.0.0.1 origin (Expo may auto-increment ports)
       if (process.env.NODE_ENV !== "production") {
@@ -34,8 +35,18 @@ app.use(
         }
       }
 
-      // In production (or non-localhost requests), only allow the configured origin
-      if (!requestOrigin || requestOrigin === allowedOrigin) {
+      // In production, allow requests without origin (health checks, server-to-server, mobile app)
+      if (!requestOrigin) {
+        callback(null, true);
+        return;
+      }
+
+      // Allow configured origins or any *.vercel.app deployment
+      const normalizedOrigin = requestOrigin.replace(/\/$/, "");
+      const isVercel = /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(normalizedOrigin);
+      const isConfigured = allowedOrigins.includes(normalizedOrigin) || allowedOrigins.includes("*");
+
+      if (isConfigured || isVercel) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));

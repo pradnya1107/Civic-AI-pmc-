@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: civic-ai-backend
+    runtime: docker
+    dockerfilePath: apps/backend/Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: OTP_HASH_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_SECURE
+        value: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        value: "CivicAI PMC <pradnyaghodke1@gmail.com>"
+      - key: FRONTEND_URL
+        value: https://*.vercel.app
+      - key: ADMIN_FULL_NAME
+        value: CivicAI Admin
+      - key: ADMIN_EMAIL
+        value: admin@civicai.com
+      - key: ADMIN_PASSWORD
+        value: Admin@12345678

@@ -9,7 +9,9 @@ import { DepartmentProtectedRoute } from './components/DepartmentProtectedRoute'
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Citizen Pages
+import { LandingPage } from './pages/LandingPage';
 import { SplashScreen } from './pages/SplashScreen';
+import { AICitizenChatbot } from './components/AICitizenChatbot';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -106,8 +108,10 @@ export const App = () => {
         <LanguageProvider>
           <AuthProvider>
             <Routes>
-              {/* Index Route */}
-              <Route path="/" element={<RootIndexRedirect />} />
+              {/* Public Landing & Marketing Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/about" element={<LandingPage />} />
 
               {/* Public Welcome & Auth Routes */}
               <Route path="/splash" element={<Navigate to="/login" replace />} />
@@ -377,6 +381,9 @@ export const App = () => {
               {/* Catch-all Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+
+            {/* Global Cute AI Robot Citizen Support Chatbot (Available across all pages) */}
+            <AICitizenChatbot />
           </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>
