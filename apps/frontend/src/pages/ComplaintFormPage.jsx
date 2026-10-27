@@ -53,24 +53,54 @@ const DEMO_PRESETS = [
 ];
 
 /**
- * Strips the [AI Visible Evidence] block from a complaint description,
- * preserving only the citizen's manually entered text.
+ * Cleans any [AI Visible Evidence] label or tag from text.
  */
-export function extractManualDescription(fullDescription) {
-  if (!fullDescription || typeof fullDescription !== 'string') return '';
-  return fullDescription.replace(/\n*\s*\[AI Visible Evidence\]:[\s\S]*$/i, '').trim();
+export function cleanAiEvidenceText(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/^\[AI Visible Evidence\]:?\s*/i, '')
+    .replace(/\n*\s*\[AI Visible Evidence\]:?\s*/gi, '\n')
+    .trim();
 }
 
 /**
- * Combines citizen manual text with an AI visible evidence block.
- * Replaces any existing AI block rather than accumulating duplicates.
+ * Strips any residual [AI Visible Evidence] block from a complaint description,
+ * preserving clean description text.
+ */
+export function extractManualDescription(fullDescription) {
+  if (!fullDescription || typeof fullDescription !== 'string') return '';
+  return cleanAiEvidenceText(fullDescription.replace(/\n*\s*\[AI Visible Evidence\]:[\s\S]*$/i, '')).trim();
+}
+
+/**
+ * Merges description with AI evidence cleanly without any [AI Visible Evidence] tag.
  */
 export function mergeDescriptionWithAiEvidence(currentDescription, aiEvidenceText) {
-  const manual = extractManualDescription(currentDescription);
-  const evidence = (aiEvidenceText || '').trim();
-  if (!evidence) return manual;
-  if (!manual) return `[AI Visible Evidence]: ${evidence}`;
-  return `${manual}\n\n[AI Visible Evidence]: ${evidence}`;
+  const raw = (currentDescription || '').trim();
+  const evidence = cleanAiEvidenceText(aiEvidenceText);
+  if (!evidence) return raw;
+  if (!raw) return evidence;
+
+  // If description had [AI Visible Evidence]: tag, strip it
+  if (/\[AI Visible Evidence\]:/i.test(raw)) {
+    const manual = raw.replace(/\n*\s*\[AI Visible Evidence\]:[\s\S]*$/i, '').trim();
+    if (!manual) return evidence;
+    return `${manual}\n\n${evidence}`;
+  }
+
+  // If description has multiple blocks separated by double newline, replace the last evidence block
+  const parts = raw.split(/\n{2,}/);
+  if (parts.length > 1) {
+    const manual = parts[0].trim();
+    return `${manual}\n\n${evidence}`;
+  }
+
+  // If there's only one block, if it's different from evidence, it's manual text
+  if (raw !== evidence) {
+    return `${raw}\n\n${evidence}`;
+  }
+
+  return evidence;
 }
 
 export const ComplaintFormPage = () => {
@@ -123,7 +153,9 @@ export const ComplaintFormPage = () => {
     setFormData((prev) => ({
       ...prev,
       imageUrl: capturedDataUrl,
-      description: extractManualDescription(prev.description),
+      title: '',
+      category: '',
+      description: '',
     }));
   };
 
@@ -139,7 +171,7 @@ export const ComplaintFormPage = () => {
   };
 
   /**
-   * Invalidates existing AI result and strips previous AI evidence
+   * Invalidates existing AI result and clears previous AI evidence, title, and category
    * whenever the user replaces or clears the complaint image.
    */
   const invalidateImageAnalysis = () => {
@@ -148,7 +180,9 @@ export const ComplaintFormPage = () => {
     setAiResult(null);
     setFormData((prev) => ({
       ...prev,
-      description: extractManualDescription(prev.description),
+      title: '',
+      category: '',
+      description: '',
     }));
   };
 
@@ -273,8 +307,11 @@ const compressImageFile = (file) => {
         setFormData((prev) => ({
           ...prev,
           imageUrl: compressedDataUrl,
-          description: extractManualDescription(prev.description),
+          title: '',
+          category: '',
+          description: '',
         }));
+        if (e.target) e.target.value = '';
         return;
       }
     } catch {
@@ -288,8 +325,11 @@ const compressImageFile = (file) => {
       setFormData((prev) => ({
         ...prev,
         imageUrl: reader.result,
-        description: extractManualDescription(prev.description),
+        title: '',
+        category: '',
+        description: '',
       }));
+      if (e.target) e.target.value = '';
     };
     reader.readAsDataURL(file);
   };
@@ -300,19 +340,17 @@ const compressImageFile = (file) => {
     invalidateImageAnalysis();
     setImagePreview(preset.url);
     setImageBase64('');
-    setFormData((prev) => {
-      const manualDesc = extractManualDescription(prev.description);
-      return {
-        ...prev,
-        imageUrl: preset.url,
-        category: preset.category,
-        address: preset.address,
-        ward: preset.ward,
-        latitude: preset.lat,
-        longitude: preset.lng,
-        description: manualDesc || preset.hint,
-      };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      imageUrl: preset.url,
+      title: '',
+      category: preset.category,
+      address: preset.address,
+      ward: preset.ward,
+      latitude: preset.lat,
+      longitude: preset.lng,
+      description: cleanAiEvidenceText(preset.hint) || '',
+    }));
   };
 
   // Trigger AI Vision Scan
@@ -330,14 +368,13 @@ const compressImageFile = (file) => {
       const isHttp = typeof formData.imageUrl === 'string' && formData.imageUrl.startsWith('http');
       const isBase64 = (typeof formData.imageUrl === 'string' && formData.imageUrl.startsWith('data:image/')) || Boolean(imageBase64);
 
-      // Pass only the citizen's manual description as hint, not stale AI evidence
+      // Clean manual description if any (do not pass old category to prevent biasing)
       const manualDesc = extractManualDescription(formData.description);
 
       const res = await aiApi.analyzeComplaint({
         imageUrl: isHttp ? formData.imageUrl : undefined,
         imageBase64: isBase64 ? (imageBase64 || formData.imageUrl) : undefined,
-        descriptionHint: manualDesc || formData.title,
-        category: formData.category,
+        descriptionHint: manualDesc || undefined,
       });
 
       // Ignore older asynchronous responses if the image was replaced during scan
@@ -359,10 +396,12 @@ const compressImageFile = (file) => {
         );
 
         if (isNonCivic) {
-          // Revert description AI block and do not auto-fill fake grievance info
+          // Revert form fields and block progression
           setFormData((prev) => ({
             ...prev,
-            description: extractManualDescription(prev.description),
+            title: '',
+            category: '',
+            description: '',
           }));
           setToastMessage('');
           setServerError('🛑 Non-Civic Image Detected! No municipal defect found in photo. Form progression and complaint submission are blocked.');
@@ -370,15 +409,16 @@ const compressImageFile = (file) => {
         }
 
         const aiTitle = ai.suggestedTitle || ai.title || 'Reported Civic Issue';
-        const aiDesc = ai.visibleEvidence || ai.description || ai.generatedDescription || ai.reasoning || '';
+        const rawDesc = ai.visibleEvidence || ai.description || ai.generatedDescription || ai.reasoning || '';
+        const aiDesc = cleanAiEvidenceText(rawDesc);
         const aiCategory = ai.category || 'Roads & Potholes';
         const aiPriority = ai.priority || ai.severity || 'HIGH';
 
         setFormData((prev) => ({
           ...prev,
-          title: prev.title.trim() ? prev.title : aiTitle,
-          description: mergeDescriptionWithAiEvidence(prev.description, aiDesc),
-          category: prev.category || aiCategory,
+          title: aiTitle,
+          description: aiDesc,
+          category: aiCategory,
           priority: aiPriority,
         }));
 

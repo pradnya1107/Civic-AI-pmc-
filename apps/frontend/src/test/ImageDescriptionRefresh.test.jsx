@@ -42,19 +42,20 @@ describe('Phase 1: Image Description Refresh & Separation', () => {
       expect(extractManualDescription(null)).toBe('');
     });
 
-    it('mergeDescriptionWithAiEvidence replaces previous evidence without duplicating tags', () => {
+    it('mergeDescriptionWithAiEvidence merges clean evidence without [AI Visible Evidence] tag', () => {
       const manual = 'Water pipe burst near FC road.';
       const evidence1 = 'High pressure water fountain leaking onto sidewalk.';
       const merged1 = mergeDescriptionWithAiEvidence(manual, evidence1);
 
-      expect(merged1).toBe(`${manual}\n\n[AI Visible Evidence]: ${evidence1}`);
+      expect(merged1).toBe(`${manual}\n\n${evidence1}`);
+      expect(merged1).not.toContain('[AI Visible Evidence]');
 
-      // Second scan on new image should replace evidence1, not accumulate multiple tags
+      // Second scan on new image should replace evidence1 cleanly
       const evidence2 = 'Dry road with minor surface crack.';
       const merged2 = mergeDescriptionWithAiEvidence(merged1, evidence2);
 
-      expect(merged2).toBe(`${manual}\n\n[AI Visible Evidence]: ${evidence2}`);
-      expect((merged2.match(/\[AI Visible Evidence\]/g) || []).length).toBe(1);
+      expect(merged2).toBe(`${manual}\n\n${evidence2}`);
+      expect(merged2).not.toContain('[AI Visible Evidence]');
     });
   });
 
