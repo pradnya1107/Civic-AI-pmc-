@@ -6,16 +6,20 @@
 
 ## 1. Quick Access Credentials Table
 
-| Role | Department / Scope | Login Email | Password | What You Can Demo |
+| Role | Department / Grievance Category (मराठी) | Login Email | Password | What You Can Demo |
 |---|---|---|---|---|
-| **Super Admin** | PMC Central Administration | `admin@civicai.com` | `Admin@12345678` | • Super Admin Console<br>• Create new Department Admins<br>• View all active admins<br>• Global system administration |
-| **Dept Admin** | Roads Department | `roads.demo@civicai.local` | `Roads@Demo2026!` | • Roads department dashboard<br>• Pothole and road repair complaints<br>• Cannot access Waste complaints (403) |
-| **Dept Admin** | Waste Management | `waste.demo@civicai.local` | `Waste@Demo2026!` | • Waste department dashboard<br>• Garbage collection & sanitation complaints |
-| **Dept Admin** | Water Supply | `water.demo@civicai.local` | `Water@Demo2026!` | • Water pipeline & leak complaints<br>• Water contamination reports |
-| **Dept Admin** | Drainage | `drainage.demo@civicai.local` | `Drainage@Demo2026!` | • Drainage & stormwater flood complaints |
-| **Dept Admin** | Street Lighting | `lighting.demo@civicai.local` | `Lighting@Demo2026!` | • Streetlight outage & damaged pole issues |
-| **Dept Admin** | Public Health | `health.demo@civicai.local` | `Health@Demo2026!` | • Mosquito breeding & sanitation complaints |
-| **Citizen** | Public Citizen Account | `citizen@example.com` | `Citizen@12345678` | • Citizen login & reporting<br>• Blocked from accessing admin routes |
+| **Super Admin** | PMC Central Administration & Multi-Domain Triage | `admin@civicai.com` | `Admin@12345678` | • Central Super Admin Dashboard<br>• **Multi-Domain Complaint Triage** (e.g. Road + Water)<br>• Assign / Reassign Complaints to Departments<br>• Manage all Department Admins |
+| **Dept Admin** | Roads & Potholes (खड्डे आणि रस्ते) | `roads.demo@civicai.local` | `Roads@Demo2026!` | • Roads & Potholes dashboard<br>• Asphalt potholes, resurfacing, road cracks |
+| **Dept Admin** | Solid Waste & Garbage (कचरा व्यवस्थापन) | `waste.demo@civicai.local` | `Waste@Demo2026!` | • Waste department dashboard<br>• Garbage accumulation, overflowing bins, uncollected waste |
+| **Dept Admin** | Water Supply (पाणी पुरवठा) | `water.demo@civicai.local` | `Water@Demo2026!` | • Water department dashboard<br>• Pipeline leakages, low water pressure, contamination |
+| **Dept Admin** | Drainage & Sewerage (ड्रेनेज आणि सांडपाणी) | `drainage.demo@civicai.local` | `Drainage@Demo2026!` | • Drainage & Sewerage dashboard<br>• Clogged storm drains, sewer overflow, gutter blockage |
+| **Dept Admin** | Street Lighting & Electrical (पथदिवे) | `lighting.demo@civicai.local` | `Lighting@Demo2026!` | • Street lighting dashboard<br>• Non-functional streetlights, broken poles, hanging wires |
+| **Dept Admin** | Health & Sanitation (आरोग्य आणि स्वच्छता) | `health.demo@civicai.local` | `Health@Demo2026!` | • Public Health dashboard<br>• Mosquito breeding, public toilet hygiene, pest control |
+| **Dept Admin** | Garden & Tree Trimming (उद्यान आणि झाडे) | `garden.demo@civicai.local` | `Garden@Demo2026!` | • Garden & Tree Trimming dashboard<br>• Dangerous branches, fallen trees, park maintenance |
+| **Dept Admin** | Encroachment (अतिक्रमण) | `encroach.demo@civicai.local` | `Encroach@Demo2026!` | • Encroachment dashboard<br>• Footpath encroachment, illegal stalls, unauthorized structures |
+| **Dept Admin** | Traffic & Signage (वाहतूक आणि फलक) | `traffic.demo@civicai.local` | `Traffic@Demo2026!` | • Traffic & Signage dashboard<br>• Damaged road signs, signal malfunctions, illegal hoardings |
+| **Dept Admin** | Other Civic Grievance (इतर नागरी तक्रार) | `general.demo@civicai.local` | `General@Demo2026!` | • General Administration dashboard<br>• Miscellaneous civic grievances & citizen welfare |
+| **Citizen** | Public Citizen Account | `citizen@example.com` | `Citizen@12345678` | • Citizen login & reporting<br>• Instant AI issue detection<br>• Live tracking & notifications |
 
 ---
 

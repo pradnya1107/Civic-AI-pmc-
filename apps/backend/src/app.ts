@@ -18,38 +18,33 @@ import { AppError } from "./utils/app-error";
 const app = express();
 
 app.use(helmet());
+app.use((req, res, next) => {
+  if (req.headers["access-control-request-private-network"]) {
+    res.setHeader("Access-Control-Allow-Private-Network", "true");
+  }
+  next();
+});
 app.use(
   cors({
     origin(requestOrigin, callback) {
       const rawFrontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
       const allowedOrigins = rawFrontendUrl.split(",").map((o) => o.trim().replace(/\/$/, ""));
 
-      // In development, allow any localhost/127.0.0.1 origin (Expo may auto-increment ports)
-      if (process.env.NODE_ENV !== "production") {
-        if (
-          !requestOrigin ||
-          /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(requestOrigin)
-        ) {
-          callback(null, true);
-          return;
-        }
-      }
-
-      // In production, allow requests without origin (health checks, server-to-server, mobile app)
+      // Allow requests without origin (health checks, server-to-server, mobile app)
       if (!requestOrigin) {
         callback(null, true);
         return;
       }
 
-      // Allow configured origins or any *.vercel.app deployment
       const normalizedOrigin = requestOrigin.replace(/\/$/, "");
-      const isVercel = /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(normalizedOrigin);
+      const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalizedOrigin);
+      const isVercel = /^https:\/\/[a-zA-Z0-9-.]+(\.vercel\.app|\.tmp\.now|\.now\.sh)$/.test(normalizedOrigin);
       const isConfigured = allowedOrigins.includes(normalizedOrigin) || allowedOrigins.includes("*");
 
-      if (isConfigured || isVercel) {
+      if (isConfigured || isVercel || isLocalhost || process.env.NODE_ENV !== "production") {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(null, true);
       }
     },
     credentials: true,

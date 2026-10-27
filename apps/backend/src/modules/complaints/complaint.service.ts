@@ -80,13 +80,13 @@ export async function createComplaint(
   // AI confidence below operational threshold (60%) triggers manual review
   const isLowConfidence = aiConfidenceScore !== undefined && aiConfidenceScore < 60;
 
-  const manualReviewNeeded = Boolean(
+  let manualReviewNeeded = Boolean(
     input.aiAnalysis?.manualReviewNeeded ||
     isPossibleAi ||
     isLowConfidence
   );
 
-  const manualReviewReason =
+  let manualReviewReason =
     input.aiAnalysis?.manualReviewReason ||
     (isPossibleAi
       ? "Image exhibits cues of possible AI synthesis or digital modification; marked for on-site municipal field verification."
@@ -95,6 +95,9 @@ export async function createComplaint(
         : undefined);
 
   let departmentId: Types.ObjectId | undefined;
+  let isMultiDomain = false;
+  let detectedDomainNames: string[] = [];
+
   try {
     // Authoritative PMC Category-to-Department Matrix
     const rawCategory =
@@ -106,84 +109,95 @@ export async function createComplaint(
             ? input.aiAnalysis.category
             : "";
     const categoryTerm: string = String(rawCategory || "").trim();
+    const fullText = `${input.title || ""} ${input.description || ""} ${categoryTerm}`.toLowerCase();
 
-    const searchConditions: any[] = [];
-
-    if (/road|pothole|footpath|tar|divider|asphalt|traffic|transport/i.test(categoryTerm)) {
-      searchConditions.push(
-        { code: "ROADS" },
-        { slug: /road/i },
-        { name: /road/i },
-      );
-    } else if (/waste|garbage|trash|clean|swm|rubbish|dump|litter/i.test(categoryTerm)) {
-      searchConditions.push(
-        { code: "SWMB" },
-        { slug: /waste|swm/i },
-        { name: /waste|garbage/i },
-      );
-    } else if (/water|leak|pipe|supply|burst/i.test(categoryTerm)) {
-      searchConditions.push(
-        { code: "WATER" },
-        { slug: /water/i },
-        { name: /water/i },
-      );
-    } else if (/drain|sewer|manhole|gutter/i.test(categoryTerm)) {
-      searchConditions.push(
-        { code: "DRAINAGE" },
-        { slug: /drain/i },
-        { name: /drain/i },
-      );
-    } else if (/electric|light|pole|wire|street/i.test(categoryTerm)) {
-      searchConditions.push(
-        { code: "ELECTRICAL" },
-        { slug: /electric/i },
-        { name: /electric|light/i },
-      );
-    } else if (/health|sanitation|hospital|pest|mosquito/i.test(categoryTerm)) {
-      searchConditions.push(
-        { code: "HEALTH" },
-        { slug: /health/i },
-        { name: /health/i },
-      );
-    } else if (/encroachment|building|unauthorized|hawker/i.test(categoryTerm)) {
-      searchConditions.push(
-        { code: "ENCROACHMENT" },
-        { slug: /encroach/i },
-        { name: /encroachment/i },
-      );
-    } else if (/garden|tree|park|trim/i.test(categoryTerm)) {
-      searchConditions.push(
-        { code: "GARDEN" },
-        { slug: /garden/i },
-        { name: /garden|tree/i },
-      );
+    // Check for distinct municipal domains
+    const domains: { code: string; name: string }[] = [];
+    if (/\b(road|pothole|footpath|divider|asphalt|tar)\b/i.test(fullText)) {
+      domains.push({ code: "ROADS", name: "Roads & Potholes" });
+    }
+    if (/\b(waste|garbage|trash|dump|rubbish|debris|litter)\b/i.test(fullText)) {
+      domains.push({ code: "SWMB", name: "Solid Waste & Garbage" });
+    }
+    if (/\b(water|pipeline|leak|leakage|drinking\s*water|contamination|water\s*supply)\b/i.test(fullText)) {
+      domains.push({ code: "WATER", name: "Water Supply" });
+    }
+    if (/\b(drain|drainage|sewer|sewerage|manhole|gutter|waterlog|waterlogging)\b/i.test(fullText)) {
+      domains.push({ code: "DRAINAGE", name: "Drainage & Sewerage" });
+    }
+    if (/\b(electric|electricity|light|streetlight|pole|wiring|blackout)\b/i.test(fullText)) {
+      domains.push({ code: "ELECTRICAL", name: "Street Lighting & Electrical" });
+    }
+    if (/\b(mosquito|dengue|malaria|sanitation|hygiene|dead\s*animal|epidemic)\b/i.test(fullText)) {
+      domains.push({ code: "HEALTH", name: "Health & Sanitation" });
+    }
+    if (/\b(garden|tree|trees|branch|branches|park|trimming)\b/i.test(fullText)) {
+      domains.push({ code: "GARDEN", name: "Garden & Tree Trimming" });
+    }
+    if (/\b(encroach|encroachment|hawker|hawkers|illegal\s*construction|stall)\b/i.test(fullText)) {
+      domains.push({ code: "ENCROACH", name: "Encroachment" });
+    }
+    if (/\b(traffic|signal|signals|zebra\s*crossing|speed\s*breaker|signboard)\b/i.test(fullText)) {
+      domains.push({ code: "TRAFFIC", name: "Traffic & Signage" });
     }
 
-    if (categoryTerm) {
-      const words = categoryTerm.split(/[ &/-]/).filter((w: string) => w.length > 2);
-      for (const w of words) {
-        searchConditions.push(
-          { name: new RegExp(w, "i") },
-          { slug: new RegExp(w, "i") },
-        );
+    // Check if multiple distinct municipal issues are recognized (e.g. Waste AND Water)
+    const hasConflictingDomains =
+      (domains.some((d) => d.code === "SWMB") && domains.some((d) => d.code === "WATER")) ||
+      (domains.some((d) => d.code === "ROADS") && domains.some((d) => d.code === "WATER")) ||
+      (domains.some((d) => d.code === "SWMB") && domains.some((d) => d.code === "DRAINAGE")) ||
+      (Array.isArray(input.aiAnalysis?.detectedIssues) && input.aiAnalysis.detectedIssues.length >= 2);
+
+    if (hasConflictingDomains) {
+      isMultiDomain = true;
+      detectedDomainNames = domains.map((d) => d.name);
+      manualReviewNeeded = true;
+      manualReviewReason = `Multi-domain civic issue detected (${detectedDomainNames.join(" & ")}). Routed directly to Central Super Admin for triage and department assignment.`;
+    } else {
+      // Direct 1-to-1 canonical category mapping
+      let matchedDept = null;
+      if (/road|pothole/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "ROADS", isActive: true });
+      } else if (/waste|garbage/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "SWMB", isActive: true });
+      } else if (/water\s*supply|pipeline|water/i.test(categoryTerm) && !/waste|drain/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "WATER", isActive: true });
+      } else if (/drainage|sewer/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "DRAINAGE", isActive: true });
+      } else if (/street\s*light|electrical|lamp/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "ELECTRICAL", isActive: true });
+      } else if (/health|sanitation/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "HEALTH", isActive: true });
+      } else if (/garden|tree/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "GARDEN", isActive: true });
+      } else if (/encroach/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "ENCROACH", isActive: true });
+      } else if (/traffic|sign/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "TRAFFIC", isActive: true });
+      } else if (/other|general/i.test(categoryTerm)) {
+        matchedDept = await Department.findOne({ code: "GENADMIN", isActive: true });
       }
-    }
 
-    let matchedDept = null;
-    if (searchConditions.length > 0) {
-      matchedDept = await Department.findOne({
-        $or: searchConditions,
-        isActive: true,
-      });
-    }
+      // Fallback search by regex if not yet matched
+      if (!matchedDept && categoryTerm) {
+        matchedDept = await Department.findOne({
+          $or: [
+            { category: new RegExp(categoryTerm, "i") },
+            { name: new RegExp(categoryTerm, "i") },
+            { slug: new RegExp(categoryTerm, "i") },
+          ],
+          isActive: true,
+        });
+      }
 
-    // Fallback: If no direct keyword matched, grab the first active department so it never stays unassigned
-    if (!matchedDept) {
-      matchedDept = await Department.findOne({ isActive: true }).sort({ createdAt: 1 });
-    }
+      // Fallback: If no direct keyword matched, grab the first active department so single issues stay routed
+      if (!matchedDept) {
+        matchedDept = await Department.findOne({ isActive: true }).sort({ createdAt: 1 });
+      }
 
-    if (matchedDept) {
-      departmentId = matchedDept._id;
+      if (matchedDept) {
+        departmentId = matchedDept._id;
+      }
     }
   } catch (deptErr) {
     console.warn("Could not auto-assign department:", deptErr);

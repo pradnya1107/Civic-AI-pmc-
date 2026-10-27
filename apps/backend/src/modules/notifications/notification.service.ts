@@ -49,14 +49,16 @@ export async function recordComplaintSubmission(
       }
     }
 
-    // 2. Notify Super Administrators for central tracking
+    // 2. Notify Super Administrators for central tracking / multi-domain triage
     const administrators = await User.find({
-      role: "ADMIN",
+      role: { $in: ["ADMIN", "SUPER_ADMIN"] },
       accountStatus: "ACTIVE",
-      emailVerified: true,
     })
       .select("_id")
       .lean();
+
+    const isMultiDomain =
+      Boolean(complaint.aiAnalysis?.manualReviewNeeded) || !complaint.departmentId;
 
     for (const admin of administrators) {
       const idStr = admin._id.toString();
@@ -66,11 +68,17 @@ export async function recordComplaintSubmission(
           recipientId: admin._id,
           complaintId: complaint._id,
           type: "COMPLAINT_SUBMITTED",
-          title: "New civic complaint",
-          message: `Complaint ${complaint.complaintNumber} was submitted.`,
+          title: isMultiDomain
+            ? "Multi-Domain Issue Alert: Needs Assignment"
+            : "New Civic Complaint Filed",
+          message: isMultiDomain
+            ? `Complaint ${complaint.complaintNumber} (${complaint.category}) contains multiple overlapping civic issues (${complaint.aiAnalysis?.manualReviewReason || "Multiple domains detected"}). Action required: Review and assign to the appropriate municipal department.`
+            : `Complaint ${complaint.complaintNumber} (${complaint.category}) was submitted and routed by AI to ${deptName}.`,
         });
       }
     }
+
+
 
     if (notificationsToCreate.length > 0) {
       await Notification.insertMany(notificationsToCreate);

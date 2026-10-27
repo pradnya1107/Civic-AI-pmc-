@@ -324,15 +324,39 @@ export async function assignAdminComplaintDepartment(
     },
   });
 
-  // Create citizen notification
+  // Create citizen notification & notify department admin
   try {
-    await Notification.create({
-      recipientId: complaint.citizenId,
-      complaintId: complaint._id,
-      type: "COMPLAINT_UPDATED",
-      title: "Department Assigned",
-      message: `Complaint ${complaint.complaintNumber} has been assigned to ${deptDoc ? deptDoc.name : "municipal department"}.`,
-    });
+    const notificationsToCreate = [
+      {
+        recipientId: complaint.citizenId,
+        complaintId: complaint._id,
+        type: "COMPLAINT_UPDATED" as const,
+        title: "Department Assigned",
+        message: `Complaint ${complaint.complaintNumber} has been assigned to ${deptDoc ? deptDoc.name : "municipal department"}.`,
+      },
+    ];
+
+    if (deptDoc) {
+      const deptAdmins = await User.find({
+        departmentId: deptDoc._id,
+        role: { $in: ["DEPARTMENT_ADMIN", "ADMIN"] },
+        accountStatus: "ACTIVE",
+      })
+        .select("_id")
+        .lean();
+
+      for (const da of deptAdmins) {
+        notificationsToCreate.push({
+          recipientId: da._id,
+          complaintId: complaint._id,
+          type: "COMPLAINT_SUBMITTED" as const,
+          title: "Complaint Assigned by Super Admin",
+          message: `Complaint ${complaint.complaintNumber} (${complaint.category}) has been assigned to your department (${deptDoc.name}) by Super Admin.`,
+        });
+      }
+    }
+
+    await Notification.insertMany(notificationsToCreate);
   } catch (err) {
     console.error("Failed to dispatch assign notification:", err);
   }

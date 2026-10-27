@@ -9,6 +9,8 @@
     "start": "node dist/server.js",
     "admin:create": "tsx src/scripts/create-admin.ts",
     "db:seed": "tsx src/scripts/seed.ts",
+    "seed:departments": "tsx src/scripts/seed-departments-and-admins.ts",
+    "clear:complaints": "tsx src/scripts/clear-all-complaints.ts",
     "db:test": "tsx src/scripts/test-db.ts",
     "test": "vitest run",
     "test:watch": "vitest",
