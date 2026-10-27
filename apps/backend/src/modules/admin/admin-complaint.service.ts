@@ -4,7 +4,7 @@ import { Complaint, type ComplaintStatus, type ComplaintPriority } from "../comp
 import { User } from "../users/user.model";
 import { Department } from "../departments/department.model";
 import { AuditLog } from "../audit/auditLog.model";
-import { Notification } from "../notifications/notification.model";
+import { Notification, type NotificationType } from "../notifications/notification.model";
 import { recordComplaintUpdate } from "../notifications/notification.service";
 
 export interface AdminActor {
@@ -326,11 +326,17 @@ export async function assignAdminComplaintDepartment(
 
   // Create citizen notification & notify department admin
   try {
-    const notificationsToCreate = [
+    const notificationsToCreate: Array<{
+      recipientId: Types.ObjectId;
+      complaintId: Types.ObjectId;
+      type: NotificationType;
+      title: string;
+      message: string;
+    }> = [
       {
         recipientId: complaint.citizenId,
         complaintId: complaint._id,
-        type: "COMPLAINT_UPDATED" as const,
+        type: "COMPLAINT_UPDATED",
         title: "Department Assigned",
         message: `Complaint ${complaint.complaintNumber} has been assigned to ${deptDoc ? deptDoc.name : "municipal department"}.`,
       },
