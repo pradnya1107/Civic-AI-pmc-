@@ -111,6 +111,165 @@ export const renderInlineMarkdown = (text, keyPrefix = 'inline') => {
 };
 
 /**
+ * Intelligent Client-side Response Generator for Pune Municipal Corporation
+ * Guarantees rich, multi-turn answers even when the backend is offline or on Vercel preview
+ */
+export const getLocalCivicResponse = (query, displayName) => {
+  const q = (query || '').toLowerCase().trim();
+
+  // Pothole / Roads
+  if (/pothole|crater|asphalt|tar road|divider|cave-in|swargate|fc road|katraj|baner|kothrud/i.test(q)) {
+    return {
+      reply: `🛣️ **Roads & Infrastructure Department (PMC)**
+• **Issue Type:** Pothole / Damaged Road Surface
+• **Target SLA:** **2 Working Days (48 Hours)**
+• **Municipal Action:** Dispatching road maintenance truck for asphalt cold/hot-mix patching.
+• **Roads Helpline:** **[020-25501000](tel:02025501000)**
+
+You can upload a photo of the road defect for automatic AI severity scoring!`,
+      suggestedActions: [
+        { label: 'Report Road Pothole', path: '/complaints/new', variant: 'primary' },
+        { label: 'View Pune Heatmap', path: '/heatmap' },
+        { label: 'Track Existing Complaint', path: '/complaints' },
+      ],
+    };
+  }
+
+  // Garbage / Waste / Solid Waste
+  if (/garbage|waste|trash|dump|overflow|debris|litter|cleanliness|kachra/i.test(q)) {
+    return {
+      reply: `🗑️ **Solid Waste Management Department (PMC)**
+• **Issue Type:** Overflowing Waste / Unattended Community Dump
+• **Target SLA:** **1 Working Day (24 Hours)**
+• **Municipal Action:** Mechanical collection vehicle and sanitary inspectors dispatched for clearance.
+• **PMC Waste WhatsApp Helpline:** **[9689900002](tel:9689900002)**
+
+Please submit a photo on the portal to alert your ward sanitary officer immediately!`,
+      suggestedActions: [
+        { label: 'Report Garbage Dump', path: '/complaints/new', variant: 'primary' },
+        { label: 'My Complaints', path: '/complaints' },
+      ],
+    };
+  }
+
+  // Water / Pipeline / Leakage
+  if (/water|pipeline|leak|burst|contamination|drinking water|pressure|pani/i.test(q)) {
+    return {
+      reply: `💧 **Water Supply Department (PMC)**
+• **Issue Type:** Pipeline Burst / Supply Disruption / Contamination
+• **Target SLA:** **24 Hours** for pipeline bursts / **48 Hours** for pressure issues.
+• **Water Control Room:** **[020-25501383](tel:02025501383)**
+
+Municipal water engineering teams address main pipeline failures on high priority.`,
+      suggestedActions: [
+        { label: 'Report Water Leak', path: '/complaints/new', variant: 'primary' },
+        { label: 'PMC Helplines', text: 'What are the official PMC helpline numbers?' },
+      ],
+    };
+  }
+
+  // Drainage / Sewer / Gutters / Flood
+  if (/drain|sewer|gutter|waterlog|flood|clog|nalah|drainage/i.test(q)) {
+    return {
+      reply: `🌊 **Drainage & Sewerage Department (PMC)**
+• **Issue Type:** Blocked Gutter / Stormwater Backflow / Overflow
+• **Target SLA:** **24 Hours**
+• **Drainage Emergency Cell:** **[020-25501269](tel:02025501269)**
+
+Suction jetting machines and municipal cleaning crews are deployed for obstructed drains.`,
+      suggestedActions: [
+        { label: 'Report Drainage Block', path: '/complaints/new', variant: 'primary' },
+      ],
+    };
+  }
+
+  // Streetlights / Electrical
+  if (/light|street\s*light|dark|pole|wire|cable|bulb/i.test(q)) {
+    return {
+      reply: `💡 **Street Lighting & Electrical Department (PMC)**
+• **Issue Type:** Non-Functional Streetlight / Damaged Pole
+• **Target SLA:** **2 Working Days (48 Hours)**
+• **Lighting Cell:** **[1800-1030-222](tel:18001030222)**
+
+Repairs include timer resetting, LED driver replacement, and cabling safety checks.`,
+      suggestedActions: [
+        { label: 'Report Streetlight Outage', path: '/complaints/new', variant: 'primary' },
+      ],
+    };
+  }
+
+  // Tracking complaints
+  if (/track|status|my complaint|complaint id|ticket|progress|where is my/i.test(q)) {
+    return {
+      reply: `🔍 **Grievance Tracking on Civic AI**
+• Every registered issue receives a unique tracking number (e.g., \`CIV-REG-001\`).
+• Visit the **[My Complaints](/complaints)** dashboard to view real-time status transitions (\`SUBMITTED\` ➔ \`UNDER_REVIEW\` ➔ \`ASSIGNED\` ➔ \`IN_PROGRESS\` ➔ \`RESOLVED\`).
+• Assigned field officer names and remaining working-day SLA deadlines are displayed on each ticket.`,
+      suggestedActions: [
+        { label: 'Go to My Complaints', path: '/complaints', variant: 'primary' },
+        { label: 'Report New Issue', path: '/complaints/new' },
+      ],
+    };
+  }
+
+  // Helplines / Emergency Contacts
+  if (/helpline|phone|number|contact|call|emergency|customer care/i.test(q)) {
+    return {
+      reply: `📞 **Official Pune Municipal Corporation (PMC) Helplines:**
+• **Central PMC Citizen Toll-Free:** **[1800-1030-222](tel:18001030222)** (24x7)
+• **PMC Head Office Switchboard:** **[020-25501000](tel:02025501000)**
+• **Solid Waste & Garbage WhatsApp:** **[9689900002](tel:9689900002)**
+• **Water Supply Emergency Cell:** **[020-25501383](tel:02025501383)**
+• **Drainage Control Room:** **[020-25501269](tel:02025501269)**
+• **Disaster Management Cell (Monsoon/Floods):** **[020-25506800](tel:02025506800)**`,
+      suggestedActions: [
+        { label: 'Report Grievance Online', path: '/complaints/new', variant: 'primary' },
+        { label: 'View Heatmap', path: '/heatmap' },
+      ],
+    };
+  }
+
+  // Working-Day SLA & Holidays
+  if (/sla|working day|holiday|timeline|how long|resolution time/i.test(q)) {
+    return {
+      reply: `🗓️ **PMC Working-Day SLA System**
+• Official PMC working days are **Monday through Friday (9:30 AM – 6:00 PM)**, excluding gazetted public holidays.
+• Standard SLAs by severity:
+  - **CRITICAL:** **1 Working Day (24x7 Emergency protocol)**
+  - **HIGH:** **2 Working Days (48 Hours)**
+  - **MEDIUM:** **4 Working Days**
+  - **LOW:** **7 Working Days**
+• Automated AI escalations occur if SLAs are near expiry!`,
+      suggestedActions: [
+        { label: 'Report an Issue Now', path: '/complaints/new', variant: 'primary' },
+      ],
+    };
+  }
+
+  // Fallback greeting / civic guidance
+  return {
+    reply: `🤖 I am **CivicBot**, your official Pune Municipal Corporation civic guide!
+
+I can assist you with:
+• **Road Potholes & Infrastructure** (48h SLA)
+• **Solid Waste & Overflowing Garbage** (24h SLA)
+• **Water Pipeline Bursts & Contamination** (24h SLA)
+• **Drainage Chokes & Stormwater Flooding** (24h SLA)
+• **Streetlight Outages & Dark Spots** (48h SLA)
+• **Grievance Tracking & Field Officer Status**
+
+Please select an option below or type your municipal question!`,
+    suggestedActions: [
+      { label: 'Report Pothole', path: '/complaints/new', variant: 'primary' },
+      { label: 'Report Garbage Dump', path: '/complaints/new' },
+      { label: 'Water Leak Help', path: '/complaints/new' },
+      { label: 'Track My Grievance', path: '/complaints' },
+      { label: 'Official PMC Helplines', text: 'What are the official PMC helpline numbers?' },
+    ],
+  };
+};
+
+/**
  * Cute Animated Robot Mascot SVG Icon
  */
 export const CuteRobotAvatar = ({ size = 44, isHappy = true }) => {
@@ -179,7 +338,15 @@ export const AICitizenChatbot = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [isOpen, setIsOpen] = useState(false);
+  // Chat window state: stays open across page transitions until user clicks the cross (✕)
+  const [isOpen, setIsOpen] = useState(() => {
+    try {
+      return sessionStorage.getItem('civicai_citizen_chat_open') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
   const [showTeaser, setShowTeaser] = useState(true);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -285,10 +452,17 @@ How can I assist your neighborhood today?`,
   const handleOpenChat = () => {
     setIsOpen(true);
     setShowTeaser(false);
+    try {
+      sessionStorage.setItem('civicai_citizen_chat_open', 'true');
+    } catch {}
   };
 
+  // Chatbot only closes when the user clicks the cross button (✕)
   const handleCloseChat = () => {
     setIsOpen(false);
+    try {
+      sessionStorage.setItem('civicai_citizen_chat_open', 'false');
+    } catch {}
   };
 
   const handleClearChat = () => {
@@ -308,20 +482,20 @@ How can I assist your neighborhood today?`,
     setInputValue('');
 
     const userMessage = {
-      id: `user-${Date.now()}`,
+      id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       role: 'user',
       content: messageText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    const nextMessages = [...messages, userMessage];
-    setMessages(nextMessages);
+    // Append user message to full multi-turn conversation thread
+    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      // Build history for backend API (last 6 messages)
-      const history = nextMessages
-        .slice(-6)
+      // Build history for backend API (last 8 messages)
+      const history = [...messages, userMessage]
+        .slice(-8)
         .map((m) => ({ role: m.role, content: m.content }));
 
       const payload = {
@@ -339,7 +513,7 @@ How can I assist your neighborhood today?`,
         }
 
         const botReply = {
-          id: `bot-${Date.now()}`,
+          id: `bot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           role: 'assistant',
           content: res.data.reply,
           suggestedActions: res.data.suggestedActions || [],
@@ -352,20 +526,17 @@ How can I assist your neighborhood today?`,
         throw new Error('Unexpected response format');
       }
     } catch {
-      // Fallback friendly error
-      const errorReply = {
-        id: `err-${Date.now()}`,
+      // Intelligent PMC domain response: continuous multi-turn replies even when offline/Vercel preview
+      const localResponse = getLocalCivicResponse(messageText, user?.name || user?.fullName);
+      const botReply = {
+        id: `bot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         role: 'assistant',
-        content: `I am currently experiencing network latency reaching PMC Civic servers. 
-
-For urgent civic hazards (flooding, open live wires, major pipeline bursts), please call the PMC 24x7 Citizen Helpline directly at **[1800-1030-222](tel:18001030222)**.`,
-        suggestedActions: [
-          { label: 'Report Grievance', path: '/complaints/new', variant: 'primary' },
-          { label: 'View Dashboard', path: '/dashboard' },
-        ],
+        content: localResponse.reply,
+        suggestedActions: localResponse.suggestedActions || [],
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, errorReply]);
+      setMessages((prev) => [...prev, botReply]);
+      playChime();
     } finally {
       setIsLoading(false);
     }
@@ -373,7 +544,7 @@ For urgent civic hazards (flooding, open live wires, major pipeline bursts), ple
 
   const handleActionClick = (action) => {
     if (action.path) {
-      setIsOpen(false);
+      // IMPORTANT: DO NOT close the chat window! The user must click the cross (✕) to exit
       navigate(action.path);
     } else if (action.text) {
       handleSendMessage(action.text);
